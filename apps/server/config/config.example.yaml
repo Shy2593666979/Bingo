@@ -1,0 +1,91 @@
+app:
+  name: Bingo
+  environment: development
+  timezone: Asia/Shanghai
+
+server:
+  host: 0.0.0.0
+  port: 8000
+  api_prefix: /api/v1
+  cors_origins:
+    - "*"
+
+database:
+  url: sqlite+aiosqlite:///./data/bingo.db
+
+agent:
+  assistant_name: Bingo
+  assistant_persona: 简洁、可靠、主动，但不替用户编造事实或声称完成未执行的操作。
+
+model:
+  provider: echo
+  api_mode: chat_completions
+  base_url: https://api.openai.com/v1
+  api_key: ""
+  model: gpt-4.1-mini
+  timeout_seconds: 60
+
+# Optional. When model is blank, image messages use the main model above.
+# When model is filled, api_key, base_url and api_mode must also be filled.
+vision:
+  model: ""
+  api_mode: null
+  base_url: ""
+  api_key: ""
+  timeout_seconds: null
+  enable_thinking: false
+
+asr:
+  api_key: ""
+  file:
+    base_url: https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation
+    model: qwen3-asr-flash
+    language: zh
+    timeout_seconds: 60
+  realtime:
+    url: wss://llm-82csv4ok6e6xu5cp.cn-beijing.maas.aliyuncs.com/api-ws/v1/inference
+    model: qwen-audio-3.0-asr-flash-streaming
+    format: pcm
+    sample_rate: 16000
+    timeout_seconds: 10
+
+realtime_call:
+  api_key: ""
+  url: ""
+  model: qwen-audio-3.1-realtime-plus
+  voice: longanqian_v3.1
+  turn_detection: smart_turn
+  max_history_turns: 20
+  timeout_seconds: 15
+
+redis:
+  url: null
+
+engagement:
+  worker_poll_seconds: 2
+  follow_up_delays_seconds:
+    - 3600
+    - 10800
+    - 36000
+  recommendation_delay_seconds: 18000
+
+push:
+  provider: disabled
+  worker_poll_seconds: 2
+  android:
+    channel_id: bingo_companion
+    channel_name: Bingo 陪伴消息
+  getui:
+    base_url: https://restapi.getui.com
+    app_id: ""
+    app_key: ""
+    master_secret: ""
+
+logging:
+  level: INFO
+  console: true
+  directory: ./logs
+  application_file: bingo.log
+  access_file: access.log
+  rotation: daily
+  retention_days: 14

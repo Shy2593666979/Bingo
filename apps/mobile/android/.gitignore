@@ -1,0 +1,7 @@
+/local.properties
+/.gradle/
+/captures/
+/app/debug/
+/app/profile/
+/app/release/
+

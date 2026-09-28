@@ -1,0 +1,15 @@
+[Unit]
+Description=Bingo personal assistant backend
+After=network-online.target redis.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/Bingo/apps/server
+ExecStart=/root/Bingo/apps/server/.venv/bin/python -m bingo
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
