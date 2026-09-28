@@ -1,13 +1,17 @@
+import 'package:bingo/core/theme/app_theme.dart';
+import 'package:bingo/core/widgets/center_toast.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
-import 'package:bingo/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 enum _AuthMode { login, register }
 
 class AuthPage extends StatefulWidget {
-  const AuthPage(
-      {required this.gateway, required this.onAuthenticated, super.key});
+  const AuthPage({
+    required this.gateway,
+    required this.onAuthenticated,
+    super.key,
+  });
 
   final AuthGateway gateway;
   final ValueChanged<AuthResult> onAuthenticated;
@@ -20,8 +24,9 @@ class _AuthPageState extends State<AuthPage> {
   final _formKey = GlobalKey<FormState>();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
-  _AuthMode _mode = _AuthMode.register;
+  _AuthMode _mode = _AuthMode.login;
   bool _obscurePassword = true;
+  bool _agreed = false;
   bool _submitting = false;
   String? _error;
 
@@ -32,8 +37,15 @@ class _AuthPageState extends State<AuthPage> {
     super.dispose();
   }
 
+  void _comingSoon() => showCenterToast(context, '敬请期待');
+
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate() || _submitting) return;
+    if (_submitting) return;
+    if (!_agreed) {
+      showCenterToast(context, '请先阅读并同意用户协议和隐私政策');
+      return;
+    }
+    if (!_formKey.currentState!.validate()) return;
     setState(() {
       _submitting = true;
       _error = null;
@@ -57,126 +69,107 @@ class _AuthPageState extends State<AuthPage> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final isLogin = _mode == _AuthMode.login;
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: BingoPalette.softGradient),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: Container(
-                  padding: const EdgeInsets.fromLTRB(22, 26, 22, 24),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.72),
-                    borderRadius: BorderRadius.circular(34),
-                    border: Border.all(color: Colors.white),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x172B4480),
-                        blurRadius: 36,
-                        offset: Offset(0, 14),
-                      ),
-                    ],
-                  ),
+      body: Stack(
+        children: [
+          const Positioned(
+            top: -150,
+            left: -110,
+            child: _BackgroundGlow(size: 310),
+          ),
+          const Positioned(
+            top: 95,
+            right: -150,
+            child: _BackgroundGlow(size: 280),
+          ),
+          const Positioned(
+            bottom: -180,
+            left: -150,
+            child: _BackgroundGlow(size: 310),
+          ),
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
                   child: Form(
                     key: _formKey,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Align(
+                        Center(
                           child: Container(
-                            width: 118,
-                            height: 118,
-                            padding: const EdgeInsets.all(4),
+                            width: 128,
+                            height: 128,
+                            padding: const EdgeInsets.all(7),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(34),
+                              borderRadius: BorderRadius.circular(38),
                               boxShadow: const [
                                 BoxShadow(
-                                    color: Color(0x263478F6), blurRadius: 28),
+                                  color: Color(0x17205F4F),
+                                  blurRadius: 32,
+                                  offset: Offset(0, 12),
+                                ),
                               ],
                             ),
-                            child: Image.asset('assets/images/bingo_logo.png'),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(31),
+                              child:
+                                  Image.asset('assets/images/bingo_logo.png'),
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 22),
                         Text(
-                          _mode == _AuthMode.login ? '欢迎回来' : '创建 Bingo 账号',
+                          isLogin ? '欢迎回来' : '创建 Bingo 账号',
                           textAlign: TextAlign.center,
                           style: Theme.of(context)
                               .textTheme
-                              .headlineSmall
-                              ?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.5,
-                              ),
+                              .headlineLarge
+                              ?.copyWith(fontWeight: FontWeight.w800),
                         ),
-                        const SizedBox(height: 22),
-                        Container(
-                          height: 50,
-                          padding: const EdgeInsets.all(5),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEEF1F8),
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: Row(
-                            children: [
-                              for (final entry in const [
-                                (_AuthMode.login, '登录'),
-                                (_AuthMode.register, '注册'),
-                              ])
-                                Expanded(
-                                  child: GestureDetector(
-                                    onTap: _submitting
-                                        ? null
-                                        : () => setState(() {
-                                              _mode = entry.$1;
-                                              _error = null;
-                                            }),
-                                    child: AnimatedContainer(
-                                      duration:
-                                          const Duration(milliseconds: 180),
-                                      alignment: Alignment.center,
-                                      decoration: BoxDecoration(
-                                        color: _mode == entry.$1
-                                            ? Colors.white
-                                            : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(14),
-                                        boxShadow: _mode == entry.$1
-                                            ? const [
-                                                BoxShadow(
-                                                  color: Color(0x14243B72),
-                                                  blurRadius: 10,
-                                                ),
-                                              ]
-                                            : null,
-                                      ),
-                                      child: Text(
-                                        entry.$2,
-                                        style: TextStyle(
-                                          color: _mode == entry.$1
-                                              ? BingoPalette.blue
-                                              : const Color(0xFF7A829B),
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
+                        const SizedBox(height: 5),
+                        Text(
+                          isLogin ? '登录后继续使用 Bingo' : '注册后开启你的 Bingo 之旅',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Color(0xFF788390),
+                            fontSize: 15,
                           ),
                         ),
+                        const SizedBox(height: 30),
+                        _modeSelector(),
                         const SizedBox(height: 24),
                         TextFormField(
                           controller: _phoneController,
                           keyboardType: TextInputType.phone,
                           textInputAction: TextInputAction.next,
                           autofillHints: const [AutofillHints.telephoneNumber],
-                          decoration: const InputDecoration(
-                            labelText: '手机号',
-                            prefixIcon: Icon(Icons.phone_android_rounded),
+                          decoration: InputDecoration(
+                            hintText: '请输入手机号',
+                            prefixIcon: SizedBox(
+                              width: 102,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.phone_android_rounded,
+                                      size: 20),
+                                  const SizedBox(width: 7),
+                                  const Text('+86',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w600)),
+                                  const SizedBox(width: 10),
+                                  Container(
+                                    width: 1,
+                                    height: 22,
+                                    color: BingoPalette.line,
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                           validator: (value) {
                             final phone = value?.trim() ?? '';
@@ -191,12 +184,12 @@ class _AuthPageState extends State<AuthPage> {
                           controller: _passwordController,
                           obscureText: _obscurePassword,
                           textInputAction: TextInputAction.done,
-                          autofillHints: _mode == _AuthMode.login
+                          autofillHints: isLogin
                               ? const [AutofillHints.password]
                               : const [AutofillHints.newPassword],
                           onFieldSubmitted: (_) => _submit(),
                           decoration: InputDecoration(
-                            labelText: '密码',
+                            hintText: '请输入密码',
                             prefixIcon: const Icon(Icons.lock_outline_rounded),
                             suffixIcon: IconButton(
                               onPressed: () => setState(
@@ -213,41 +206,113 @@ class _AuthPageState extends State<AuthPage> {
                           validator: (value) =>
                               (value?.length ?? 0) < 8 ? '密码至少需要 8 位' : null,
                         ),
+                        if (isLogin)
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: _comingSoon,
+                              child: const Text('忘记密码？'),
+                            ),
+                          )
+                        else
+                          const SizedBox(height: 18),
                         if (_error case final error?) ...[
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 6),
                           Text(error, style: TextStyle(color: colors.error)),
+                          const SizedBox(height: 10),
                         ],
-                        const SizedBox(height: 22),
                         DecoratedBox(
                           decoration: BoxDecoration(
                             gradient: BingoPalette.brandGradient,
-                            borderRadius: BorderRadius.circular(18),
+                            borderRadius: BorderRadius.circular(20),
                             boxShadow: const [
                               BoxShadow(
-                                  color: Color(0x293478F6), blurRadius: 20),
+                                color: Color(0x3020A077),
+                                blurRadius: 22,
+                                offset: Offset(0, 8),
+                              ),
                             ],
                           ),
-                          child: FilledButton.icon(
+                          child: FilledButton(
                             style: FilledButton.styleFrom(
                               backgroundColor: Colors.transparent,
                               shadowColor: Colors.transparent,
+                              minimumSize: const Size.fromHeight(58),
                             ),
                             onPressed: _submitting ? null : _submit,
-                            icon: _submitting
+                            child: _submitting
                                 ? const SizedBox.square(
-                                    dimension: 18,
+                                    dimension: 20,
                                     child: CircularProgressIndicator(
-                                        strokeWidth: 2),
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
                                   )
-                                : Icon(
-                                    _mode == _AuthMode.login
-                                        ? Icons.arrow_forward_rounded
-                                        : Icons.person_add_alt_1_rounded,
+                                : Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        isLogin ? '登录' : '注册并继续',
+                                        style: const TextStyle(fontSize: 18),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      const Icon(Icons.arrow_forward_rounded),
+                                    ],
                                   ),
-                            label:
-                                Text(_mode == _AuthMode.login ? '登录' : '注册并继续'),
                           ),
                         ),
+                        if (isLogin) ...[
+                          const SizedBox(height: 26),
+                          const Row(
+                            children: [
+                              Expanded(child: Divider()),
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 14),
+                                child: Text(
+                                  '或使用其他方式登录',
+                                  style: TextStyle(color: Color(0xFF788390)),
+                                ),
+                              ),
+                              Expanded(child: Divider()),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Center(
+                            child: InkWell(
+                              onTap: _comingSoon,
+                              borderRadius: BorderRadius.circular(18),
+                              child: Padding(
+                                padding: const EdgeInsets.all(5),
+                                child: Column(
+                                  children: [
+                                    Container(
+                                      width: 54,
+                                      height: 54,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                            color: BingoPalette.line),
+                                      ),
+                                      child: const Icon(
+                                        Icons.sms_outlined,
+                                        color: Color(0xFF687783),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    const Text(
+                                      '验证码登录',
+                                      style:
+                                          TextStyle(color: Color(0xFF788390)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 28),
+                        _agreement(),
                       ],
                     ),
                   ),
@@ -255,8 +320,118 @@ class _AuthPageState extends State<AuthPage> {
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
+
+  Widget _modeSelector() => Container(
+        height: 54,
+        padding: const EdgeInsets.all(5),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEDF5F2),
+          borderRadius: BorderRadius.circular(27),
+        ),
+        child: Row(
+          children: [
+            for (final (mode, label) in const [
+              (_AuthMode.login, '登录'),
+              (_AuthMode.register, '注册'),
+            ])
+              Expanded(
+                child: InkWell(
+                  onTap: _submitting
+                      ? null
+                      : () => setState(() {
+                            _mode = mode;
+                            _error = null;
+                          }),
+                  borderRadius: BorderRadius.circular(24),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: _mode == mode ? Colors.white : Colors.transparent,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: _mode == mode
+                          ? const [
+                              BoxShadow(
+                                color: Color(0x14205F4F),
+                                blurRadius: 10,
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        color: _mode == mode
+                            ? BingoPalette.blue
+                            : const Color(0xFF788390),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+
+  Widget _agreement() => Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Checkbox(
+            value: _agreed,
+            onChanged: (value) => setState(() => _agreed = value ?? false),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 9),
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  const Text('我已阅读并同意'),
+                  _agreementLink('《用户协议》'),
+                  const Text('和'),
+                  _agreementLink('《隐私政策》'),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+
+  Widget _agreementLink(String label) => InkWell(
+        onTap: _comingSoon,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: BingoPalette.blue,
+              decoration: TextDecoration.underline,
+            ),
+          ),
+        ),
+      );
+}
+
+class _BackgroundGlow extends StatelessWidget {
+  const _BackgroundGlow({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: size,
+        height: size,
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(
+            colors: [Color(0x3667CDAE), Color(0x0067CDAE)],
+          ),
+        ),
+      );
 }

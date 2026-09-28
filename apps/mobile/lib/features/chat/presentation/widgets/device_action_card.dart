@@ -32,7 +32,7 @@ class DeviceActionCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(22),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x12243B72),
+              color: Color(0x12205F4F),
               blurRadius: 22,
               offset: Offset(0, 7),
             ),

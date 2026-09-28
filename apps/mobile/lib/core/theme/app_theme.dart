@@ -9,6 +9,8 @@ abstract final class BingoPalette {
   static const blush = Color(0xFFE4F7F0);
   static const ice = Color(0xFFF9FCFB);
   static const line = Color(0xFFE3EEEA);
+  static const softSurface = Color(0xFFEDF5F2);
+  static const userBubble = Color(0xFFD5F0E3);
 
   static const brandGradient = LinearGradient(
     begin: Alignment.topLeft,
@@ -41,16 +43,16 @@ ThemeData buildBingoTheme() {
   return base.copyWith(
     scaffoldBackgroundColor: BingoPalette.ice,
     textTheme: base.textTheme.apply(
-      bodyColor: BingoPalette.ink,
-      displayColor: BingoPalette.ink,
+      bodyColor: colors.onSurface,
+      displayColor: colors.onSurface,
     ),
-    appBarTheme: const AppBarTheme(
+    appBarTheme: AppBarTheme(
       backgroundColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       centerTitle: false,
-      foregroundColor: BingoPalette.ink,
-      systemOverlayStyle: SystemUiOverlayStyle(
+      foregroundColor: colors.onSurface,
+      systemOverlayStyle: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.dark,
         statusBarBrightness: Brightness.light,
@@ -70,11 +72,11 @@ ThemeData buildBingoTheme() {
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
-        borderSide: const BorderSide(color: BingoPalette.line),
+        borderSide: BorderSide(color: colors.outlineVariant),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
-        borderSide: const BorderSide(color: BingoPalette.blue, width: 1.5),
+        borderSide: BorderSide(color: colors.primary, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),

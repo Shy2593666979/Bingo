@@ -27,8 +27,9 @@ class MessageBubble extends StatelessWidget {
       constraints: const BoxConstraints(maxWidth: 560),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
       decoration: BoxDecoration(
-        gradient: isUser ? BingoPalette.brandGradient : null,
-        color: isUser ? null : const Color(0xFFEDF5F2).withValues(alpha: 0.94),
+        color: isUser
+            ? BingoPalette.userBubble
+            : BingoPalette.softSurface.withValues(alpha: 0.94),
         borderRadius: BorderRadius.only(
           topLeft: const Radius.circular(26),
           topRight: const Radius.circular(26),
@@ -61,7 +62,7 @@ class MessageBubble extends StatelessWidget {
                   SelectableText(
                     message.content,
                     style: TextStyle(
-                      color: isUser ? Colors.white : BingoPalette.ink,
+                      color: BingoPalette.ink,
                       fontSize: 16,
                       height: 1.55,
                     ),
@@ -133,8 +134,7 @@ class CallRecordTile extends StatelessWidget {
       constraints: const BoxConstraints(maxWidth: 300),
       padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 13),
       decoration: BoxDecoration(
-        gradient: isUser ? BingoPalette.brandGradient : null,
-        color: isUser ? null : const Color(0xFFEDF5F2),
+        color: isUser ? BingoPalette.userBubble : BingoPalette.softSurface,
         borderRadius: BorderRadius.only(
           topLeft: const Radius.circular(22),
           topRight: const Radius.circular(22),
@@ -151,7 +151,7 @@ class CallRecordTile extends StatelessWidget {
                 ? Icons.call_end_rounded
                 : Icons.call_rounded,
             size: 23,
-            color: isUser ? Colors.white : BingoPalette.ink,
+            color: BingoPalette.ink,
           ),
           const SizedBox(width: 10),
           Column(
@@ -161,7 +161,7 @@ class CallRecordTile extends StatelessWidget {
               Text(
                 '语音通话',
                 style: TextStyle(
-                  color: isUser ? Colors.white : BingoPalette.ink,
+                  color: BingoPalette.ink,
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                 ),
@@ -170,7 +170,7 @@ class CallRecordTile extends StatelessWidget {
               Text(
                 '$statusLabel  $minutes:$seconds',
                 style: TextStyle(
-                  color: isUser ? Colors.white : const Color(0xFF65716D),
+                  color: const Color(0xFF65716D),
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
@@ -301,7 +301,7 @@ class AssistantTypingBubble extends StatelessWidget {
               height: 46,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: const Color(0xFFEDF5F2).withValues(alpha: 0.94),
+                color: BingoPalette.softSurface.withValues(alpha: 0.94),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(26),
                   topRight: Radius.circular(26),

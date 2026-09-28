@@ -212,7 +212,6 @@ class _BingoAppState extends State<BingoApp> with WidgetsBindingObserver {
       key: const ValueKey('app'),
       chatController: _controller,
       gateway: _gateway,
-      config: _config,
       profile: profile,
       callCaptionsEnabled: _callCaptionsEnabled,
       onCallCaptionsChanged: _setCallCaptionsEnabled,

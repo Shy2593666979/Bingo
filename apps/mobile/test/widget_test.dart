@@ -25,8 +25,21 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1300));
     await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.text('创建 Bingo 账号'), findsOneWidget);
-    expect(find.text('手机号'), findsOneWidget);
+    expect(find.text('欢迎回来'), findsOneWidget);
+    expect(find.text('请输入手机号'), findsOneWidget);
+    expect(find.text('忘记密码？'), findsOneWidget);
+    expect(find.text('验证码登录'), findsOneWidget);
     expect(find.text('注册'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('忘记密码？'));
+    await tester.tap(find.text('忘记密码？'));
+    await tester.pump();
+    expect(find.text('敬请期待'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('验证码登录'));
+    await tester.tap(find.text('验证码登录'));
+    await tester.pump();
+    expect(find.text('敬请期待'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 2));
   });
 }

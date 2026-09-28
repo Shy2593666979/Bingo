@@ -1,4 +1,3 @@
-import 'package:bingo/core/config/app_config.dart';
 import 'package:bingo/core/widgets/center_toast.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
@@ -14,7 +13,6 @@ class AppShell extends StatelessWidget {
   const AppShell({
     required this.chatController,
     required this.gateway,
-    required this.config,
     required this.profile,
     required this.callCaptionsEnabled,
     required this.onCallCaptionsChanged,
@@ -25,7 +23,6 @@ class AppShell extends StatelessWidget {
 
   final ChatController chatController;
   final HttpApiGateway gateway;
-  final AppConfig config;
   final UserProfile profile;
   final bool callCaptionsEnabled;
   final Future<void> Function(bool enabled) onCallCaptionsChanged;
@@ -120,7 +117,6 @@ class AppShell extends StatelessWidget {
       MaterialPageRoute(
         builder: (settingsContext) => SettingsPage(
           gateway: gateway,
-          config: config,
           profile: profile,
           callCaptionsEnabled: callCaptionsEnabled,
           onCallCaptionsChanged: onCallCaptionsChanged,

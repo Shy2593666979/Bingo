@@ -425,13 +425,13 @@ class _RecommendationRows extends StatelessWidget {
                 color: const Color(0xFFDDF4EB),
                 borderRadius: BorderRadius.circular(999),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.auto_awesome_rounded,
                       size: 14, color: BingoPalette.blue),
-                  SizedBox(width: 5),
-                  Text(
+                  const SizedBox(width: 5),
+                  const Text(
                     '为您推荐',
                     style: TextStyle(
                       color: BingoPalette.ink,
@@ -501,7 +501,7 @@ class _EmptyChat extends StatelessWidget {
                 color: Colors.white.withValues(alpha: 0.8),
                 borderRadius: BorderRadius.circular(32),
                 boxShadow: const [
-                  BoxShadow(color: Color(0x203478F6), blurRadius: 32),
+                  BoxShadow(color: Color(0x2020A077), blurRadius: 32),
                 ],
               ),
               child: Image.asset('assets/images/bingo_logo.png'),
