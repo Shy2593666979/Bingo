@@ -1,4 +1,5 @@
 import json
+import re
 from html.parser import HTMLParser
 from typing import Any
 
@@ -18,6 +19,22 @@ _HEADERS = {
 
 # DuckDuckGo Lite 搜索效果通常优于必应，但仅适用于能够访问外网的环境。
 _DUCKDUCKGO_SEARCH_URL = "https://lite.duckduckgo.com/lite/"
+_NEWS_QUERY_SUFFIX = re.compile(
+    r"(?:有(?:什么|啥))?的?(?:最新)?(?:新闻|资讯)[？?。.!！]*$"
+)
+_QUERY_PREFIXES = (
+    "麻烦帮我",
+    "帮我",
+    "请帮我",
+    "请",
+    "查一下",
+    "查查",
+    "搜索",
+    "搜一下",
+    "看一下",
+    "看看",
+)
+_TIME_PREFIXES = ("今天", "今日", "最近", "当前")
 
 
 class _DuckDuckGoResultParser(HTMLParser):
@@ -152,10 +169,11 @@ class WebSearchTool(BaseTool):
         if not query:
             raise ValueError("query 不能为空")
         max_results = max(1, min(int(arguments.get("max_results", 5)), 8))
+        search_query = _normalize_search_query(query)
         async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
             response = await client.get(
                 _SEARCH_URL,
-                params={"q": query, "setlang": "zh-hans"},
+                params={"q": search_query, "setlang": "zh-hans"},
                 headers=_HEADERS,
             )
             # 保留旧的 DuckDuckGo 请求，供能够访问外网的部署环境切换使用。
@@ -173,3 +191,20 @@ class WebSearchTool(BaseTool):
                 ensure_ascii=False,
             )
         )
+
+
+def _normalize_search_query(query: str) -> str:
+    match = _NEWS_QUERY_SUFFIX.search(query)
+    if match is None:
+        return query
+
+    topic = query[: match.start()].strip()
+    changed = True
+    while changed:
+        changed = False
+        for prefix in (*_QUERY_PREFIXES, *_TIME_PREFIXES):
+            if topic.startswith(prefix):
+                topic = topic[len(prefix) :].strip()
+                changed = True
+                break
+    return f"{topic} 最新新闻" if topic else query

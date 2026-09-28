@@ -70,3 +70,18 @@ def test_bing_parser_keeps_nested_title_text() -> None:
 
     assert len(parser.results) == 2
     assert parser.results[1]["title"] == "人工智能新闻"
+
+
+@pytest.mark.parametrize(
+    ("query", "expected"),
+    [
+        ("北京的新闻", "北京 最新新闻"),
+        ("帮我看一下今天北京的新闻", "北京 最新新闻"),
+        ("中国有什么新闻", "中国 最新新闻"),
+        ("AI 最新新闻", "AI 最新新闻"),
+        ("新闻联播", "新闻联播"),
+        ("FastAPI 官方文档", "FastAPI 官方文档"),
+    ],
+)
+def test_normalize_news_queries(query: str, expected: str) -> None:
+    assert web_search._normalize_search_query(query) == expected
