@@ -6,18 +6,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _HealthyServer implements ServerGateway {
+  var healthChecks = 0;
+
   @override
-  Future<bool> checkHealth() async => true;
+  Future<bool> checkHealth() async {
+    healthChecks++;
+    return true;
+  }
 }
 
 void main() {
   testWidgets('settings keeps account details and separates logout',
       (tester) async {
     var logoutCount = 0;
+    final gateway = _HealthyServer();
     await tester.pumpWidget(MaterialApp(
       theme: buildBingoTheme(),
       home: SettingsPage(
-        gateway: _HealthyServer(),
+        gateway: gateway,
         profile: const UserProfile(
           id: 'user-1',
           phone: '13800138000',
@@ -33,8 +39,12 @@ void main() {
         onLogout: () => logoutCount++,
       ),
     ));
+    await tester.pumpAndSettle();
 
     expect(find.text('昵称：小明'), findsOneWidget);
+    expect(gateway.healthChecks, 1);
+    expect(find.text('服务在线'), findsOneWidget);
+    expect(find.byIcon(Icons.refresh_rounded), findsNothing);
     expect(find.text('手机号：13800138000'), findsOneWidget);
     expect(find.text('服务端地址'), findsNothing);
     expect(find.text('本地网络传输'), findsNothing);

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
@@ -35,6 +37,7 @@ class _SettingsPageState extends State<SettingsPage> {
   void initState() {
     super.initState();
     _callCaptionsEnabled = widget.callCaptionsEnabled;
+    unawaited(_check());
   }
 
   Future<void> _setCallCaptionsEnabled(bool enabled) async {
@@ -191,15 +194,14 @@ class _SettingsPageState extends State<SettingsPage> {
                   subtitle: switch (_online) {
                     true => '服务在线',
                     false => '服务不可用',
-                    null => '点击检测当前连接',
+                    null => _checking ? '正在检查连接…' : '暂未检查连接',
                   },
                   trailing: _checking
                       ? const SizedBox.square(
                           dimension: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.refresh_rounded),
-                  onTap: _checking ? null : _check,
+                      : null,
                 ),
                 const _SettingsDivider(),
                 const _SettingsRow(

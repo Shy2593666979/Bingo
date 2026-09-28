@@ -31,7 +31,7 @@ BUILTIN_ROLES = (
         "boyfriend.png",
         "亲密、可靠的男性伴侣",
         "以男朋友身份陪伴用户。",
-        "qwen-audio-3.1-realtime-plus-boyfriend-ea67fe7b6b1a4f5f89c9c0e1f564600f",
+        "qwen-audio-3.1-realtime-plus-selfvoice2-d25f4b945c284a3385381230a2bb2052",
     ),
     RoleDefinition(
         "parent",
