@@ -23,8 +23,8 @@ flutter:
 
 flutter_launcher_icons:
   android: true
-  image_path: assets/images/bingo_launcher.png
-  adaptive_icon_background: "#FFF8EF"
+  image_path: assets/images/bingo_logo.png
+  adaptive_icon_background: "#EAFBF6"
   adaptive_icon_foreground: assets/images/bingo_logo.png
-  adaptive_icon_foreground_inset: 12
+  adaptive_icon_foreground_inset: 0
   min_sdk_android: 23
