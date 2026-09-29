@@ -165,6 +165,41 @@ void main() {
     expect(called, isTrue);
   });
 
+  testWidgets('dismisses the more panel when tapping outside', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              const Expanded(child: Text('聊天区域')),
+              MessageInput(
+                enabled: true,
+                speechGateway: _FakeSpeechGateway(),
+                onSend: (_) {},
+                onCall: () {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('更多功能'));
+    await tester.pumpAndSettle();
+    expect(find.text('相册'), findsOneWidget);
+
+    await tester.tap(find.text('聊天区域'));
+    await tester.pumpAndSettle();
+    expect(find.text('相册'), findsNothing);
+
+    await tester.tap(find.byTooltip('更多功能'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('键盘输入'));
+    await tester.pumpAndSettle();
+    expect(find.text('相册'), findsNothing);
+    expect(find.byType(TextField), findsOneWidget);
+  });
+
   testWidgets('switches the trailing action between more and send',
       (tester) async {
     String? sent;

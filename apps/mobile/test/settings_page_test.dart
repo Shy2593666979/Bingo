@@ -35,7 +35,7 @@ void main() {
         ),
         callCaptionsEnabled: false,
         onCallCaptionsChanged: (_) async {},
-        onEditProfile: () {},
+        onEditProfile: (_) async => null,
         onLogout: () => logoutCount++,
       ),
     ));

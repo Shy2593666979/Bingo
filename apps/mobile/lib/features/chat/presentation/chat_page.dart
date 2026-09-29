@@ -298,22 +298,12 @@ class _ChatHeader extends StatelessWidget {
           ),
           const SizedBox(width: 14),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  assistantName,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-                const SizedBox(height: 2),
-                const Text(
-                  '个人助理',
-                  style: TextStyle(fontSize: 14, color: Color(0xFF707B78)),
-                ),
-              ],
+            child: Text(
+              assistantName,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
             ),
           ),
           _HeaderButton(

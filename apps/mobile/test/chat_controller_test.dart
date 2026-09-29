@@ -667,6 +667,11 @@ void main() {
     ));
 
     expect(find.text('为您推荐'), findsOneWidget);
+    expect(find.text('个人助理'), findsNothing);
+    expect(
+      tester.getCenter(find.text('Bingo')).dy,
+      closeTo(tester.getCenter(find.byIcon(Icons.settings_rounded)).dy, 0.5),
+    );
     expect(find.text('有趣话题一'), findsOneWidget);
     expect(find.byIcon(Icons.north_west_rounded), findsNothing);
     expect(

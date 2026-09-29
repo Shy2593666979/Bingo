@@ -68,6 +68,8 @@ class MainActivity : FlutterActivity() {
     private var callPlaybackThread: Thread? = null
     private val callPlaybackQueue = LinkedBlockingQueue<ByteArray>(80)
     @Volatile private var callPlaybackRunning = false
+    private var previousCallAudioMode: Int? = null
+    private var previousCallSpeakerphoneOn: Boolean? = null
     private var statusBarOverlay: View? = null
     private var incomingCallPlayer: MediaPlayer? = null
     private var incomingCallRingtone: Ringtone? = null
@@ -727,6 +729,7 @@ class MainActivity : FlutterActivity() {
         )
         if (minBuffer <= 0) {
             callAudio = false
+            restoreCallAudioRouting()
             result.error("audio_unavailable", "无法初始化通话扬声器", null)
             return
         }
@@ -750,6 +753,7 @@ class MainActivity : FlutterActivity() {
         if (track.state != AudioTrack.STATE_INITIALIZED) {
             track.release()
             callAudio = false
+            restoreCallAudioRouting()
             result.error("audio_unavailable", "通话扬声器初始化失败", null)
             return
         }
@@ -789,6 +793,11 @@ class MainActivity : FlutterActivity() {
 
     private fun setCallSpeaker(enabled: Boolean) {
         val manager = getSystemService(AudioManager::class.java)
+        if (previousCallAudioMode == null) {
+            previousCallAudioMode = manager.mode
+            @Suppress("DEPRECATION")
+            run { previousCallSpeakerphoneOn = manager.isSpeakerphoneOn }
+        }
         manager.mode = AudioManager.MODE_IN_COMMUNICATION
         @Suppress("DEPRECATION")
         run { manager.isSpeakerphoneOn = enabled }
@@ -808,23 +817,25 @@ class MainActivity : FlutterActivity() {
             track.release()
         }
         callAudioTrack = null
+        restoreCallAudioRouting()
+    }
+
+    private fun restoreCallAudioRouting() {
         val manager = getSystemService(AudioManager::class.java)
-        @Suppress("DEPRECATION")
-        run { manager.isSpeakerphoneOn = false }
-        manager.mode = AudioManager.MODE_NORMAL
+        previousCallSpeakerphoneOn?.let { enabled ->
+            @Suppress("DEPRECATION")
+            run { manager.isSpeakerphoneOn = enabled }
+        }
+        previousCallAudioMode?.let { manager.mode = it }
+        previousCallSpeakerphoneOn = null
+        previousCallAudioMode = null
     }
 
     private fun startIncomingCallRinging() {
         stopIncomingCallRinging()
         incomingCallRingingRequested = true
-        val manager = getSystemService(AudioManager::class.java)
-        manager.mode = AudioManager.MODE_NORMAL
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            manager.clearCommunicationDevice()
-        }
-        volumeControlStream = AudioManager.STREAM_RING
         val audioAttributes = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+            .setUsage(AudioAttributes.USAGE_ALARM)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
             .build()
         incomingCallAudioAttributes = audioAttributes
@@ -895,7 +906,6 @@ class MainActivity : FlutterActivity() {
         incomingCallVibrator = null
         incomingCallAudioAttributes = null
         abandonIncomingCallAudioFocus()
-        volumeControlStream = AudioManager.USE_DEFAULT_STREAM_TYPE
     }
 
     private fun requestIncomingCallAudioFocus(attributes: AudioAttributes): Int {
@@ -912,7 +922,7 @@ class MainActivity : FlutterActivity() {
             @Suppress("DEPRECATION")
             manager.requestAudioFocus(
                 incomingCallAudioFocusListener,
-                AudioManager.STREAM_RING,
+                AudioManager.STREAM_ALARM,
                 AudioManager.AUDIOFOCUS_GAIN_TRANSIENT,
             )
         }

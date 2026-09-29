@@ -110,131 +110,140 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   @override
   Widget build(BuildContext context) {
     final options = _options;
-    return Scaffold(
-      backgroundColor: BingoPalette.ice,
-      body: Stack(
-        children: [
-          const Positioned.fill(
-              child: DecoratedBox(
-                  decoration:
-                      BoxDecoration(gradient: BingoPalette.softGradient))),
-          const Positioned(top: 70, right: -90, child: _SoftCircle(size: 210)),
-          const Positioned(top: 180, left: -105, child: _SoftCircle(size: 170)),
-          SafeArea(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(28, 4, 28, 32),
-              children: [
-                _buildHeader(context),
-                const SizedBox(height: 8),
-                _buildIntro(),
-                const SizedBox(height: 22),
-                Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      _ProfileTextCard(
-                        label: '你的用户名',
-                        icon: const Icon(Icons.person_outline_rounded,
-                            color: BingoPalette.blue, size: 25),
-                        controller: _usernameController,
-                        validator: _requiredName,
-                        textInputAction: TextInputAction.next,
-                      ),
-                      const SizedBox(height: 12),
-                      _ProfileTextCard(
-                        label: '助手名称',
-                        icon: const _AssistantNameIcon(),
-                        controller: _assistantNameController,
-                        validator: _requiredName,
-                        textInputAction: TextInputAction.done,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                if (options == null && _error == null)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 28),
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                else if (options != null) ...[
-                  _ProfileDropdown(
-                    key: ValueKey('role-$_role'),
-                    label: '助手角色',
-                    icon: const _RoleIcon(),
-                    iconBackgroundColor: const Color(0xFFECFBF6),
-                    value: _role,
-                    options: options.roles,
-                    onSelected: (value) => setState(() => _role = value),
+    return PopScope(
+      canPop: widget.onCancel == null,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) widget.onCancel?.call();
+      },
+      child: Scaffold(
+        backgroundColor: BingoPalette.ice,
+        body: Stack(
+          children: [
+            const Positioned.fill(
+                child: DecoratedBox(
+                    decoration:
+                        BoxDecoration(gradient: BingoPalette.softGradient))),
+            const Positioned(
+                top: 70, right: -90, child: _SoftCircle(size: 210)),
+            const Positioned(
+                top: 180, left: -105, child: _SoftCircle(size: 170)),
+            SafeArea(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(28, 4, 28, 32),
+                children: [
+                  _buildHeader(context),
+                  const SizedBox(height: 8),
+                  _buildIntro(),
+                  const SizedBox(height: 22),
+                  Form(
+                    key: _formKey,
+                    child: Column(
+                      children: [
+                        _ProfileTextCard(
+                          label: '你的用户名',
+                          icon: const Icon(Icons.person_outline_rounded,
+                              color: BingoPalette.blue, size: 25),
+                          controller: _usernameController,
+                          validator: _requiredName,
+                          textInputAction: TextInputAction.next,
+                        ),
+                        const SizedBox(height: 12),
+                        _ProfileTextCard(
+                          label: '助手名称',
+                          icon: const _AssistantNameIcon(),
+                          controller: _assistantNameController,
+                          validator: _requiredName,
+                          textInputAction: TextInputAction.done,
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 12),
-                  _ProfileDropdown(
-                    key: ValueKey('personality-$_personality'),
-                    label: '助手性格',
-                    icon: const _PersonalityIcon(),
-                    value: _personality,
-                    options: options.personalities,
-                    onSelected: (value) => setState(() => _personality = value),
-                  ),
-                ],
-                if (_error != null) ...[
-                  const SizedBox(height: 14),
-                  Text(_error!,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          color: Theme.of(context).colorScheme.error)),
-                  if (options == null)
-                    TextButton(
-                        onPressed: _loadOptions, child: const Text('重试')),
-                ],
-                const SizedBox(height: 22),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: BingoPalette.brandGradient,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: BingoPalette.blue.withValues(alpha: 0.16),
-                        blurRadius: 16,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: FilledButton(
-                    onPressed: _saving || options == null ? null : _save,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      disabledBackgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      minimumSize: const Size.fromHeight(56),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
+                  if (options == null && _error == null)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 28),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (options != null) ...[
+                    _ProfileDropdown(
+                      key: ValueKey('role-$_role'),
+                      label: '助手角色',
+                      icon: const _RoleIcon(),
+                      iconBackgroundColor: const Color(0xFFECFBF6),
+                      value: _role,
+                      options: options.roles,
+                      onSelected: (value) => setState(() => _role = value),
                     ),
-                    child: _saving
-                        ? const SizedBox.square(
-                            dimension: 22,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2.5, color: Colors.white),
-                          )
-                        : const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text('保存并继续',
-                                  style: TextStyle(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w700)),
-                              SizedBox(width: 8),
-                              Icon(Icons.arrow_forward_rounded, size: 23),
-                            ],
-                          ),
+                    const SizedBox(height: 12),
+                    _ProfileDropdown(
+                      key: ValueKey('personality-$_personality'),
+                      label: '助手性格',
+                      icon: const _PersonalityIcon(),
+                      value: _personality,
+                      options: options.personalities,
+                      onSelected: (value) =>
+                          setState(() => _personality = value),
+                    ),
+                  ],
+                  if (_error != null) ...[
+                    const SizedBox(height: 14),
+                    Text(_error!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.error)),
+                    if (options == null)
+                      TextButton(
+                          onPressed: _loadOptions, child: const Text('重试')),
+                  ],
+                  const SizedBox(height: 22),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: BingoPalette.brandGradient,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: BingoPalette.blue.withValues(alpha: 0.16),
+                          blurRadius: 16,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: FilledButton(
+                      onPressed: _saving || options == null ? null : _save,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        disabledBackgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        minimumSize: const Size.fromHeight(56),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      child: _saving
+                          ? const SizedBox.square(
+                              dimension: 22,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2.5, color: Colors.white),
+                            )
+                          : const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('保存并继续',
+                                    style: TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w700)),
+                                SizedBox(width: 8),
+                                Icon(Icons.arrow_forward_rounded, size: 23),
+                              ],
+                            ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -408,9 +417,9 @@ class _RoleIcon extends StatelessWidget {
               ),
             ),
             const Positioned(
-              right: 0,
-              bottom: 1,
-              child: Icon(Icons.favorite_rounded, color: _iconColor, size: 15),
+              left: 21,
+              top: 13,
+              child: Icon(Icons.favorite_rounded, color: _iconColor, size: 13),
             ),
           ],
         ),

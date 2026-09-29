@@ -48,6 +48,32 @@ class _ProfileGateway implements AuthGateway {
 }
 
 void main() {
+  testWidgets('system back returns from profile editing', (tester) async {
+    var cancelCount = 0;
+    await tester.pumpWidget(MaterialApp(
+      home: ProfileSetupPage(
+        gateway: _ProfileGateway(),
+        profile: const UserProfile(
+          id: 'user-1',
+          phone: '13800138000',
+          username: '小明',
+          assistantName: 'Bingo',
+          personality: '温柔体贴',
+          role: '女朋友',
+          onboardingComplete: true,
+        ),
+        onSaved: (_) {},
+        onCancel: () => cancelCount += 1,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(cancelCount, 1);
+  });
+
   testWidgets('profile setup shows compact choices and saves selections',
       (tester) async {
     final gateway = _ProfileGateway();

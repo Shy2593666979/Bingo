@@ -21,7 +21,7 @@ class SettingsPage extends StatefulWidget {
   final UserProfile profile;
   final bool callCaptionsEnabled;
   final Future<void> Function(bool enabled) onCallCaptionsChanged;
-  final VoidCallback onEditProfile;
+  final Future<UserProfile?> Function(UserProfile profile) onEditProfile;
   final VoidCallback onLogout;
 
   @override
@@ -32,10 +32,12 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _checking = false;
   bool? _online;
   late bool _callCaptionsEnabled;
+  late UserProfile _profile;
 
   @override
   void initState() {
     super.initState();
+    _profile = widget.profile;
     _callCaptionsEnabled = widget.callCaptionsEnabled;
     unawaited(_check());
   }
@@ -57,6 +59,11 @@ class _SettingsPageState extends State<SettingsPage> {
       _checking = false;
       _online = online;
     });
+  }
+
+  Future<void> _editProfile() async {
+    final updated = await widget.onEditProfile(_profile);
+    if (updated != null && mounted) setState(() => _profile = updated);
   }
 
   Future<void> _confirmLogout() async {
@@ -117,14 +124,14 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               child: Row(
                 children: [
-                  AssistantAvatar(role: widget.profile.role, size: 54),
+                  AssistantAvatar(role: _profile.role, size: 54),
                   const SizedBox(width: 13),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          widget.profile.assistantName ?? 'Bingo',
+                          _profile.assistantName ?? 'Bingo',
                           style: const TextStyle(
                               color: BingoPalette.ink,
                               fontSize: 19,
@@ -132,7 +139,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          '${widget.profile.role ?? '未设置'} · ${widget.profile.personality ?? '未设置'}',
+                          '${_profile.role ?? '未设置'} · ${_profile.personality ?? '未设置'}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -142,7 +149,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   ),
                   IconButton(
-                    onPressed: widget.onEditProfile,
+                    onPressed: _editProfile,
                     tooltip: '编辑助手',
                     icon: const Icon(Icons.edit_outlined,
                         color: BingoPalette.blue, size: 22),
@@ -156,8 +163,8 @@ class _SettingsPageState extends State<SettingsPage> {
               children: [
                 _SettingsRow(
                   icon: Icons.person_outline_rounded,
-                  title: '昵称：${widget.profile.username ?? '未设置'}',
-                  subtitle: '手机号：${widget.profile.phone}',
+                  title: '昵称：${_profile.username ?? '未设置'}',
+                  subtitle: '手机号：${_profile.phone}',
                 ),
                 const _SettingsDivider(),
                 _SettingsRow(

@@ -37,6 +37,7 @@ class _MessageInputState extends State<MessageInput> {
 
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
+  final _moreMenuTapRegionGroup = Object();
   BytesBuilder _audio = BytesBuilder(copy: false);
   StreamSubscription<dynamic>? _audioSubscription;
   RealtimeTranscriptionSession? _realtimeSession;
@@ -96,12 +97,20 @@ class _MessageInputState extends State<MessageInput> {
 
   void _toggleVoiceMode() {
     if (_recording || _transcribing) return;
-    setState(() => _voiceMode = !_voiceMode);
+    setState(() {
+      _voiceMode = !_voiceMode;
+      _showMore = false;
+    });
     if (_voiceMode) {
       _focusNode.unfocus();
     } else {
       _focusNode.requestFocus();
     }
+  }
+
+  void _hideMore() {
+    if (!_showMore || !mounted) return;
+    setState(() => _showMore = false);
   }
 
   void _handlePointerDown(PointerDownEvent event) {
@@ -536,41 +545,44 @@ class _MessageInputState extends State<MessageInput> {
                           ),
                   ),
                   const SizedBox(width: 7),
-                  Container(
-                    width: 43,
-                    height: 43,
-                    decoration: BoxDecoration(
-                      color: widget.enabled
-                          ? const Color(0xFFEEF6F3)
-                          : colors.surfaceContainer,
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      onPressed: !widget.enabled
-                          ? null
-                          : showSend
-                              ? _submit
-                              : () {
-                                  _focusNode.unfocus();
-                                  setState(() => _showMore = !_showMore);
-                                },
-                      tooltip: showSend ? '发送消息' : '更多功能',
-                      color: BingoPalette.blue,
-                      icon: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 160),
-                        transitionBuilder: (child, animation) =>
-                            ScaleTransition(scale: animation, child: child),
-                        child: showSend
-                            ? const Icon(
-                                Icons.arrow_upward_rounded,
-                                key: ValueKey('send'),
-                              )
-                            : AnimatedRotation(
-                                key: const ValueKey('more'),
-                                turns: _showMore ? 0.125 : 0,
-                                duration: const Duration(milliseconds: 180),
-                                child: const Icon(Icons.add_rounded),
-                              ),
+                  TapRegion(
+                    groupId: _moreMenuTapRegionGroup,
+                    child: Container(
+                      width: 43,
+                      height: 43,
+                      decoration: BoxDecoration(
+                        color: widget.enabled
+                            ? const Color(0xFFEEF6F3)
+                            : colors.surfaceContainer,
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        onPressed: !widget.enabled
+                            ? null
+                            : showSend
+                                ? _submit
+                                : () {
+                                    _focusNode.unfocus();
+                                    setState(() => _showMore = !_showMore);
+                                  },
+                        tooltip: showSend ? '发送消息' : '更多功能',
+                        color: BingoPalette.blue,
+                        icon: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 160),
+                          transitionBuilder: (child, animation) =>
+                              ScaleTransition(scale: animation, child: child),
+                          child: showSend
+                              ? const Icon(
+                                  Icons.arrow_upward_rounded,
+                                  key: ValueKey('send'),
+                                )
+                              : AnimatedRotation(
+                                  key: const ValueKey('more'),
+                                  turns: _showMore ? 0.125 : 0,
+                                  duration: const Duration(milliseconds: 180),
+                                  child: const Icon(Icons.add_rounded),
+                                ),
+                        ),
                       ),
                     ),
                   ),
@@ -581,19 +593,23 @@ class _MessageInputState extends State<MessageInput> {
               duration: const Duration(milliseconds: 180),
               alignment: Alignment.topCenter,
               child: _showMore
-                  ? _MoreActionsPanel(
-                      onGallery: () {
-                        setState(() => _showMore = false);
-                        widget.onGallery?.call();
-                      },
-                      onCamera: () {
-                        setState(() => _showMore = false);
-                        widget.onCamera?.call();
-                      },
-                      onCall: () {
-                        setState(() => _showMore = false);
-                        widget.onCall();
-                      },
+                  ? TapRegion(
+                      groupId: _moreMenuTapRegionGroup,
+                      onTapOutside: (_) => _hideMore(),
+                      child: _MoreActionsPanel(
+                        onGallery: () {
+                          _hideMore();
+                          widget.onGallery?.call();
+                        },
+                        onCamera: () {
+                          _hideMore();
+                          widget.onCamera?.call();
+                        },
+                        onCall: () {
+                          _hideMore();
+                          widget.onCall();
+                        },
+                      ),
                     )
                   : const SizedBox.shrink(),
             ),

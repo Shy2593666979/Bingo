@@ -35,7 +35,6 @@ class _BingoAppState extends State<BingoApp> with WidgetsBindingObserver {
   late final CallPreferencesStore _callPreferencesStore;
   bool _showSplash = true;
   bool _sessionResolved = false;
-  bool _editingProfile = false;
   bool _callCaptionsEnabled = false;
   UserProfile? _profile;
   Timer? _engagementTimer;
@@ -137,7 +136,6 @@ class _BingoAppState extends State<BingoApp> with WidgetsBindingObserver {
     if (mounted) {
       setState(() {
         _profile = null;
-        _editingProfile = false;
       });
     }
   }
@@ -146,7 +144,6 @@ class _BingoAppState extends State<BingoApp> with WidgetsBindingObserver {
     _controller.setAssistantRole(updated.role);
     setState(() {
       _profile = updated;
-      _editingProfile = false;
     });
     await _pushRegistration.activate();
   }
@@ -197,14 +194,11 @@ class _BingoAppState extends State<BingoApp> with WidgetsBindingObserver {
         onAuthenticated: _onAuthenticated,
       );
     }
-    if (!profile.onboardingComplete || _editingProfile) {
+    if (!profile.onboardingComplete) {
       return ProfileSetupPage(
         key: const ValueKey('profile-setup'),
         gateway: _gateway,
         profile: profile,
-        onCancel: _editingProfile
-            ? () => setState(() => _editingProfile = false)
-            : null,
         onSaved: _onProfileSaved,
       );
     }
@@ -215,7 +209,7 @@ class _BingoAppState extends State<BingoApp> with WidgetsBindingObserver {
       profile: profile,
       callCaptionsEnabled: _callCaptionsEnabled,
       onCallCaptionsChanged: _setCallCaptionsEnabled,
-      onEditProfile: () => setState(() => _editingProfile = true),
+      onProfileSaved: _onProfileSaved,
       onLogout: _logout,
     );
   }

@@ -1,5 +1,6 @@
 import 'package:bingo/core/widgets/center_toast.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
+import 'package:bingo/features/auth/presentation/profile_setup_page.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/chat/presentation/chat_controller.dart';
 import 'package:bingo/features/chat/presentation/chat_page.dart';
@@ -16,7 +17,7 @@ class AppShell extends StatelessWidget {
     required this.profile,
     required this.callCaptionsEnabled,
     required this.onCallCaptionsChanged,
-    required this.onEditProfile,
+    required this.onProfileSaved,
     required this.onLogout,
     super.key,
   });
@@ -26,7 +27,7 @@ class AppShell extends StatelessWidget {
   final UserProfile profile;
   final bool callCaptionsEnabled;
   final Future<void> Function(bool enabled) onCallCaptionsChanged;
-  final VoidCallback onEditProfile;
+  final ValueChanged<UserProfile> onProfileSaved;
   final VoidCallback onLogout;
   static const _deviceChannel = MethodChannel('bingo/device_tools');
 
@@ -120,10 +121,8 @@ class AppShell extends StatelessWidget {
           profile: profile,
           callCaptionsEnabled: callCaptionsEnabled,
           onCallCaptionsChanged: onCallCaptionsChanged,
-          onEditProfile: () {
-            Navigator.of(settingsContext).pop();
-            onEditProfile();
-          },
+          onEditProfile: (currentProfile) =>
+              _openProfileSetup(settingsContext, currentProfile),
           onLogout: () {
             Navigator.of(settingsContext).pop();
             onLogout();
@@ -132,5 +131,24 @@ class AppShell extends StatelessWidget {
       ),
     );
     await chatController.refreshEngagement();
+  }
+
+  Future<UserProfile?> _openProfileSetup(
+    BuildContext context,
+    UserProfile currentProfile,
+  ) {
+    return Navigator.of(context).push<UserProfile>(
+      MaterialPageRoute(
+        builder: (profileContext) => ProfileSetupPage(
+          gateway: gateway,
+          profile: currentProfile,
+          onCancel: () => Navigator.of(profileContext).pop(),
+          onSaved: (updated) {
+            onProfileSaved(updated);
+            Navigator.of(profileContext).pop(updated);
+          },
+        ),
+      ),
+    );
   }
 }

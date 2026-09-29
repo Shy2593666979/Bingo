@@ -379,28 +379,30 @@ class _AuthPageState extends State<AuthPage> {
         ),
       );
 
-  Widget _agreement() => Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Checkbox(
-            value: _agreed,
-            onChanged: (value) => setState(() => _agreed = value ?? false),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 9),
-              child: Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  const Text('我已阅读并同意'),
-                  _agreementLink('《用户协议》'),
-                  const Text('和'),
-                  _agreementLink('《隐私政策》'),
-                ],
+  Widget _agreement() => Center(
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 34,
+                child: Checkbox(
+                  value: _agreed,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
+                  onChanged: (value) =>
+                      setState(() => _agreed = value ?? false),
+                ),
               ),
-            ),
+              const Text('我已阅读并同意'),
+              _agreementLink('《用户协议》'),
+              const Text('和'),
+              _agreementLink('《隐私政策》'),
+            ],
           ),
-        ],
+        ),
       );
 
   Widget _agreementLink(String label) => InkWell(
@@ -411,7 +413,8 @@ class _AuthPageState extends State<AuthPage> {
             label,
             style: const TextStyle(
               color: BingoPalette.blue,
-              decoration: TextDecoration.underline,
+              fontWeight: FontWeight.w600,
+              decoration: TextDecoration.none,
             ),
           ),
         ),
