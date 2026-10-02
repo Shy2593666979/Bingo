@@ -239,6 +239,11 @@ def test_short_recordings_and_consent_are_checked_server_side(client):
         == 422
     )
     assert client.post(endpoint, json={"audio": "invalid!", "consent": True}).status_code == 422
+    response = client.post(
+        endpoint, json={"audio": base64.b64encode(bytes(32000 * 20)).decode(), "consent": True}
+    )
+    assert response.status_code == 422
+    assert "没有检测到声音" in response.json()["detail"]
 
 
 def test_clone_job_cleans_sample_and_delete_invalidates_reused_voice(client, monkeypatch):
@@ -257,7 +262,7 @@ def test_clone_job_cleans_sample_and_delete_invalidates_reused_voice(client, mon
     response = client.post(
         f"/api/v1/roles/{role['id']}/voice-clone",
         json={
-            "audio": base64.b64encode(bytes(32000 * 20)).decode(),
+            "audio": base64.b64encode(b"\xe8\x03\x18\xfc" * (8000 * 20)).decode(),
             "consent": True,
         },
     )
@@ -345,7 +350,10 @@ def test_failed_clone_retry_recovers_existing_provider_voice_without_recreating(
 
     monkeypatch.setattr(VoiceCloningService, "request", provider)
     role = create_role(client)
-    payload = {"audio": base64.b64encode(bytes(32000 * 20)).decode(), "consent": True}
+    payload = {
+        "audio": base64.b64encode(b"\xe8\x03\x18\xfc" * (8000 * 20)).decode(),
+        "consent": True,
+    }
     first = client.post(f"/api/v1/roles/{role['id']}/voice-clone", json=payload).json()
 
     async def finish_jobs():
@@ -412,7 +420,10 @@ def test_yukisbox_clone_passes_uploaded_url_and_always_cleans_it(
     role = create_role(client)
     response = client.post(
         f"/api/v1/roles/{role['id']}/voice-clone",
-        json={"audio": base64.b64encode(bytes(32000 * 20)).decode(), "consent": True},
+        json={
+            "audio": base64.b64encode(b"\xe8\x03\x18\xfc" * (8000 * 20)).decode(),
+            "consent": True,
+        },
     )
     assert response.status_code == 202
 

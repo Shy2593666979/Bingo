@@ -17,7 +17,7 @@ from bingo.roles import role_id
 from bingo.roles.traits import CATEGORIES, TRAITS
 from bingo.schemas.avatar import validate_avatar
 from bingo.schemas.chat import ConversationResponse
-from bingo.services.voice_cloning import pcm_wav
+from bingo.services.voice_cloning import pcm_has_signal, pcm_wav
 
 router = APIRouter(tags=["roles"])
 
@@ -292,6 +292,8 @@ async def clone_voice(
         raise HTTPException(422, "录音时间太短，请重新录制")
     if len(audio) > 16000 * 2 * 60 or len(audio) % 2:
         raise HTTPException(422, "请录制 15～60 秒的音频")
+    if not pcm_has_signal(audio):
+        raise HTTPException(422, "录音没有检测到声音，请检查麦克风后重新录制")
     settings = request.app.state.settings
     if not settings.realtime_call.api_key:
         raise HTTPException(503, "服务器尚未配置声音复刻")

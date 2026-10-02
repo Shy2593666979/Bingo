@@ -3,6 +3,8 @@ import base64
 import io
 import json
 import logging
+import re
+import struct
 import wave
 from collections import OrderedDict
 from datetime import timedelta
@@ -19,6 +21,21 @@ from bingo.db.time import beijing_now
 from bingo.services.realtime_call import _model_url, derive_realtime_url
 
 logger = logging.getLogger(__name__)
+
+
+class VoiceProviderError(ValueError):
+    pass
+
+
+def provider_error_message(code: str) -> str:
+    return {
+        "Audio.AudioSilentError": "未检测到足够的人声，请检查麦克风并连续朗读 20～30 秒后重试",
+        "Audio.AudioRateError": "录音采样率不受支持，请更新应用后重新录制",
+        "Audio.DecoderError": "录音文件无法解码，请重新录制",
+        "Audio.PreprocessError": "录音质量不符合要求，请在安静环境中清晰朗读后重试",
+        "BadRequest.UnsupportedFileFormat": "录音格式不受支持，请更新应用后重新录制",
+    }.get(code, "声音服务处理失败，请稍后重试")
+
 
 PREVIEW_TEXT = (
     "你好，很高兴能用这样的声音与你见面。今天过得怎么样？"
@@ -37,6 +54,16 @@ def pcm_wav(audio: bytes, sample_rate: int = 16000) -> bytes:
         recording.setframerate(sample_rate)
         recording.writeframes(audio)
     return output.getvalue()
+
+
+def pcm_has_signal(audio: bytes) -> bool:
+    lowest, highest = 32767, -32768
+    for (sample,) in struct.iter_unpack("<h", audio):
+        lowest = min(lowest, sample)
+        highest = max(highest, sample)
+        if highest - lowest >= 32:
+            return True
+    return False
 
 
 class VoiceCloningService:
@@ -119,10 +146,20 @@ class VoiceCloningService:
                 headers={"Authorization": f"Bearer {key}"},
                 json={"model": "voice-enrollment", "input": {"action": action, **values}},
             )
-            response.raise_for_status()
-            payload = response.json()
-            if payload.get("code"):
-                raise ValueError("声音服务处理失败，请重新尝试")
+            try:
+                payload = response.json()
+            except ValueError:
+                response.raise_for_status()
+                raise VoiceProviderError("声音服务返回异常，请稍后重试") from None
+            if response.is_error or payload.get("code"):
+                code = re.sub(r"[^a-zA-Z0-9_.-]", "", str(payload.get("code", "Unknown")))[:100]
+                logger.error(
+                    "Voice provider rejected action=%s status=%s code=%s",
+                    action,
+                    response.status_code,
+                    code,
+                )
+                raise VoiceProviderError(provider_error_message(code))
             return payload.get("output", {})
 
     async def upload_sample(self, job: VoiceJob) -> str:
@@ -295,7 +332,9 @@ class VoiceCloningService:
                 )
                 job.status = "failed"
                 job.error = (
-                    "录音上传服务暂时不可用，请稍后重试"
+                    str(error)
+                    if isinstance(error, VoiceProviderError)
+                    else "录音上传服务暂时不可用，请稍后重试"
                     if stage == "uploading"
                     else "音色处理失败，请稍后重试或重新录制清晰的声音"
                 )

@@ -30,6 +30,19 @@ Uint8List recordingWav(Uint8List pcm) {
   return bytes;
 }
 
+bool recordingHasSignal(Uint8List pcm) {
+  final data = ByteData.sublistView(pcm);
+  var lowest = 32767;
+  var highest = -32768;
+  for (var offset = 0; offset + 1 < pcm.length; offset += 2) {
+    final sample = data.getInt16(offset, Endian.little);
+    if (sample < lowest) lowest = sample;
+    if (sample > highest) highest = sample;
+    if (highest - lowest >= 32) return true;
+  }
+  return false;
+}
+
 class VoiceRecordPage extends StatefulWidget {
   const VoiceRecordPage({super.key});
 
@@ -127,9 +140,14 @@ class _VoiceRecordPageState extends State<VoiceRecordPage>
       if (!discard && data.length < 32000 * 15) {
         showCenterToast(context, '录音时间太短，请重新录制');
       }
+      final hasSignal = recordingHasSignal(data);
+      if (!discard && data.length >= 32000 * 15 && !hasSignal) {
+        showCenterToast(context, '录音没有检测到声音，请检查麦克风后重新录制');
+      }
       setState(() {
         _recording = false;
-        _recorded = !discard && data.length >= 32000 * 15 ? data : null;
+        _recorded =
+            !discard && data.length >= 32000 * 15 && hasSignal ? data : null;
       });
     } on PlatformException {
       if (mounted) {
