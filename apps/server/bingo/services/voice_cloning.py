@@ -29,6 +29,9 @@ class VoiceProviderError(ValueError):
 
 def provider_error_message(code: str) -> str:
     return {
+        "Audio.AudioShortError": (
+            "有效人声太短，请连续朗读完整文案 20～30 秒，回听确认声音清楚后重新提交"
+        ),
         "Audio.AudioSilentError": "未检测到足够的人声，请检查麦克风并连续朗读 20～30 秒后重试",
         "Audio.AudioRateError": "录音采样率不受支持，请更新应用后重新录制",
         "Audio.DecoderError": "录音文件无法解码，请重新录制",

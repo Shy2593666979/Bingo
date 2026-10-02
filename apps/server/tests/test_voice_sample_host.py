@@ -9,23 +9,30 @@ from bingo.services.voice_cloning import VoiceCloningService, VoiceProviderError
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "code, message",
+    [
+        ("Audio.AudioSilentError", "未检测到足够的人声"),
+        ("Audio.AudioShortError", "有效人声太短"),
+    ],
+)
 async def test_provider_silence_error_is_specific_and_does_not_log_private_data(
-    monkeypatch, caplog
+    monkeypatch, caplog, code, message
 ):
     mock_http(
         monkeypatch,
         lambda request: httpx.Response(
             400,
             json={
-                "code": "Audio.AudioSilentError",
+                "code": code,
                 "message": "silent audio https://private.example/token",
             },
         ),
     )
     service = VoiceCloningService(None, Settings(realtime_call={"api_key": "test-key"}))
-    with pytest.raises(VoiceProviderError, match="未检测到足够的人声"):
+    with pytest.raises(VoiceProviderError, match=message):
         await service.request("create_voice")
-    assert "Audio.AudioSilentError" in caplog.text
+    assert code in caplog.text
     assert "private.example" not in caplog.text
     assert "test-key" not in caplog.text
 
