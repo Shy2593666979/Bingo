@@ -25,7 +25,10 @@ async def test_preview_reuses_success_and_coalesces_requests(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_preview_failure_can_retry_and_expired_cache_regenerates(monkeypatch):
+@pytest.mark.parametrize("started_at", [0.0, 30.0, 86400.0])
+async def test_preview_failure_can_retry_and_expired_cache_regenerates(monkeypatch, started_at):
+    now = started_at
+    monkeypatch.setattr("bingo.services.voice_cloning.monotonic", lambda: now)
     service = VoiceCloningService(None, Settings())
     calls = []
 
@@ -39,7 +42,11 @@ async def test_preview_failure_can_retry_and_expired_cache_regenerates(monkeypat
     with pytest.raises(ValueError):
         await service.preview("voice")
     assert await service.preview("voice") == b"wav"
-    service.preview_cache["voice"] = (0, b"old")
+    assert len(calls) == 2
+    now = started_at + 599
+    assert await service.preview("voice") == b"wav"
+    assert len(calls) == 2
+    now = started_at + 600
     assert await service.preview("voice") == b"wav"
     assert len(calls) == 3
 
