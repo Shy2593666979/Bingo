@@ -13,6 +13,7 @@ from sqlalchemy import (
 from sqlmodel import Field, SQLModel
 
 from bingo.db.time import BeijingDateTime, beijing_now
+from bingo.roles.catalog import BUILTIN_NICKNAMES
 
 
 def new_id() -> str:
@@ -31,6 +32,27 @@ class Role(SQLModel, table=True):
     voice: str = Field(default="", max_length=255)
     enabled: bool = Field(default=True, sa_column=Column(Boolean, nullable=False, index=True))
     sort_order: int = Field(default=0, sa_column=Column(Integer, nullable=False))
+    owner_id: str | None = Field(default=None, index=True, max_length=36)
+    display_name: str | None = Field(default=None, max_length=30)
+    avatar_data: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
+    voice_source_id: str | None = Field(default=None, max_length=36, index=True)
+    owned_voice: str = Field(default="", max_length=255)
+    deleted: bool = Field(default=False)
+    categories_json: str = Field(default='["陪伴", "朋友"]', sa_column=Column(Text, nullable=False))
+    traits_json: str = Field(
+        default='["善于倾听", "陪伴聊天"]', sa_column=Column(Text, nullable=False)
+    )
+
+    @property
+    def visible_name(self) -> str:
+        return self.display_name or self.name
+
+    @property
+    def nickname(self) -> str:
+        if self.owner_id is None:
+            return BUILTIN_NICKNAMES.get(self.code, self.visible_name)
+        return self.visible_name
+
     created_at: datetime = Field(
         default_factory=beijing_now,
         sa_column=Column(BeijingDateTime(), nullable=False),
@@ -41,6 +63,22 @@ class Role(SQLModel, table=True):
     )
 
 
+class VoiceJob(SQLModel, table=True):
+    __tablename__ = "voice_jobs"
+
+    id: str = Field(default_factory=new_id, primary_key=True, max_length=36)
+    user_id: str = Field(index=True, max_length=36)
+    role_id: str = Field(index=True, max_length=36)
+    kind: str = Field(default="clone", max_length=20)
+    status: str = Field(default="pending", max_length=20, index=True)
+    voice: str = Field(default="", max_length=255)
+    error: str | None = Field(default=None, max_length=255)
+    sample: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
+    sample_token: str | None = Field(default=None, max_length=100, index=True)
+    public_base_url: str = Field(default="", max_length=255)
+    created_at: datetime = Field(default_factory=beijing_now, sa_column=Column(BeijingDateTime()))
+
+
 class User(SQLModel, table=True):
     __tablename__ = "users"
 
@@ -48,6 +86,10 @@ class User(SQLModel, table=True):
     phone: str = Field(max_length=20, unique=True, index=True)
     password_hash: str = Field(max_length=255)
     username: str | None = Field(default=None, max_length=30)
+    birthday: str | None = Field(default=None, max_length=10)
+    gender: str | None = Field(default=None, max_length=10)
+    user_avatar_data: str | None = Field(default=None, sa_column=Column(Text))
+    recovery_hash: str | None = Field(default=None, max_length=64)
     assistant_name: str | None = Field(default=None, max_length=30)
     personality: str | None = Field(default=None, max_length=30)
     role_id: str | None = Field(
@@ -117,6 +159,10 @@ class Conversation(SQLModel, table=True):
         ),
     )
     title: str = Field(default="New conversation", max_length=200)
+    role_id: str | None = Field(default=None, foreign_key="roles.id", index=True)
+    last_read_at: datetime | None = Field(
+        default=None, sa_column=Column(BeijingDateTime(), nullable=True)
+    )
     created_at: datetime = Field(
         default_factory=beijing_now,
         sa_column=Column(BeijingDateTime(), nullable=False),

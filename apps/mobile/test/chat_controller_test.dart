@@ -668,10 +668,7 @@ void main() {
 
     expect(find.text('为您推荐'), findsOneWidget);
     expect(find.text('个人助理'), findsNothing);
-    expect(
-      tester.getCenter(find.text('Bingo')).dy,
-      closeTo(tester.getCenter(find.byIcon(Icons.settings_rounded)).dy, 0.5),
-    );
+    expect(find.byIcon(Icons.settings_rounded), findsNothing);
     expect(find.text('有趣话题一'), findsOneWidget);
     expect(find.byIcon(Icons.north_west_rounded), findsNothing);
     expect(
@@ -681,5 +678,33 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets(
+      'empty chat uses selected avatar and new suggestions without settings',
+      (tester) async {
+    final controller = ChatController(gateway: FakeChatGateway());
+    await tester.pumpWidget(MaterialApp(
+        home: ChatPage(
+            controller: controller,
+            assistantName: '暖暖',
+            assistantRole: '男朋友',
+            speechGateway: FakeSpeechGateway(),
+            onStartCall: () {},
+            onIncomingCall: (_) async {},
+            onOpenSettings: () {})));
+    await tester.pumpAndSettle();
+    expect(find.text('今天想聊点什么？'), findsOneWidget);
+    expect(find.text('看一下今天有什么新闻'), findsOneWidget);
+    expect(find.text('今天天气怎么样'), findsOneWidget);
+    expect(find.text('今天有点累，陪我聊聊吧'), findsOneWidget);
+    expect(find.text('帮我整理今天的计划'), findsNothing);
+    expect(find.byIcon(Icons.settings_rounded), findsNothing);
+    final avatars =
+        tester.widgetList<AssistantAvatar>(find.byType(AssistantAvatar));
+    expect(avatars.length, 2);
+    expect(avatars.every((avatar) => avatar.role == '男朋友'), isTrue);
+    await tester.pumpWidget(const SizedBox.shrink());
+    controller.dispose();
   });
 }

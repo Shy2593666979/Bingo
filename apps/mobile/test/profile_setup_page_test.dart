@@ -1,8 +1,10 @@
 import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/auth/presentation/profile_setup_page.dart';
+import 'package:bingo/features/auth/presentation/role_editor_page.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _ProfileGateway implements AuthGateway {
@@ -47,7 +49,103 @@ class _ProfileGateway implements AuthGateway {
       throw UnimplementedError();
 }
 
+class _CustomProfileGateway extends _ProfileGateway implements RoleGateway {
+  @override
+  Future<ProfileOptions> getProfileOptions() async => const ProfileOptions(
+        personalities: ['温柔体贴'],
+        roles: ['女朋友', '倾听伙伴'],
+        roleDetails: [
+          RoleOption(id: 'system', name: '女朋友', builtin: true),
+          RoleOption(
+              id: 'custom', name: '倾听伙伴', builtin: false, prompt: '耐心倾听，温柔陪伴'),
+        ],
+      );
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 void main() {
+  testWidgets('custom roles share the assistant selector and save by ID',
+      (tester) async {
+    final gateway = _CustomProfileGateway();
+    await tester.pumpWidget(MaterialApp(
+      theme: buildBingoTheme(),
+      home: ProfileSetupPage(
+        gateway: gateway,
+        profile: const UserProfile(
+          id: 'user-1',
+          phone: '13800138000',
+          username: '小明',
+          assistantName: 'Bingo',
+          personality: '温柔体贴',
+          role: '女朋友',
+          onboardingComplete: true,
+        ),
+        onSaved: (_) {},
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('我的角色'), findsNothing);
+    expect(find.text('创建新角色'), findsNothing);
+    await tester.ensureVisible(find.text('助手角色'));
+    await tester.tap(find.text('助手角色'));
+    await tester.pumpAndSettle();
+    expect(find.text('女朋友'), findsNWidgets(2));
+    expect(find.text('倾听伙伴'), findsOneWidget);
+    expect(find.byTooltip('编辑倾听伙伴'), findsOneWidget);
+    expect(find.byTooltip('编辑女朋友'), findsNothing);
+    expect(find.text('创建新角色'), findsOneWidget);
+    await tester.ensureVisible(find.text('倾听伙伴'));
+    await tester.tap(find.text('倾听伙伴'));
+    await tester.pumpAndSettle();
+    expect(find.text('倾听伙伴'), findsOneWidget);
+    expect(find.text('创建新角色'), findsNothing);
+    await tester.ensureVisible(find.text('保存并继续'));
+    await tester.tap(find.text('保存并继续'));
+    await tester.pumpAndSettle();
+    expect(gateway.savedRole, 'custom');
+  });
+
+  testWidgets('assistant selector opens custom editing and creation',
+      (tester) async {
+    const device = MethodChannel('bingo/device_tools');
+    final messenger = tester.binding.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(device, (_) async => null);
+    addTearDown(() => messenger.setMockMethodCallHandler(device, null));
+    await tester.pumpWidget(MaterialApp(
+      home: ProfileSetupPage(
+        gateway: _CustomProfileGateway(),
+        profile: const UserProfile(
+          id: 'user-1',
+          phone: '13800138000',
+          username: '小明',
+          assistantName: 'Bingo',
+          personality: '温柔体贴',
+          role: '女朋友',
+          onboardingComplete: true,
+        ),
+        onSaved: (_) {},
+      ),
+    ));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('助手角色'));
+    await tester.tap(find.text('助手角色'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byTooltip('编辑倾听伙伴'));
+    await tester.tap(find.byTooltip('编辑倾听伙伴'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<RoleEditorPage>(find.byType(RoleEditorPage)).role?.id,
+        'custom');
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('创建新角色'));
+    await tester.tap(find.text('创建新角色'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<RoleEditorPage>(find.byType(RoleEditorPage)).role,
+        isNull);
+  });
+
   testWidgets('system back returns from profile editing', (tester) async {
     var cancelCount = 0;
     await tester.pumpWidget(MaterialApp(

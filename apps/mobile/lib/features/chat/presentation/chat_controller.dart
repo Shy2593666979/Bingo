@@ -39,6 +39,9 @@ class ChatController extends ChangeNotifier {
   String? _title;
   bool _refreshingEngagement = false;
   bool _syncingRemote = false;
+  bool _roleConversation = false;
+  bool _accountOnly = false;
+  int _bindingSequence = 0;
   String? _assistantRole;
   final List<String> _recommendations = [];
   int _runSequence = 0;
@@ -66,8 +69,13 @@ class ChatController extends ChangeNotifier {
   Future<void> reloadConversation(String conversationId) async {
     final gateway = _remoteHistory;
     if (gateway == null) return;
+    final binding = _bindingSequence;
     try {
       final messages = await gateway.listMessages(conversationId);
+      if (binding != _bindingSequence ||
+          (_roleConversation && conversationId != _conversationId)) {
+        return;
+      }
       _conversationId = conversationId;
       _messages
         ..clear()
@@ -88,6 +96,41 @@ class ChatController extends ChangeNotifier {
 
   void setAssistantRole(String? role) {
     _assistantRole = role;
+  }
+
+  Future<void> bindAccount(String userId) async {
+    unbindUser();
+    _userId = userId;
+    _accountOnly = true;
+    await _refreshPendingCall();
+    await refreshEngagement();
+    notifyListeners();
+  }
+
+  Future<void> bindConversation(
+      String userId, String conversationId, String role) async {
+    unbindUser();
+    _userId = userId;
+    _roleConversation = true;
+    _assistantRole = role;
+    _conversationId = conversationId;
+    try {
+      final conversation = await _localStore?.loadConversation(
+          '$userId:conversation:$conversationId', conversationId);
+      if (conversation != null) {
+        _title = conversation.title;
+        _messages.addAll(_expandAssistantMessages(conversation.messages));
+        _timelineItems.addAll(_expandTimelineItems(conversation.timelineItems));
+        _deviceActionItems
+            .addAll(conversation.timelineItems.whereType<DeviceAction>());
+      }
+    } on Exception {
+      _messages.clear();
+      _timelineItems.clear();
+    }
+    await reloadConversation(conversationId);
+    await refreshEngagement();
+    notifyListeners();
   }
 
   Future<void> bindUser(String userId) async {
@@ -162,11 +205,14 @@ class ChatController extends ChangeNotifier {
   }
 
   void unbindUser() {
+    _bindingSequence++;
     _stopRecoveryPolling();
     _runSequence++;
     _activeRunId = null;
     _attachedRunId = null;
     _userId = null;
+    _roleConversation = false;
+    _accountOnly = false;
     _conversationId = null;
     _title = null;
     _messages.clear();
@@ -221,7 +267,7 @@ class ChatController extends ChangeNotifier {
     if (_recommendations.isNotEmpty) {
       _recommendations.clear();
       notifyListeners();
-      unawaited(_engagement?.clearRecommendations());
+      unawaited(_clearRecommendations());
     }
 
     final createdAt = DateTime.now();
@@ -346,8 +392,10 @@ class ChatController extends ChangeNotifier {
       return;
     }
     _syncingRemote = true;
+    final binding = _bindingSequence;
     try {
       final remoteMessages = await gateway.listMessages(conversationId);
+      if (binding != _bindingSequence) return;
       final pendingRunId = _unfinishedRunId();
       final remoteFinished = pendingRunId == null ||
           remoteMessages.any(
@@ -452,12 +500,23 @@ class ChatController extends ChangeNotifier {
   Future<void> sendRecommendation(String content) async {
     _recommendations.clear();
     notifyListeners();
+    await _clearRecommendations();
+    await send(content);
+  }
+
+  Future<void> _clearRecommendations() async {
     try {
-      await _engagement?.clearRecommendations();
+      if (_roleConversation &&
+          _gateway is RoleConversationGateway &&
+          _conversationId != null) {
+        await (_gateway as RoleConversationGateway)
+            .clearConversationRecommendations(_conversationId!);
+      } else {
+        await _engagement?.clearRecommendations();
+      }
     } on Exception {
       // The next activity also invalidates server-side recommendations.
     }
-    await send(content);
   }
 
   Future<void> refreshEngagement() async {
@@ -471,13 +530,24 @@ class ChatController extends ChangeNotifier {
       return;
     }
     _refreshingEngagement = true;
+    final binding = _bindingSequence;
+    final conversationId = _conversationId;
     try {
+      await _refreshPendingCall();
       final proactive = await gateway.listProactiveMessages();
       for (final item in proactive) {
         final saved = await _saveProactiveMessage(store, userId, item);
         if (saved) await gateway.acknowledgeProactiveMessage(item.id);
       }
-      final recommendations = await gateway.getRecommendations();
+      final recommendations = _accountOnly
+          ? <String>[]
+          : _roleConversation &&
+                  _gateway is RoleConversationGateway &&
+                  conversationId != null
+              ? await (_gateway as RoleConversationGateway)
+                  .getConversationRecommendations(conversationId)
+              : await gateway.getRecommendations();
+      if (binding != _bindingSequence) return;
       _recommendations
         ..clear()
         ..addAll(recommendations.take(3));
@@ -687,7 +757,8 @@ class ChatController extends ChangeNotifier {
     if (store == null || userId == null || conversationId == null) return false;
     try {
       await store.saveConversation(
-        userId: userId,
+        userId:
+            _roleConversation ? '$userId:conversation:$conversationId' : userId,
         conversationId: conversationId,
         title: _title ?? '新对话',
         messages: List.of(_messages),

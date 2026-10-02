@@ -11,6 +11,8 @@ abstract final class BingoPalette {
   static const line = Color(0xFFE3EEEA);
   static const softSurface = Color(0xFFEDF5F2);
   static const userBubble = Color(0xFFD5F0E3);
+  static const avatarButton = Color(0xFFDDF2E7);
+  static const avatarButtonInk = Color(0xFF4F8067);
 
   static const brandGradient = LinearGradient(
     begin: Alignment.topLeft,

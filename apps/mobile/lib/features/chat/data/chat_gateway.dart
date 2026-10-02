@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:bingo/core/config/app_config.dart';
+import 'package:bingo/core/role_avatar_store.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/chat/models/chat_message.dart';
 
@@ -139,17 +140,20 @@ class ConversationSummary {
     required this.id,
     required this.title,
     required this.createdAt,
+    this.roleId,
   });
 
   final String id;
   final String title;
   final DateTime createdAt;
+  final String? roleId;
 
   factory ConversationSummary.fromJson(Map<String, dynamic> json) =>
       ConversationSummary(
         id: json['id'] as String,
         title: json['title'] as String,
         createdAt: DateTime.parse(json['created_at'] as String),
+        roleId: json['role_id'] as String?,
       );
 }
 
@@ -305,9 +309,63 @@ abstract interface class AuthGateway {
   Future<ProfileOptions> getProfileOptions();
 }
 
+abstract interface class RoleGateway {
+  Future<List<RoleOption>> listRoles();
+  Future<RoleOption> saveRole(
+      {String? id,
+      required String name,
+      required String prompt,
+      String? avatarData,
+      String? voiceSourceId,
+      List<String>? categories,
+      List<String>? traits,
+      bool draft = false});
+  Future<void> deleteRole(String id);
+  Future<String> cloneRoleVoice(String id, Uint8List audio);
+  Future<Map<String, dynamic>> voiceJob(String id);
+  Future<Uint8List> previewRoleVoice(String id);
+}
+
+class UserDetailsResult {
+  const UserDetailsResult(this.user, this.recoveryCode);
+  final UserProfile user;
+  final String? recoveryCode;
+}
+
+abstract interface class UserDetailsGateway {
+  Future<UserDetailsResult> saveUserDetails({
+    required String nickname,
+    required String gender,
+    required DateTime birthday,
+    String? avatarData,
+  });
+}
+
+abstract interface class AccountGateway {
+  Future<String> setupRecovery(DateTime birthday);
+  Future<String> resetPassword(
+      {required String phone,
+      required String username,
+      required DateTime birthday,
+      required String recoveryCode,
+      required String newPassword});
+  Future<void> changePassword(String oldPassword, String newPassword);
+}
+
+abstract interface class RoleConversationGateway {
+  Future<ConversationSummary> openRoleConversation(String roleId);
+  Future<void> markConversationRead(String conversationId);
+  Future<List<String>> getConversationRecommendations(String conversationId);
+  Future<void> clearConversationRecommendations(String conversationId);
+}
+
 class HttpApiGateway
     implements
         AuthGateway,
+        UserDetailsGateway,
+        AccountGateway,
+        RoleGateway,
+        RoleConversationGateway,
         ChatGateway,
         ConversationGateway,
         DeviceActionGateway,
@@ -324,6 +382,41 @@ class HttpApiGateway
   final AppConfig config;
   final HttpClient _client = HttpClient();
   String? accessToken;
+
+  @override
+  Future<ConversationSummary> openRoleConversation(String roleId) async {
+    final json =
+        await _request('POST', config.endpoint('/roles/$roleId/conversation'))
+            as Map<String, dynamic>;
+    return ConversationSummary.fromJson(json);
+  }
+
+  @override
+  Future<void> markConversationRead(String conversationId) async {
+    await _request(
+        'POST', config.endpoint('/conversations/$conversationId/read'));
+  }
+
+  @override
+  Future<List<String>> getConversationRecommendations(
+      String conversationId) async {
+    final json = await _request(
+            'GET',
+            config
+                .endpoint('/recommendations')
+                .replace(queryParameters: {'conversation_id': conversationId}))
+        as Map<String, dynamic>;
+    return List<String>.from(json['items'] as List? ?? []);
+  }
+
+  @override
+  Future<void> clearConversationRecommendations(String conversationId) async {
+    await _request(
+        'DELETE',
+        config
+            .endpoint('/recommendations')
+            .replace(queryParameters: {'conversation_id': conversationId}));
+  }
 
   String imageUrl(String imageId) => config
       .endpoint('/chat/images/${Uri.encodeComponent(imageId)}')
@@ -479,7 +572,12 @@ class HttpApiGateway
       var message = '语音识别失败 (${response.statusCode})';
       try {
         final error = jsonDecode(payload) as Map<String, dynamic>;
-        message = error['detail'] as String? ?? message;
+        final detail = error['detail'];
+        if (detail is String) {
+          message = detail;
+        } else if (detail is List && detail.isNotEmpty && detail.first is Map) {
+          message = (detail.first as Map)['msg']?.toString() ?? message;
+        }
       } on FormatException {
         if (payload.isNotEmpty) message = payload;
       }
@@ -584,6 +682,7 @@ class HttpApiGateway
 
   @override
   Future<void> logout() async {
+    RoleAvatarStore.clear();
     await _request('POST', config.endpoint('/auth/logout'));
   }
 
@@ -619,6 +718,64 @@ class HttpApiGateway
     final json = await _request('GET', config.endpoint('/profile/options'))
         as Map<String, dynamic>;
     return ProfileOptions.fromJson(json);
+  }
+
+  Future<UserProfile> updatePersonality(String personality) async {
+    final result = await _request('PUT', config.endpoint('/me/personality'),
+        body: {'personality': personality}) as Map<String, dynamic>;
+    return UserProfile.fromJson(result);
+  }
+
+  @override
+  Future<String> setupRecovery(DateTime birthday) async {
+    final result = await _request(
+            'POST', config.endpoint('/me/recovery-profile'),
+            body: {'birthday': birthday.toIso8601String().substring(0, 10)})
+        as Map<String, dynamic>;
+    return result['recovery_code'] as String;
+  }
+
+  @override
+  Future<UserDetailsResult> saveUserDetails({
+    required String nickname,
+    required String gender,
+    required DateTime birthday,
+    String? avatarData,
+  }) async {
+    final result =
+        await _request('PUT', config.endpoint('/me/user-profile'), body: {
+      'username': nickname,
+      'gender': gender,
+      'birthday': birthday.toIso8601String().substring(0, 10),
+      'user_avatar_data': avatarData,
+    }) as Map<String, dynamic>;
+    return UserDetailsResult(
+        UserProfile.fromJson(result['user'] as Map<String, dynamic>),
+        result['recovery_code'] as String?);
+  }
+
+  @override
+  Future<String> resetPassword(
+      {required String phone,
+      required String username,
+      required DateTime birthday,
+      required String recoveryCode,
+      required String newPassword}) async {
+    final result =
+        await _request('POST', config.endpoint('/auth/reset-password'), body: {
+      'phone': phone,
+      'username': username,
+      'birthday': birthday.toIso8601String().substring(0, 10),
+      'recovery_code': recoveryCode,
+      'new_password': newPassword,
+    }) as Map<String, dynamic>;
+    return result['recovery_code'] as String;
+  }
+
+  @override
+  Future<void> changePassword(String oldPassword, String newPassword) async {
+    await _request('POST', config.endpoint('/me/password'),
+        body: {'old_password': oldPassword, 'new_password': newPassword});
   }
 
   @override
@@ -709,15 +866,78 @@ class HttpApiGateway
     );
   }
 
+  @override
+  Future<List<RoleOption>> listRoles() async {
+    final json = await _request('GET', config.endpoint('/roles')) as List;
+    return json
+        .map((item) =>
+            RoleOption.fromJson(Map<String, dynamic>.from(item as Map)))
+        .toList();
+  }
+
+  @override
+  Future<RoleOption> saveRole(
+      {String? id,
+      required String name,
+      required String prompt,
+      String? avatarData,
+      String? voiceSourceId,
+      List<String>? categories,
+      List<String>? traits,
+      bool draft = false}) async {
+    final json = await _request(id == null ? 'POST' : 'PUT',
+        config.endpoint(id == null ? '/roles' : '/roles/$id'),
+        body: {
+          'name': name,
+          'prompt': prompt,
+          'avatar_data': avatarData,
+          'voice_source_id': voiceSourceId,
+          'draft': draft,
+          if (categories != null) 'categories': categories,
+          if (traits != null) 'traits': traits,
+        }) as Map<String, dynamic>;
+    return RoleOption.fromJson(json);
+  }
+
+  @override
+  Future<void> deleteRole(String id) async {
+    await _request('DELETE', config.endpoint('/roles/$id'));
+  }
+
+  @override
+  Future<String> cloneRoleVoice(String id, Uint8List audio) async {
+    final json = await _request(
+            'POST', config.endpoint('/roles/$id/voice-clone'),
+            body: {'audio': base64Encode(audio), 'consent': true})
+        as Map<String, dynamic>;
+    return json['id'] as String;
+  }
+
+  @override
+  Future<Map<String, dynamic>> voiceJob(String id) async =>
+      await _request('GET', config.endpoint('/voice-jobs/$id'))
+          as Map<String, dynamic>;
+
+  @override
+  Future<Uint8List> previewRoleVoice(String id) async {
+    final json = await _request(
+        'POST', config.endpoint('/roles/$id/voice-preview'),
+        responseTimeout: const Duration(seconds: 100)) as Map<String, dynamic>;
+    return base64Decode(json['audio'] as String);
+  }
+
   Future<Object?> _request(String method, Uri uri,
-      {Map<String, dynamic>? body, bool authenticated = true}) async {
+      {Map<String, dynamic>? body,
+      bool authenticated = true,
+      Duration responseTimeout = const Duration(seconds: 60)}) async {
     final request =
         await _client.openUrl(method, uri).timeout(const Duration(seconds: 15));
     _prepareRequest(request, authenticated: authenticated);
     if (body != null) request.write(jsonEncode(body));
 
-    final response = await request.close().timeout(const Duration(seconds: 60));
-    final payload = await response.transform(utf8.decoder).join();
+    final response = await request.close().timeout(responseTimeout);
+    final payload =
+        await response.transform(utf8.decoder).join().timeout(responseTimeout);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       var message = '请求失败 (${response.statusCode})';
       try {

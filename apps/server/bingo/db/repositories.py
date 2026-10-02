@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+from fastapi import HTTPException
 from sqlalchemy import delete, or_
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -27,7 +28,9 @@ class ConversationRepository:
         self._session = session
         self._user_id = user_id
 
-    async def get_or_create(self, conversation_id: str | None) -> Conversation:
+    async def get_or_create(
+        self, conversation_id: str | None, role_id: str | None = None
+    ) -> Conversation:
         conversation = None
         if conversation_id:
             conversation = (
@@ -38,16 +41,20 @@ class ConversationRepository:
                     )
                 )
             ).first()
+            if conversation is None:
+                raise HTTPException(404, "对话不存在")
         if conversation is not None:
             return conversation
-
-        # The product exposes one continuous conversation per user. If the
-        # client loses its local active id (for example after reinstalling),
-        # resume the newest existing conversation instead of creating another.
+        if role_id is None:
+            user = await self._session.get(User, self._user_id)
+            role_id = user.role_id if user else None
         conversation = (
             await self._session.exec(
                 select(Conversation)
-                .where(Conversation.user_id == self._user_id)
+                .where(
+                    Conversation.user_id == self._user_id,
+                    Conversation.role_id == role_id,
+                )
                 .order_by(Conversation.created_at.desc())
                 .limit(1)
             )
@@ -55,10 +62,21 @@ class ConversationRepository:
         if conversation is not None:
             return conversation
 
-        conversation = Conversation(user_id=self._user_id)
+        conversation = Conversation(user_id=self._user_id, role_id=role_id)
         self._session.add(conversation)
         await self._session.flush()
         return conversation
+
+    async def context_user(self, user: User, conversation_id: str | None) -> User:
+        conversation = await self.get_or_create(conversation_id)
+        if conversation.role_id is None:
+            return user
+        role = await self._session.get(Role, conversation.role_id)
+        if not role or role.deleted or not role.enabled or role.owner_id not in {None, user.id}:
+            raise HTTPException(404, "角色已失效，请重新选择")
+        return user.model_copy(
+            update={"role_id": role.id, "role": role.visible_name, "assistant_name": role.nickname}
+        )
 
     async def add_message(
         self,
@@ -308,8 +326,14 @@ class UserRepository:
         personality: str,
         role: str,
     ) -> User:
-        selected_role = await RoleRepository(self._session).get_by_name(role)
-        if selected_role is None or not selected_role.enabled:
+        roles = RoleRepository(self._session)
+        selected_role = await roles.get(role) or await roles.get_by_name(role)
+        if (
+            selected_role is None
+            or not selected_role.enabled
+            or selected_role.deleted
+            or selected_role.owner_id not in {None, user.id}
+        ):
             raise ValueError("Invalid assistant role")
         if user.role_id != selected_role.id:
             user.role_changed_at = beijing_now()
@@ -317,7 +341,7 @@ class UserRepository:
         user.username = username
         user.assistant_name = assistant_name
         user.personality = personality
-        user.role = role
+        user.role = selected_role.visible_name
         user.onboarding_complete = True
         await self._session.commit()
         await self._session.refresh(user)
@@ -329,15 +353,31 @@ class RoleRepository:
         self._session = session
 
     async def get_by_name(self, name: str) -> Role | None:
-        return (await self._session.exec(select(Role).where(Role.name == name))).first()
+        if name == "小孩":
+            name = "小朋友"
+        return (
+            await self._session.exec(
+                select(Role).where(
+                    Role.name == name, Role.owner_id.is_(None), Role.deleted.is_(False)
+                )
+            )
+        ).first()
 
     async def get(self, role_id: str | None) -> Role | None:
         if role_id is None:
             return None
         return await self._session.get(Role, role_id)
 
-    async def list_enabled(self) -> list[Role]:
-        statement = select(Role).where(Role.enabled.is_(True)).order_by(Role.sort_order, Role.name)
+    async def list_enabled(self, user_id: str | None = None) -> list[Role]:
+        statement = (
+            select(Role)
+            .where(
+                Role.enabled.is_(True),
+                Role.deleted.is_(False),
+                or_(Role.owner_id.is_(None), Role.owner_id == user_id),
+            )
+            .order_by(Role.sort_order, Role.name)
+        )
         return list((await self._session.exec(statement)).all())
 
 
@@ -517,12 +557,14 @@ class ProactiveMessageRepository:
         content: str,
         stage: int,
         assistant_role: str | None = None,
+        role_id: str | None = None,
     ) -> ProactiveMessage:
         message = Message(
             conversation_id=conversation_id,
             role="assistant",
             content=content,
             assistant_role=assistant_role,
+            role_id=role_id,
         )
         self._session.add(message)
         await self._session.flush()

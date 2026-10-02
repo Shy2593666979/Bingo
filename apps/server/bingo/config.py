@@ -86,6 +86,14 @@ class RealtimeCallSettings(BaseModel):
     timeout_seconds: float = 15.0
 
 
+class VoiceCloningSettings(BaseModel):
+    sample_host: Literal["yukisbox", "public_url"] = "yukisbox"
+    upload_endpoint: str = "https://yukisbox.com/upload"
+    public_base_url: str = ""
+    endpoint: str = ""
+    timeout_seconds: float = 180.0
+
+
 class RedisSettings(BaseModel):
     url: str | None = None
 
@@ -134,6 +142,7 @@ class Settings(BaseModel):
     vision: VisionSettings = Field(default_factory=VisionSettings)
     asr: AsrSettings = Field(default_factory=AsrSettings)
     realtime_call: RealtimeCallSettings = Field(default_factory=RealtimeCallSettings)
+    voice_cloning: VoiceCloningSettings = Field(default_factory=VoiceCloningSettings)
     redis: RedisSettings = Field(default_factory=RedisSettings)
     engagement: EngagementSettings = Field(default_factory=EngagementSettings)
     push: PushSettings = Field(default_factory=PushSettings)

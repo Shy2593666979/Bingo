@@ -72,6 +72,9 @@ class MainActivity : FlutterActivity() {
     private var previousCallSpeakerphoneOn: Boolean? = null
     private var statusBarOverlay: View? = null
     private var incomingCallPlayer: MediaPlayer? = null
+    private var previewAudioPlayer: MediaPlayer? = null
+    private var previewAudioResult: MethodChannel.Result? = null
+    private var previewAudioFile: File? = null
     private var incomingCallRingtone: Ringtone? = null
     private var incomingCallVibrator: Vibrator? = null
     private var incomingCallAudioFocusRequest: AudioFocusRequest? = null
@@ -274,6 +277,11 @@ class MainActivity : FlutterActivity() {
                     "createAlarm" -> createAlarm(call.arguments, result)
                     "pickImage" -> pickImage(result)
                     "takePhoto" -> takePhoto(result)
+                    "playPreviewAudio" -> playPreviewAudio(call.arguments as? ByteArray, result)
+                    "stopPreviewAudio" -> {
+                        stopPreviewAudio()
+                        result.success(null)
+                    }
                     "startAudioCapture" -> requestAudioCapture(result)
                     "stopAudioCapture" -> {
                         stopAudioCapture()
@@ -392,6 +400,15 @@ class MainActivity : FlutterActivity() {
                     val values = call.arguments as? Map<*, *> ?: emptyMap<String, Any?>()
                     val userId = values["user_id"] as? String
                     when (call.method) {
+                        "loadRoleOrder" -> result.success(
+                            localChatDatabase.loadRoleOrder(requireNotNull(userId)),
+                        )
+                        "saveRoleOrder" -> {
+                            val roleIds = requireNotNull(values["role_ids"] as? List<*>)
+                                .map { requireNotNull(it as? String) }
+                            localChatDatabase.saveRoleOrder(requireNotNull(userId), roleIds)
+                            result.success(null)
+                        }
                         "loadActive" -> result.success(
                             localChatDatabase.loadActive(requireNotNull(userId)),
                         )
@@ -524,6 +541,53 @@ class MainActivity : FlutterActivity() {
             pendingCameraFile?.delete()
             pendingCameraFile = null
         }
+    }
+
+    private fun playPreviewAudio(bytes: ByteArray?, result: MethodChannel.Result) {
+        stopPreviewAudio()
+        if (bytes == null || bytes.isEmpty()) {
+            result.error("invalid_audio", "没有可播放的录音", null)
+            return
+        }
+        try {
+            val file = File.createTempFile("bingo-preview-", ".wav", cacheDir)
+            file.writeBytes(bytes)
+            previewAudioFile = file
+            previewAudioResult = result
+            val player = MediaPlayer()
+            previewAudioPlayer = player
+            player.apply {
+                setAudioAttributes(AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+                setDataSource(file.absolutePath)
+                setOnCompletionListener { stopPreviewAudio() }
+                setOnErrorListener { _, _, _ ->
+                    previewAudioResult?.error("audio_play_failed", "音频播放失败，请重试", null)
+                    previewAudioResult = null
+                    stopPreviewAudio()
+                    true
+                }
+                prepare()
+                start()
+            }
+        } catch (error: Exception) {
+            previewAudioResult = null
+            stopPreviewAudio()
+            result.error("audio_play_failed", error.message ?: "音频播放失败", null)
+        }
+    }
+
+    private fun stopPreviewAudio() {
+        previewAudioPlayer?.let { player ->
+            runCatching { if (player.isPlaying) player.stop() }
+            player.release()
+        }
+        previewAudioPlayer = null
+        previewAudioFile?.delete()
+        previewAudioFile = null
+        previewAudioResult?.success(null)
+        previewAudioResult = null
     }
 
     private fun decodeScaledBitmap(bytes: ByteArray, maximumDimension: Int): Bitmap? {
@@ -945,6 +1009,7 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
+        stopPreviewAudio()
         stopIncomingCallRinging()
         super.onDestroy()
     }

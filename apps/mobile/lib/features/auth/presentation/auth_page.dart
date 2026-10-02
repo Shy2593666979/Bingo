@@ -1,6 +1,7 @@
 import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/core/widgets/center_toast.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
+import 'package:bingo/features/auth/presentation/password_recovery_page.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:flutter/material.dart';
 
@@ -210,7 +211,16 @@ class _AuthPageState extends State<AuthPage> {
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton(
-                              onPressed: _comingSoon,
+                              onPressed: () {
+                                final gateway = widget.gateway;
+                                if (gateway is AccountGateway) {
+                                  Navigator.of(context).push<void>(
+                                      MaterialPageRoute(
+                                          builder: (_) => PasswordRecoveryPage(
+                                              gateway:
+                                                  gateway as AccountGateway)));
+                                }
+                              },
                               child: const Text('忘记密码？'),
                             ),
                           )

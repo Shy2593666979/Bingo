@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bingo · 进入聊天与创建伙伴按钮配色</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#f1f4f1;color:#2c3e35;font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif}button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}button:focus-visible{outline:3px solid #83b49d;outline-offset:4px}svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.symbols{position:absolute;width:0;height:0;overflow:hidden}.layout{max-width:1140px;display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:54px;align-items:start;padding:42px 26px 55px;margin:auto}.eyebrow{font-size:11px;font-weight:600;letter-spacing:3px;color:#6d937f}h1{font-size:29px;margin:14px 0 11px;letter-spacing:.3px}.intro{font-size:13px;line-height:1.9;color:#788c7e;margin:0 0 22px}.approved{display:flex;align-items:center;gap:10px;background:#e9f2ec;border-radius:14px;padding:12px 14px;margin-bottom:20px;font-size:11px;color:#718a78}.approved-camera{display:grid;place-items:center;width:27px;height:27px;background:#ddf2e7;border-radius:50%;color:#4f8067;border:2px solid #fff}.approved-camera svg{width:14px;height:14px}.approved strong{font-weight:600;color:#4f8067}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.variant{position:relative;width:100%;padding:17px;background:#fff;border:1px solid #e2e9e2;border-radius:22px;text-align:left;transition:border-color .15s,box-shadow .15s;color:#2c3e35}.variant[aria-pressed="true"]{border-color:#98c5ac;box-shadow:0 0 0 2px #9ebda51d}.variant:hover{border-color:#b2cbbb}.variant-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px}.variant h2{font-size:13px;font-weight:600;margin:0}.recommend{font-size:9px;background:#eff6f0;color:#70977c;border-radius:7px;padding:3px 6px}.description{font-size:10px;line-height:1.7;color:#95a496;margin:0 0 15px}.sample-small{display:inline-flex;align-items:center;gap:5px;padding:7px 11px;border:1px solid var(--small-line);border-radius:20px;background:var(--small-bg);color:var(--action-ink);font-size:11px}.sample-small svg{width:13px;height:13px}.sample-main{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;height:38px;background:var(--main-bg);border:1px solid var(--main-line);color:var(--action-ink);border-radius:22px;font-size:12px;font-weight:600;margin-top:11px}.sample-main svg{width:17px;height:17px}.selected-dot{width:7px;height:7px;background:#7aaa8a;border-radius:50%;display:inline-block;opacity:0}.variant[aria-pressed="true"] .selected-dot{opacity:1}.before{margin-top:18px;padding:16px 18px;border:1px solid #e0e9e1;border-radius:18px;font-size:11px;color:#7d8d80;display:flex;align-items:center;justify-content:space-between;gap:12px}.before span{font-weight:500}.before button{padding:8px 16px;border:0;border-radius:20px;background:#129a81;color:white;font-size:11px}.notes{font-size:12px;line-height:1.9;color:#7b8e7e;margin:20px 2px}.back-link{font-size:11px;color:#71967c;text-decoration:none}
+    .preview{position:sticky;top:22px}.preview-label{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#96a398;padding:0 6px 12px}.preview-label strong{font-weight:500;color:#678870}.phone{height:774px;background:#f8fbf8;border:7px solid #fff;border-radius:34px;box-shadow:0 23px 65px #3a513414;overflow:hidden;position:relative}.screen{height:100%;overflow:auto;scrollbar-width:none;background:radial-gradient(ellipse at 15% 0%,#e6f4e9,transparent 40%),#f7fbf8}.status{height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;font-size:10px;color:#748c7d}.header{height:63px;position:relative;display:flex;align-items:center;justify-content:space-between;padding:0 19px}.brand{width:29px;height:29px;border-radius:9px}.heading{text-align:center;position:absolute;left:50%;transform:translateX(-50%);white-space:nowrap}.heading h2{font-size:18px;font-weight:600;margin:0}.heading p{font-size:9px;color:#94a697;margin:5px 0 0}.user-avatar{width:32px;height:32px;border-radius:50%;border:2px solid white}.content{padding:14px 14px 102px}.card{background:#fff;border-radius:24px;padding:15px 12px;margin-bottom:12px}.card-main{display:flex;gap:10px;align-items:center}.avatar{width:58px;height:58px;object-fit:cover;border-radius:50%;flex-shrink:0}.info{flex:1;min-width:0}.card-heading{display:flex;justify-content:space-between;align-items:center;gap:8px}.card-heading h3{font-size:17px;margin:0;font-weight:600}.enter-wrap{position:relative;flex-shrink:0}.enter{display:flex;align-items:center;gap:5px;border:1px solid var(--small-line);background:var(--small-bg);color:var(--action-ink);border-radius:20px;font-size:11px;padding:7px 10px}.enter svg{width:13px;height:13px}.unread{position:absolute;right:-3px;top:-7px;background:#fa5d70;color:white;border:2px solid white;border-radius:12px;min-width:18px;height:18px;display:grid;place-items:center;font-size:9px;padding:0 3px}.subtitle{font-size:10px;color:#94a597;margin:6px 0 0;line-height:1.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.traits{display:flex;gap:5px;flex-wrap:wrap;margin-top:13px}.trait{display:flex;align-items:center;gap:4px;padding:5px 7px;border-radius:16px;background:#f0f7f2;color:#728e7b;font-size:9px}.trait svg{width:12px;height:12px}.trait.heart svg{color:#ee9cb7;fill:currentColor;stroke:none}.trait.leaf svg,.trait.chat svg{color:#67aa90}.trait.star svg{color:#d9b95f;fill:currentColor;stroke:none}.trait.coffee svg{color:#ac9e91}.bottom{position:absolute;left:0;right:0;bottom:0;padding:21px 17px;background:linear-gradient(transparent,#f7fbf8 24%)}.primary{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:47px;background:var(--main-bg);border:1px solid var(--main-line);color:var(--action-ink);border-radius:25px;font-size:15px;font-weight:600}.primary svg{width:20px;height:20px}.scene-tabs{display:flex;gap:7px;justify-content:center;padding:15px 0 0}.scene-tabs button{border:1px solid #dfe8e0;background:transparent;color:#809683;border-radius:16px;padding:7px 12px;font-size:11px}.scene-tabs button[aria-pressed="true"]{background:#e5efe6;color:#5b8067;border-color:#cbdece}.detail{background:#fff;border-radius:24px;padding:23px 17px;text-align:center}.detail-avatar{width:94px;height:94px;border-radius:50%;object-fit:cover}.detail h3{font-size:24px;font-weight:600;margin:14px 0 5px}.detail p{font-size:11px;color:#8c9e90;line-height:1.9}.detail .traits{justify-content:center}.welcome{padding:21px;background:#fff;border-radius:24px;margin-top:13px;color:#8a9b8d;font-size:12px;line-height:1.9}.welcome strong{display:block;font-size:15px;font-weight:500;color:#526b58;margin-bottom:9px}.toast{position:absolute;left:50%;bottom:88px;transform:translateX(-50%);max-width:92%;white-space:nowrap;color:#fff;background:#3c5043ed;border-radius:12px;padding:10px 12px;font-size:10px;opacity:0;pointer-events:none;transition:opacity .15s}.toast.visible{opacity:1}.footnote{text-align:center;font-size:10px;color:#98a59a;line-height:1.8;margin-top:12px}
+    @media(max-width:950px){.layout{gap:28px;grid-template-columns:minmax(0,1fr) 330px;padding:32px 22px}.variant{padding:15px 13px}.variant h2{font-size:12px}}@media(max-width:700px){.layout{display:flex;flex-direction:column;padding:27px 17px;gap:30px}.options{width:100%}.preview{position:static;width:100%;max-width:360px;margin:auto}.grid{gap:10px}.variant{padding:15px 13px}h1{font-size:25px}.intro{font-size:12px}.phone{height:748px}}@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+  </style>
+</head>
+<body>
+  <svg class="symbols" aria-hidden="true"><defs>
+    <symbol id="camera" viewBox="0 0 24 24"><path d="M3 7h5l2-3h4l2 3h5v13H3Z"/><circle cx="12" cy="13" r="4"/></symbol>
+    <symbol id="plus" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></symbol>
+    <symbol id="chat" viewBox="0 0 24 24"><path d="M21 11a9 9 0 0 1-9 9H7l-5 2 2-5a9 9 0 1 1 17-6Z"/><path d="M7 11h.01M12 11h.01M17 11h.01"/></symbol>
+    <symbol id="heart" viewBox="0 0 24 24"><path d="M12 21S2 15 2 8a5.7 5.7 0 0 1 10-3.4A5.7 5.7 0 0 1 22 8c0 7-10 13-10 13Z"/></symbol>
+    <symbol id="leaf" viewBox="0 0 24 24"><path d="M22 2C10 1 2 7 3 14c.5 3.5 3 6 7 6C18 20 21 12 22 2ZM2 22 17 7"/></symbol>
+    <symbol id="star" viewBox="0 0 24 24"><path d="m12 1 3.4 7 7.6 1.1-5.5 5.4 1.3 7.5-6.8-3.6L5.2 22l1.3-7.5L1 9.1 8.6 8Z"/></symbol>
+    <symbol id="coffee" viewBox="0 0 24 24"><path d="M3 9h13v7a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4ZM16 10h2a3 3 0 1 1 0 6h-2M2 23h17M7 2v3M12 2v3"/></symbol>
+  </defs></svg>
+  <main class="layout">
+    <section class="options">
+      <div class="eyebrow">BINGO · ACTION BUTTONS</div>
+      <h1>按钮也轻一点，但依然好找。</h1>
+      <p class="intro">「进入聊天」和「创建伙伴」作为同一套按钮来选。保留圆角、图标和现有卡片，仅调整按钮底色、描边和文字颜色。点击方案，右侧同步展示页面效果。</p>
+      <div class="approved"><span class="approved-camera"><svg aria-hidden="true"><use href="#camera"/></svg></span><span>头像上传已选：<strong>01 · 浅薄荷</strong></span></div>
+      <div class="grid" id="variants" aria-label="六套操作按钮配色"></div>
+      <div class="before"><span>原深绿色按钮，作对比</span><button type="button" id="original">查看原配色</button></div>
+      <p class="notes">推荐 <strong>01 浅薄荷</strong>，与已经选好的头像按钮统一。<br><strong>02 柔和渐变</strong>更有主按钮的层次感；<strong>03 奶白描边</strong>最轻，但强调感也更弱。</p>
+      <a class="back-link" href="avatar-button-colors.html">返回头像按钮配色</a>
+    </section>
+    <section class="preview" aria-label="按钮在页面中的效果">
+      <div class="preview-label"><span>卡片样式保持不变</span><strong id="current-label">01 · 浅薄荷</strong></div>
+      <div class="phone" id="phone">
+        <div class="screen">
+          <div class="status" aria-hidden="true"><span>09:41</span><span>5G · 83%</span></div>
+          <header class="header"><img class="brand" src="../../apps/mobile/assets/images/bingo_logo.png" alt="Bingo"><div class="heading"><h2 id="page-title">陪伴空间</h2><p id="page-caption">在这里，慢慢聊</p></div><img class="user-avatar" src="../../apps/mobile/assets/images/bingo_logo.png" alt="用户头像"></header>
+          <div class="content" id="content"></div>
+        </div>
+        <footer class="bottom"><button class="primary" id="primary" type="button"><svg aria-hidden="true"><use href="#plus"/></svg>创建伙伴</button></footer>
+        <div class="toast" id="toast" role="status"></div>
+      </div>
+      <nav class="scene-tabs" aria-label="预览页面"><button type="button" data-scene="home" aria-pressed="true">陪伴空间</button><button type="button" data-scene="detail" aria-pressed="false">进入聊天按钮</button></nav>
+      <p class="footnote">本页为配色演示，不会创建伙伴或发起聊天。<br>头像按钮已确定，其余按钮等待你选择。</p>
+    </section>
+  </main>
+  <script>
+    const variants = [
+      {name:'浅薄荷',description:'和头像按钮统一，清新自然',small:'#EDF7F1',main:'#D0EDDE',ink:'#416D55',line:'#C1DDCC',recommended:true},
+      {name:'柔和渐变',description:'保留一点层次，不再浓重',small:'#EBF5EF',main:'linear-gradient(115deg,#D3ECDF,#B8DDCB)',ink:'#39674E',line:'#B7D7C2',recommended:true},
+      {name:'奶白描边',description:'轻巧干净，靠边框区分',small:'#FFFFFF',main:'#FFFFFF',ink:'#5C7D66',line:'#BDD5C3'},
+      {name:'雾蓝',description:'更清爽，偏安静的感觉',small:'#EFF4F9',main:'#DDEAF5',ink:'#536F86',line:'#C6D9E8'},
+      {name:'暖米色',description:'更温暖，陪伴感更柔和',small:'#F8F5EC',main:'#F1E7D0',ink:'#827052',line:'#E2D6BA'},
+      {name:'浅鼠尾草',description:'低饱和，更耐看一些',small:'#F0F4EC',main:'#E0EAD8',ink:'#617753',line:'#CDDBC2'},
+    ];
+    const roles = [
+      {name:'甜甜',type:'女朋友',image:'girlfriend',description:'亲密、体贴的女性伴侣',unread:2,traits:[['主动关心','heart'],['温柔体贴','leaf'],['甜蜜互动','heart']]},
+      {name:'暖暖',type:'男朋友',image:'boyfriend',description:'亲密、可靠的男性伴侣',unread:0,traits:[['安心陪伴','leaf'],['耐心倾听','chat'],['鼓励支持','star']]},
+      {name:'小周',type:'同事',image:'colleague',description:'可靠且有边界感的工作伙伴',unread:3,traits:[['工作搭子','coffee'],['思路梳理','star'],['高效协作','leaf']]},
+      {name:'小田老师',type:'老师',image:'teacher',description:'耐心讲解并帮助用户成长',unread:0,traits:[['耐心讲解','chat'],['成长引导','leaf'],['答疑解惑','star']]},
+    ];
+    const icon = name => `<svg aria-hidden="true"><use href="#${name}"/></svg>`;
+    const traits = role => `<div class="traits">${role.traits.map(([label,symbol]) => `<span class="trait ${symbol}">${icon(symbol)}${label}</span>`).join('')}</div>`;
+    const phone = document.getElementById('phone');
+    const holder = document.getElementById('variants');
+    let scene = 'home', toastTimer;
+    function setColors(element, variant) {
+      element.style.setProperty('--small-bg', variant.small);
+      element.style.setProperty('--main-bg', variant.main);
+      element.style.setProperty('--action-ink', variant.ink);
+      element.style.setProperty('--small-line', variant.line);
+      element.style.setProperty('--main-line', variant.line);
+    }
+    function selectVariant(variant, index) {
+      setColors(phone, variant);
+      document.getElementById('current-label').textContent = String(index + 1).padStart(2,'0') + ' · ' + variant.name;
+      for (const button of holder.querySelectorAll('button')) button.setAttribute('aria-pressed', String(Number(button.dataset.index) === index));
+    }
+    variants.forEach((variant,index) => {
+      const button = document.createElement('button');
+      button.type = 'button'; button.className = 'variant'; button.dataset.index = index;
+      button.setAttribute('aria-pressed', String(index === 0)); setColors(button,variant);
+      button.innerHTML = `<div class="variant-heading"><h2>${String(index+1).padStart(2,'0')} · ${variant.name}</h2>${variant.recommended ? '<span class="recommend">推荐</span>' : '<span class="selected-dot"></span>'}</div><p class="description">${variant.description}</p><span class="sample-small">${icon('chat')}进入聊天</span><span class="sample-main">${icon('plus')}创建伙伴</span>`;
+      button.addEventListener('click', () => selectVariant(variant,index)); holder.append(button);
+    });
+    function notify(message) {
+      const toast = document.getElementById('toast'); toast.textContent = message; toast.classList.add('visible');
+      clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('visible'),2000);
+    }
+    function renderScene() {
+      const content = document.getElementById('content');
+      document.getElementById('page-title').textContent = scene === 'home' ? '陪伴空间' : '伙伴详情';
+      document.getElementById('page-caption').textContent = scene === 'home' ? '在这里，慢慢聊' : '和甜甜，慢慢聊';
+      document.getElementById('primary').innerHTML = scene === 'home' ? icon('plus') + '创建伙伴' : icon('chat') + '进入聊天';
+      if (scene === 'home') {
+        content.innerHTML = roles.map(role => `<article class="card"><div class="card-main"><img class="avatar" src="../../apps/mobile/assets/images/${role.image}.png" alt="${role.name}头像"><div class="info"><div class="card-heading"><h3>${role.name}</h3><span class="enter-wrap"><button type="button" class="enter" data-name="${role.name}" aria-label="进入${role.name}的聊天">${icon('chat')}进入</button>${role.unread ? `<span class="unread">${role.unread}</span>` : ''}</span></div><p class="subtitle">${role.type} · ${role.description}</p></div></div>${traits(role)}</article>`).join('');
+        for (const button of content.querySelectorAll('.enter')) button.addEventListener('click', () => notify(button.dataset.name + '的聊天入口（仅配色演示）'));
+      } else {
+        content.innerHTML = `<section class="detail"><img class="detail-avatar" src="../../apps/mobile/assets/images/girlfriend.png" alt="甜甜头像"><h3>甜甜</h3><p>女朋友 · 温柔陪伴</p>${traits(roles[0])}<p>愿意听你分享日常，也愿意陪你度过疲惫的时刻。</p></section><section class="welcome"><strong>今天，想聊点什么？</strong>看一下今天有什么新闻<br>今天天气怎么样<br>今天有点累，陪我聊聊吧</section>`;
+      }
+      document.querySelector('.screen').scrollTop = 0;
+      for (const button of document.querySelectorAll('[data-scene]')) button.setAttribute('aria-pressed',String(button.dataset.scene === scene));
+    }
+    for (const button of document.querySelectorAll('[data-scene]')) button.addEventListener('click', () => {scene = button.dataset.scene;renderScene();});
+    document.getElementById('primary').addEventListener('click', () => notify('仅配色演示，不会创建伙伴或发起聊天'));
+    document.getElementById('original').addEventListener('click', () => {
+      setColors(phone,{small:'#129A81',main:'#129A81',ink:'#FFFFFF',line:'#129A81'});
+      document.getElementById('current-label').textContent = '原深绿色 · 对比';
+      for (const button of holder.querySelectorAll('button')) button.setAttribute('aria-pressed','false');
+    });
+    selectVariant(variants[0],0);renderScene();
+  </script>
+</body>
+</html>

@@ -32,7 +32,7 @@ class AssistantCallInviteTool(BaseTool):
         invitation = await CallInvitationRepository(context.session, context.user.id).create(
             conversation_id=context.conversation_id,
             role_id=context.user.role_id,
-            caller_name=context.user.assistant_name or "Bingo",
+            caller_name=context.user.role or context.user.assistant_name or "Bingo",
             caller_role=context.user.role,
             reason=reason,
         )

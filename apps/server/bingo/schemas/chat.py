@@ -49,6 +49,7 @@ class ConversationResponse(BaseModel):
     id: str
     title: str
     created_at: datetime
+    role_id: str | None = None
 
 
 class MemoryCreate(BaseModel):

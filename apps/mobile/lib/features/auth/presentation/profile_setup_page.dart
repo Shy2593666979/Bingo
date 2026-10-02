@@ -1,6 +1,8 @@
 import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/core/widgets/center_toast.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
+import 'package:bingo/features/auth/presentation/role_editor_page.dart';
+import 'package:bingo/features/auth/presentation/password_recovery_page.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/shared/widgets/assistant_avatar.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +13,7 @@ class ProfileSetupPage extends StatefulWidget {
     required this.profile,
     required this.onSaved,
     this.onCancel,
+    this.showRoleSelector = true,
     super.key,
   });
 
@@ -18,6 +21,7 @@ class ProfileSetupPage extends StatefulWidget {
   final UserProfile profile;
   final ValueChanged<UserProfile> onSaved;
   final VoidCallback? onCancel;
+  final bool showRoleSelector;
 
   @override
   State<ProfileSetupPage> createState() => _ProfileSetupPageState();
@@ -29,14 +33,17 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   late final TextEditingController _assistantNameController;
   ProfileOptions? _options;
   String? _role;
+  String? _roleId;
   String? _personality;
   String? _error;
   bool _saving = false;
+  DateTime? _birthday;
 
   @override
   void initState() {
     super.initState();
     _usernameController = TextEditingController(text: widget.profile.username);
+    _birthday = DateTime.tryParse(widget.profile.birthday ?? '');
     _assistantNameController =
         TextEditingController(text: widget.profile.assistantName ?? 'Bingo');
     _loadOptions();
@@ -48,15 +55,23 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       if (!mounted) return;
       setState(() {
         _options = options;
-        _role = options.roles.contains(widget.profile.role)
-            ? widget.profile.role
-            : (options.roles.isNotEmpty ? options.roles.first : null);
-        _personality =
-            options.personalities.contains(widget.profile.personality)
-                ? widget.profile.personality
-                : (options.personalities.isNotEmpty
-                    ? options.personalities.first
-                    : null);
+        final selected = options.roleDetails
+            .where((role) => role.id == (_roleId ?? widget.profile.roleId));
+        _role = selected.isNotEmpty
+            ? selected.first.name
+            : options.roles.contains(_role ?? widget.profile.role)
+                ? (_role ?? widget.profile.role)
+                : (options.roles.isNotEmpty ? options.roles.first : null);
+        _roleId = options.roleDetails
+            .where((role) => role.name == _role)
+            .firstOrNull
+            ?.id;
+        _personality = options.personalities
+                .contains(_personality ?? widget.profile.personality)
+            ? (_personality ?? widget.profile.personality)
+            : (options.personalities.isNotEmpty
+                ? options.personalities.first
+                : null);
         _error = null;
       });
     } on Exception {
@@ -66,6 +81,12 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
 
   Future<void> _save() async {
     if (_saving || !_formKey.currentState!.validate()) return;
+    if (widget.gateway is AccountGateway &&
+        _birthday == null &&
+        widget.profile.birthday == null) {
+      showCenterToast(context, '请设置生日，用于核对找回信息');
+      return;
+    }
     final role = _role;
     final personality = _personality;
     if (role == null || personality == null) {
@@ -77,12 +98,21 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       _error = null;
     });
     try {
-      final profile = await widget.gateway.updateProfile(
+      var profile = await widget.gateway.updateProfile(
         username: _usernameController.text.trim(),
         assistantName: _assistantNameController.text.trim(),
         personality: personality,
-        role: role,
+        role: _roleId ?? role,
       );
+      if (widget.profile.birthday == null &&
+          _birthday != null &&
+          widget.gateway is AccountGateway) {
+        final code =
+            await (widget.gateway as AccountGateway).setupRecovery(_birthday!);
+        if (!mounted) return;
+        await showRecoveryCode(context, code);
+        profile = await widget.gateway.getProfile();
+      }
       if (mounted) widget.onSaved(profile);
     } on ApiException catch (error) {
       if (mounted) setState(() => _error = error.message);
@@ -98,6 +128,31 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     if (name.isEmpty) return '此项不能为空';
     if (name.length > 30) return '最多输入 30 个字符';
     return null;
+  }
+
+  Future<void> _editRole([RoleOption? role]) async {
+    final gateway = widget.gateway;
+    if (gateway is! RoleGateway) return;
+    final saved =
+        await Navigator.of(context).push<RoleOption>(MaterialPageRoute(
+      builder: (_) => RoleEditorPage(
+          gateway: gateway as RoleGateway,
+          roles: _options!.roleDetails,
+          role: role),
+    ));
+    if (!mounted) return;
+    if (saved != null) {
+      _role = saved.name;
+      _roleId = saved.id;
+    }
+    await _loadOptions();
+    if (!mounted) return;
+    if (role != null &&
+        widget.profile.roleId == role.id &&
+        !_options!.roleDetails.any((item) => item.id == role.id)) {
+      final profile = await widget.gateway.getProfile();
+      if (mounted) widget.onSaved(profile);
+    }
   }
 
   @override
@@ -140,13 +195,42 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                     child: Column(
                       children: [
                         _ProfileTextCard(
-                          label: '你的用户名',
+                          label: '你的昵称',
                           icon: const Icon(Icons.person_outline_rounded,
                               color: BingoPalette.blue, size: 25),
                           controller: _usernameController,
                           validator: _requiredName,
                           textInputAction: TextInputAction.next,
                         ),
+                        if (widget.gateway is AccountGateway) ...[
+                          const SizedBox(height: 14),
+                          Container(
+                              decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(24),
+                                  border: Border.all(color: BingoPalette.line)),
+                              child: ListTile(
+                                  leading: const Icon(Icons.cake_outlined,
+                                      color: BingoPalette.blue),
+                                  title: const Text('你的生日'),
+                                  subtitle: Text(_birthday
+                                          ?.toIso8601String()
+                                          .substring(0, 10) ??
+                                      '首次设置，用于找回验证'),
+                                  trailing: const Icon(Icons.chevron_right),
+                                  onTap: widget.profile.birthday != null
+                                      ? null
+                                      : () async {
+                                          final date = await showDatePicker(
+                                              context: context,
+                                              initialDate: DateTime(2000),
+                                              firstDate: DateTime(1900),
+                                              lastDate: DateTime.now());
+                                          if (date != null && mounted) {
+                                            setState(() => _birthday = date);
+                                          }
+                                        })),
+                        ],
                         const SizedBox(height: 12),
                         _ProfileTextCard(
                           label: '助手名称',
@@ -165,15 +249,27 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                       child: Center(child: CircularProgressIndicator()),
                     )
                   else if (options != null) ...[
-                    _ProfileDropdown(
-                      key: ValueKey('role-$_role'),
-                      label: '助手角色',
-                      icon: const _RoleIcon(),
-                      iconBackgroundColor: const Color(0xFFECFBF6),
-                      value: _role,
-                      options: options.roles,
-                      onSelected: (value) => setState(() => _role = value),
-                    ),
+                    if (widget.showRoleSelector)
+                      _ProfileDropdown(
+                        key: ValueKey('role-$_role'),
+                        label: '助手角色',
+                        icon: const _RoleIcon(),
+                        iconBackgroundColor: const Color(0xFFECFBF6),
+                        value: _role,
+                        options: options.roles,
+                        roleDetails: options.roleDetails,
+                        onCreate:
+                            widget.gateway is RoleGateway ? _editRole : null,
+                        onEdit:
+                            widget.gateway is RoleGateway ? _editRole : null,
+                        onSelected: (value) => setState(() {
+                          _role = value;
+                          _roleId = options.roleDetails
+                              .where((role) => role.name == value)
+                              .firstOrNull
+                              ?.id;
+                        }),
+                      ),
                     const SizedBox(height: 12),
                     _ProfileDropdown(
                       key: ValueKey('personality-$_personality'),
@@ -595,6 +691,9 @@ class _ProfileDropdown extends StatefulWidget {
     required this.value,
     required this.options,
     required this.onSelected,
+    this.roleDetails = const [],
+    this.onCreate,
+    this.onEdit,
     this.iconBackgroundColor = BingoPalette.softSurface,
     super.key,
   });
@@ -605,6 +704,9 @@ class _ProfileDropdown extends StatefulWidget {
   final String? value;
   final List<String> options;
   final ValueChanged<String> onSelected;
+  final List<RoleOption> roleDetails;
+  final VoidCallback? onCreate;
+  final ValueChanged<RoleOption>? onEdit;
 
   @override
   State<_ProfileDropdown> createState() => _ProfileDropdownState();
@@ -668,6 +770,10 @@ class _ProfileDropdownState extends State<_ProfileDropdown> {
                         const EdgeInsets.symmetric(horizontal: 6, vertical: 9),
                     child: Row(
                       children: [
+                        if (widget.roleDetails.isNotEmpty) ...[
+                          AssistantAvatar(role: option, size: 32),
+                          const SizedBox(width: 10),
+                        ],
                         Expanded(
                           child: Text(option,
                               style: TextStyle(
@@ -683,10 +789,28 @@ class _ProfileDropdownState extends State<_ProfileDropdown> {
                         if (option == widget.value)
                           const Icon(Icons.check_rounded,
                               color: BingoPalette.blue, size: 19),
+                        if (widget.onEdit != null &&
+                            widget.roleDetails.any(
+                                (role) => role.name == option && !role.builtin))
+                          IconButton(
+                            tooltip: '编辑$option',
+                            icon: const Icon(Icons.edit_outlined, size: 20),
+                            color: BingoPalette.blue,
+                            onPressed: () => widget.onEdit!(widget.roleDetails
+                                .firstWhere((role) => role.name == option)),
+                          ),
                       ],
                     ),
                   ),
                 ),
+              if (widget.onCreate != null) ...[
+                const Divider(height: 1, color: BingoPalette.line),
+                TextButton.icon(
+                  onPressed: widget.onCreate,
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('创建新角色'),
+                ),
+              ],
             ],
           ],
         ),

@@ -4,7 +4,7 @@ import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:flutter/material.dart';
-import 'package:bingo/shared/widgets/assistant_avatar.dart';
+import 'package:bingo/features/auth/presentation/password_recovery_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({
@@ -14,6 +14,7 @@ class SettingsPage extends StatefulWidget {
     required this.onCallCaptionsChanged,
     required this.onEditProfile,
     required this.onLogout,
+    this.onBack,
     super.key,
   });
 
@@ -23,6 +24,7 @@ class SettingsPage extends StatefulWidget {
   final Future<void> Function(bool enabled) onCallCaptionsChanged;
   final Future<UserProfile?> Function(UserProfile profile) onEditProfile;
   final VoidCallback onLogout;
+  final VoidCallback? onBack;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -61,11 +63,6 @@ class _SettingsPageState extends State<SettingsPage> {
     });
   }
 
-  Future<void> _editProfile() async {
-    final updated = await widget.onEditProfile(_profile);
-    if (updated != null && mounted) setState(() => _profile = updated);
-  }
-
   Future<void> _confirmLogout() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -100,7 +97,8 @@ class _SettingsPageState extends State<SettingsPage> {
             Row(
               children: [
                 IconButton(
-                  onPressed: () => Navigator.of(context).maybePop(),
+                  onPressed:
+                      widget.onBack ?? () => Navigator.of(context).maybePop(),
                   tooltip: '返回',
                   icon: const Icon(Icons.arrow_back, size: 24),
                 ),
@@ -113,49 +111,6 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                 ),
               ],
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-              decoration: BoxDecoration(
-                color: const Color(0xFFEAF5F0),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0xFFDDEDE5)),
-              ),
-              child: Row(
-                children: [
-                  AssistantAvatar(role: _profile.role, size: 54),
-                  const SizedBox(width: 13),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _profile.assistantName ?? 'Bingo',
-                          style: const TextStyle(
-                              color: BingoPalette.ink,
-                              fontSize: 19,
-                              fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          '${_profile.role ?? '未设置'} · ${_profile.personality ?? '未设置'}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              color: Color(0xFF66756E), fontSize: 13),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: _editProfile,
-                    tooltip: '编辑助手',
-                    icon: const Icon(Icons.edit_outlined,
-                        color: BingoPalette.blue, size: 22),
-                  ),
-                ],
-              ),
             ),
             const SizedBox(height: 20),
             _SectionLabel('账号'),
@@ -219,6 +174,20 @@ class _SettingsPageState extends State<SettingsPage> {
               ],
             ),
             const SizedBox(height: 28),
+            if (widget.gateway is AccountGateway) ...[
+              _SettingsCard(children: [
+                _SettingsRow(
+                    icon: Icons.lock_outline_rounded,
+                    title: '修改密码',
+                    subtitle: '验证当前密码后修改',
+                    onTap: () => Navigator.of(context).push<void>(
+                        MaterialPageRoute(
+                            builder: (_) => PasswordRecoveryPage(
+                                gateway: widget.gateway as AccountGateway,
+                                onPasswordChanged: widget.onLogout)))),
+              ]),
+              const SizedBox(height: 16),
+            ],
             _SettingsCard(
               children: [
                 _SettingsRow(

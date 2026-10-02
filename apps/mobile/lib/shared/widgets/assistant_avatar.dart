@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:bingo/core/role_avatar_store.dart';
 
 String assistantAvatarAsset(String? role) => switch (role) {
       '男朋友' => 'assets/images/boyfriend.png',
       '女朋友' => 'assets/images/girlfriend.png',
       '家长' => 'assets/images/parent.png',
       '老师' || '导师' => 'assets/images/teacher.png',
-      '小孩' || '儿子' || '女儿' => 'assets/images/child.png',
+      '小朋友' || '小孩' || '儿子' || '女儿' => 'assets/images/child.png',
       '同事' || '朋友' => 'assets/images/colleague.png',
       _ => 'assets/images/bingo_logo.png',
     };
@@ -34,16 +35,20 @@ class AssistantAvatar extends StatelessWidget {
             width: size,
             height: size,
             child: ClipOval(
-              child: Transform.scale(
-                scale: 1.12,
-                child: Image.asset(
-                  assistantAvatarAsset(role),
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Image.asset(
-                    'assets/images/bingo_logo.png',
-                    fit: BoxFit.cover,
-                  ),
-                ),
+              child: ValueListenableBuilder(
+                valueListenable: RoleAvatarStore.images,
+                builder: (context, images, _) => images[role] != null
+                    ? Image.memory(images[role]!, fit: BoxFit.cover)
+                    : Transform.scale(
+                        scale: 1.12,
+                        child: Image.asset(
+                          assistantAvatarAsset(role),
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Image.asset(
+                            'assets/images/bingo_logo.png',
+                            fit: BoxFit.cover,
+                          ),
+                        )),
               ),
             ),
           ),

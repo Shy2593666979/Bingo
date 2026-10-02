@@ -44,9 +44,12 @@ async def acknowledge_proactive_message(
 async def get_recommendations(
     request: Request,
     user: CurrentUserDependency,
+    conversation_id: str | None = None,
 ) -> RecommendationsResponse:
     service: EngagementService | None = request.app.state.engagement
-    items = [] if service is None else await service.recommendations_for_entry(user.id)
+    items = (
+        [] if service is None else await service.recommendations_for_entry(user.id, conversation_id)
+    )
     return RecommendationsResponse(items=items)
 
 
@@ -54,8 +57,9 @@ async def get_recommendations(
 async def clear_recommendations(
     request: Request,
     user: CurrentUserDependency,
+    conversation_id: str | None = None,
 ) -> Response:
     service: EngagementService | None = request.app.state.engagement
     if service is not None:
-        await service.clear_recommendations(user.id)
+        await service.clear_recommendations(user.id, conversation_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

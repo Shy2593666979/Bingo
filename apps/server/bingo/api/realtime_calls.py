@@ -1,4 +1,4 @@
-from fastapi import APIRouter, WebSocket
+from fastapi import APIRouter, HTTPException, WebSocket
 
 from bingo.agent.context import build_context
 from bingo.db.repositories import (
@@ -40,13 +40,19 @@ async def realtime_call(websocket: WebSocket) -> None:
             await invitation_repository.set_status(invitation, "active")
             requested_conversation_id = invitation.conversation_id
         repository = ConversationRepository(session, user.id)
-        conversation = await repository.get_or_create(requested_conversation_id)
+        try:
+            user = await repository.context_user(user, requested_conversation_id)
+            conversation = await repository.get_or_create(requested_conversation_id)
+        except HTTPException:
+            await websocket.close(code=4409, reason="角色或对话已失效")
+            return
         await repository.commit()
-        history = await repository.list_messages(
-            conversation.id, limit=40, since=user.role_changed_at
-        )
+        history = await repository.list_messages(conversation.id, limit=40)
         memories = await MemoryRepository(session, user.id).list(role_id=user.role_id)
         role = await RoleRepository(session).get(invitation.role_id if invitation else user.role_id)
+        if role and (role.deleted or not role.enabled or role.owner_id not in {None, user.id}):
+            await websocket.close(code=4409, reason="角色已失效，请重新选择")
+            return
 
     settings = websocket.app.state.settings
     call_settings = settings.realtime_call

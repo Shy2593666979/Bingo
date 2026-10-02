@@ -81,6 +81,7 @@ class AgentRuntime:
         log_event(logger, logging.INFO, "agent.started", user_id=user.id)
         try:
             repository = ConversationRepository(session, user.id)
+            user = await repository.context_user(user, conversation_id)
             stored_content = content or "[图片]"
             conversation, activity_version, user_message = await self._prepare_run(
                 repository,
@@ -93,7 +94,7 @@ class AgentRuntime:
             user_message.image_id = image_id
             user_message.image_mime_type = image_mime_type
             await repository.commit()
-            history = await repository.list_messages(conversation.id, since=user.role_changed_at)
+            history = await repository.list_messages(conversation.id)
             memories = await MemoryRepository(session, user.id).list(role_id=user.role_id)
             role = await RoleRepository(session).get(user.role_id)
             context = self._context(
@@ -210,6 +211,7 @@ class AgentRuntime:
     ) -> AsyncIterator[dict[str, Any]]:
         started_at = time.perf_counter()
         repository = ConversationRepository(session, user.id)
+        user = await repository.context_user(user, conversation_id)
         stored_content = content or "[图片]"
         conversation, activity_version, user_message = await self._prepare_run(
             repository,
@@ -235,7 +237,7 @@ class AgentRuntime:
             yield {"type": "interrupted", "run_id": run_handle.run_id}
             raise AgentRunInterrupted
 
-        messages = await repository.list_messages(conversation.id, since=user.role_changed_at)
+        messages = await repository.list_messages(conversation.id)
         memories = await MemoryRepository(session, user.id).list(role_id=user.role_id)
         role = await RoleRepository(session).get(user.role_id)
         history = self._context(user, messages, memories, role_prompt=role.prompt if role else "")
@@ -413,7 +415,7 @@ class AgentRuntime:
         await self._remember_explicit_fact(session, user_id, content)
         activity_version = None
         if self._engagement is not None:
-            activity_version = await self._engagement.record_user_activity(user_id)
+            activity_version = await self._engagement.record_user_activity(user_id, conversation.id)
         return conversation, activity_version, user_message
 
     async def _schedule_background(

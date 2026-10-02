@@ -58,6 +58,12 @@ realtime_call:
   max_history_turns: 20
   timeout_seconds: 15
 
+voice_cloning:
+  sample_host: yukisbox
+  upload_endpoint: https://yukisbox.com/upload
+  endpoint: ""
+  timeout_seconds: 180
+
 redis:
   url: null
 

@@ -57,6 +57,7 @@ class LocalChatDatabase(context: Context) :
             )
             """.trimIndent(),
         )
+        createRoleOrderTable(db)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -81,6 +82,51 @@ class LocalChatDatabase(context: Context) :
             )
             db.execSQL("ALTER TABLE local_messages ADD COLUMN call_status TEXT")
             db.execSQL("ALTER TABLE local_messages ADD COLUMN call_duration_seconds INTEGER")
+        }
+        if (oldVersion < 7) {
+            createRoleOrderTable(db)
+        }
+    }
+
+    private fun createRoleOrderTable(db: SQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE local_role_order (
+                user_id TEXT NOT NULL,
+                role_id TEXT NOT NULL,
+                ordinal INTEGER NOT NULL,
+                PRIMARY KEY (user_id, role_id)
+            )
+            """.trimIndent(),
+        )
+    }
+
+    fun loadRoleOrder(userId: String): List<String> {
+        val roleIds = mutableListOf<String>()
+        readableDatabase.query(
+            "local_role_order",
+            arrayOf("role_id"),
+            "user_id = ?",
+            arrayOf(userId),
+            null,
+            null,
+            "ordinal ASC",
+        ).use { cursor ->
+            while (cursor.moveToNext()) roleIds += cursor.getString(0)
+        }
+        return roleIds
+    }
+
+    fun saveRoleOrder(userId: String, roleIds: List<String>) {
+        writableDatabase.transaction {
+            delete("local_role_order", "user_id = ?", arrayOf(userId))
+            roleIds.distinct().forEachIndexed { index, roleId ->
+                insertOrThrow("local_role_order", null, ContentValues().apply {
+                    put("user_id", userId)
+                    put("role_id", roleId)
+                    put("ordinal", index)
+                })
+            }
         }
     }
 
@@ -268,6 +314,6 @@ class LocalChatDatabase(context: Context) :
     }
 
     private companion object {
-        const val DATABASE_VERSION = 6
+        const val DATABASE_VERSION = 7
     }
 }

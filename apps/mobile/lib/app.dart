@@ -9,12 +9,13 @@ import 'package:bingo/features/app_shell.dart';
 import 'package:bingo/features/auth/data/auth_token_store.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/auth/presentation/auth_page.dart';
-import 'package:bingo/features/auth/presentation/profile_setup_page.dart';
+import 'package:bingo/features/auth/presentation/user_setup_page.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/chat/data/local_chat_store.dart';
 import 'package:bingo/features/chat/presentation/chat_controller.dart';
 import 'package:bingo/features/splash/presentation/splash_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 class BingoApp extends StatefulWidget {
   const BingoApp({this.tokenStore, super.key});
@@ -99,8 +100,8 @@ class _BingoAppState extends State<BingoApp> with WidgetsBindingObserver {
         _gateway.accessToken = token;
         _profile = await _gateway.getProfile();
         _controller.setAssistantRole(_profile!.role);
-        await _controller.bindUser(_profile!.id);
-        if (_profile!.onboardingComplete) {
+        await _controller.bindAccount(_profile!.id);
+        if (_profile!.onboardingComplete && _profile!.birthday != null) {
           await _pushRegistration.activate();
         }
       }
@@ -116,8 +117,8 @@ class _BingoAppState extends State<BingoApp> with WidgetsBindingObserver {
     _gateway.accessToken = result.accessToken;
     await _tokenStore.write(result.accessToken);
     _controller.setAssistantRole(result.user.role);
-    await _controller.bindUser(result.user.id);
-    if (result.user.onboardingComplete) {
+    await _controller.bindAccount(result.user.id);
+    if (result.user.onboardingComplete && result.user.birthday != null) {
       await _pushRegistration.activate();
     }
     if (mounted) setState(() => _profile = result.user);
@@ -162,6 +163,9 @@ class _BingoAppState extends State<BingoApp> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Bingo',
+      locale: const Locale('zh', 'CN'),
+      supportedLocales: const [Locale('zh', 'CN')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       debugShowCheckedModeBanner: false,
       theme: buildBingoTheme(),
       home: AnimatedSwitcher(
@@ -194,8 +198,8 @@ class _BingoAppState extends State<BingoApp> with WidgetsBindingObserver {
         onAuthenticated: _onAuthenticated,
       );
     }
-    if (!profile.onboardingComplete) {
-      return ProfileSetupPage(
+    if (!profile.onboardingComplete || profile.birthday == null) {
+      return UserSetupPage(
         key: const ValueKey('profile-setup'),
         gateway: _gateway,
         profile: profile,

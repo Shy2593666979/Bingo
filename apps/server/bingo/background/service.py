@@ -75,7 +75,8 @@ class EngagementService:
                 await self._worker
         await self._broker.close()
 
-    async def record_user_activity(self, user_id: str) -> str:
+    async def record_user_activity(self, user_id: str, conversation_id: str | None = None) -> str:
+        await self.clear_recommendations(user_id, conversation_id)
         return await self._broker.record_activity(user_id)
 
     async def schedule_after_turn(
@@ -116,21 +117,50 @@ class EngagementService:
             count=len(self._follow_up_delays) + 2,
         )
 
-    async def get_recommendations(self, user_id: str) -> list[str]:
-        return await self._broker.get_recommendations(user_id)
+    async def _recommendation_target(
+        self, user_id: str, conversation_id: str | None = None
+    ) -> tuple[str, str | None]:
+        async with self._session_factory() as session:
+            repository = ConversationRepository(session, user_id)
+            if conversation_id:
+                conversation = await repository.get_or_create(conversation_id)
+            else:
+                user = await UserRepository(session).get(user_id)
+                conversations = await repository.list_conversations(200)
+                conversation = next(
+                    (item for item in conversations if user and item.role_id == user.role_id), None
+                )
+        target = conversation.id if conversation else None
+        return (f"{user_id}:{target}" if target else user_id), target
 
-    async def recommendations_for_entry(self, user_id: str) -> list[str]:
-        items = await self._broker.get_recommendations(user_id)
+    async def get_recommendations(
+        self, user_id: str, conversation_id: str | None = None
+    ) -> list[str]:
+        key, _ = await self._recommendation_target(user_id, conversation_id)
+        return await self._broker.get_recommendations(key)
+
+    async def recommendations_for_entry(
+        self, user_id: str, conversation_id: str | None = None
+    ) -> list[str]:
+        key, target = await self._recommendation_target(user_id, conversation_id)
+        items = await self._broker.get_recommendations(key)
         if items:
             return items
 
-        lock = self._recommendation_locks.setdefault(user_id, asyncio.Lock())
+        lock = self._recommendation_locks.setdefault(key, asyncio.Lock())
         async with lock:
-            items = await self._broker.get_recommendations(user_id)
+            items = await self._broker.get_recommendations(key)
             if items:
                 return items
             async with self._session_factory() as session:
-                latest = await ConversationRepository(session, user_id).latest_user_message()
+                messages = (
+                    await ConversationRepository(session, user_id).list_messages(target, 200)
+                    if target
+                    else []
+                )
+                latest = next(
+                    (message for message in reversed(messages) if message.role == "user"), None
+                )
             if latest is None:
                 return []
             idle_seconds = (beijing_now() - as_beijing(latest.created_at)).total_seconds()
@@ -139,10 +169,11 @@ class EngagementService:
             await self._create_recommendations(
                 {"user_id": user_id, "conversation_id": latest.conversation_id}
             )
-            return await self._broker.get_recommendations(user_id)
+            return await self._broker.get_recommendations(key)
 
-    async def clear_recommendations(self, user_id: str) -> None:
-        await self._broker.clear_recommendations(user_id)
+    async def clear_recommendations(self, user_id: str, conversation_id: str | None = None) -> None:
+        key, _ = await self._recommendation_target(user_id, conversation_id)
+        await self._broker.clear_recommendations(key)
 
     async def _run_worker(self) -> None:
         while True:
@@ -254,8 +285,11 @@ class EngagementService:
             user = await UserRepository(session).get(payload["user_id"])
             if user is None:
                 return
+            user = await ConversationRepository(session, user.id).context_user(
+                user, payload["conversation_id"]
+            )
             messages = await ConversationRepository(session, user.id).list_messages(
-                payload["conversation_id"], 30, since=user.role_changed_at
+                payload["conversation_id"], 30
             )
             chat_messages = [item for item in messages if item.message_type == "chat"]
             transcript = "\n".join(f"{item.role}: {item.content}" for item in chat_messages)
@@ -274,6 +308,7 @@ class EngagementService:
                     content[:500],
                     stage,
                     assistant_role=user.role,
+                    role_id=user.role_id,
                 )
                 if self._push_service is not None:
                     await self._push_service.enqueue(
@@ -287,8 +322,11 @@ class EngagementService:
             user = await UserRepository(session).get(payload["user_id"])
             if user is None:
                 return
+            user = await ConversationRepository(session, user.id).context_user(
+                user, payload["conversation_id"]
+            )
             messages = await ConversationRepository(session, user.id).list_messages(
-                payload["conversation_id"], 40, since=user.role_changed_at
+                payload["conversation_id"], 40
             )
             memories = await MemoryRepository(session, user.id).list(30, role_id=user.role_id)
             chat_messages = [item for item in messages if item.message_type == "chat"]
@@ -311,7 +349,9 @@ class EngagementService:
                     "结合我的长期偏好，陪我聊聊最近最值得投入的兴趣",
                     "帮我回看最近的目标，找出最值得继续深入的线索",
                 ]
-            await self._broker.save_recommendations(user.id, items[:3])
+            await self._broker.save_recommendations(
+                f"{user.id}:{payload['conversation_id']}", items[:3]
+            )
 
 
 def _parse_json_list(raw: str) -> list[Any]:

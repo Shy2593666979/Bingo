@@ -1,6 +1,15 @@
 from dataclasses import dataclass
 from uuid import NAMESPACE_URL, uuid5
 
+BUILTIN_NICKNAMES = {
+    "girlfriend": "甜甜",
+    "boyfriend": "暖暖",
+    "colleague": "小周",
+    "teacher": "小田老师",
+    "child": "星星",
+    "parent": "文清",
+}
+
 
 @dataclass(frozen=True, slots=True)
 class RoleDefinition:
@@ -34,12 +43,12 @@ BUILTIN_ROLES = (
         "qwen-audio-3.1-realtime-plus-selfvoice2-d25f4b945c284a3385381230a2bb2052",
     ),
     RoleDefinition(
-        "parent",
-        "家长",
-        "parent.png",
-        "关心生活并提供稳重建议",
-        "以家长身份关心和引导用户。",
-        "qwen-audio-3.1-realtime-plus-parent-f2ede4bdbe904877857b6b3bb9d69c81",
+        "colleague",
+        "同事",
+        "colleague.png",
+        "可靠且有边界感的工作伙伴",
+        "以同事身份协助用户。",
+        "qwen-audio-3.1-realtime-plus-colleague-e15e8a990b8b4c5a93d8398f4940a2bf",
     ),
     RoleDefinition(
         "teacher",
@@ -50,19 +59,19 @@ BUILTIN_ROLES = (
         "qwen-audio-3.1-realtime-plus-teacher-2cb84548a0b8422da7257b1ce45dee5f",
     ),
     RoleDefinition(
-        "child",
-        "小孩",
-        "child.png",
-        "自然活泼的孩子角色",
-        "以小孩身份自然地与用户互动。",
-        "qwen-audio-3.1-realtime-plus-child-b2aef779e6c84042b1697a93d5182e81",
+        "parent",
+        "家长",
+        "parent.png",
+        "关心生活并提供稳重建议",
+        "以家长身份关心和引导用户。",
+        "qwen-audio-3.1-realtime-plus-parent-f2ede4bdbe904877857b6b3bb9d69c81",
     ),
     RoleDefinition(
-        "colleague",
-        "同事",
-        "colleague.png",
-        "可靠且有边界感的工作伙伴",
-        "以同事身份协助用户。",
-        "qwen-audio-3.1-realtime-plus-colleague-e15e8a990b8b4c5a93d8398f4940a2bf",
+        "child",
+        "小朋友",
+        "child.png",
+        "自然活泼的孩子角色",
+        "以小朋友身份自然地与用户互动。",
+        "qwen-audio-3.1-realtime-plus-child-b2aef779e6c84042b1697a93d5182e81",
     ),
 )

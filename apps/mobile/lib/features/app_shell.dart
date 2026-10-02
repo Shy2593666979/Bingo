@@ -1,16 +1,21 @@
+import 'dart:async';
+
+import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/core/widgets/center_toast.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
-import 'package:bingo/features/auth/presentation/profile_setup_page.dart';
+import 'package:bingo/features/auth/presentation/user_setup_page.dart';
+import 'package:bingo/features/settings/presentation/my_page.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/chat/presentation/chat_controller.dart';
 import 'package:bingo/features/chat/presentation/chat_page.dart';
 import 'package:bingo/features/chat/presentation/incoming_call_page.dart';
 import 'package:bingo/features/chat/presentation/realtime_call_page.dart';
 import 'package:bingo/features/settings/presentation/settings_page.dart';
+import 'package:bingo/features/roles/presentation/role_home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-class AppShell extends StatelessWidget {
+class AppShell extends StatefulWidget {
   const AppShell({
     required this.chatController,
     required this.gateway,
@@ -29,22 +34,98 @@ class AppShell extends StatelessWidget {
   final Future<void> Function(bool enabled) onCallCaptionsChanged;
   final ValueChanged<UserProfile> onProfileSaved;
   final VoidCallback onLogout;
-  static const _deviceChannel = MethodChannel('bingo/device_tools');
 
   @override
-  Widget build(BuildContext context) {
+  State<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends State<AppShell> {
+  ChatController get chatController => widget.chatController;
+  HttpApiGateway get gateway => widget.gateway;
+  UserProfile get profile => widget.profile;
+  bool get callCaptionsEnabled => widget.callCaptionsEnabled;
+  Future<void> Function(bool) get onCallCaptionsChanged =>
+      widget.onCallCaptionsChanged;
+  ValueChanged<UserProfile> get onProfileSaved => widget.onProfileSaved;
+  VoidCallback get onLogout => widget.onLogout;
+  static const _deviceChannel = MethodChannel('bingo/device_tools');
+  final _rolesKey = GlobalKey<RoleHomePageState>();
+  bool _showingIncoming = false;
+
+  @override
+  void initState() {
+    super.initState();
+    chatController.addListener(_onChatChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _onChatChanged());
+  }
+
+  void _onChatChanged() {
+    final invitation = chatController.takeIncomingCall();
+    if (invitation == null || _showingIncoming || !mounted) return;
+    _showingIncoming = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        if (mounted) await _openIncomingCall(context, invitation);
+      } finally {
+        _showingIncoming = false;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    chatController.removeListener(_onChatChanged);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        backgroundColor: BingoPalette.ice,
+        body: RoleHomePage(
+          key: _rolesKey,
+          userId: profile.id,
+          gateway: gateway,
+          userAvatarData: profile.userAvatarData,
+          onOpenRole: _openRole,
+          onOpenSettings: () => _openMy(context),
+          onRolesChanged: () async {
+            final updated = await gateway.getProfile();
+            if (mounted) onProfileSaved(updated);
+          },
+        ),
+      );
+
+  Future<void> _openRole(RoleOption role) async {
+    final conversation = await gateway.openRoleConversation(role.id);
+    final selected = await gateway.getProfile();
+    if (!mounted) return;
+    onProfileSaved(selected);
+    await chatController.bindConversation(
+        profile.id, conversation.id, role.name);
+    if (!mounted) return;
+    await Navigator.of(context).push<void>(MaterialPageRoute(
+      builder: (chatContext) => _chatPage(chatContext, role),
+    ));
+    await gateway.markConversationRead(conversation.id);
+    final updated = await gateway.getProfile();
+    if (mounted) onProfileSaved(updated);
+  }
+
+  Widget _chatPage(BuildContext context, RoleOption role) {
     return ChatPage(
       controller: chatController,
-      assistantName: profile.assistantName ?? 'Bingo',
-      assistantRole: profile.role,
+      assistantName: role.displayName,
+      assistantRole: role.name,
       speechGateway: gateway,
-      onStartCall: () => _openRealtimeCall(context),
+      onStartCall: () => _openRealtimeCall(context,
+          assistantName: role.displayName, assistantRole: role.name),
       onIncomingCall: (invitation) => _openIncomingCall(context, invitation),
       onPickGallery: () => _pickImage(context, 'pickImage'),
       onTakePhoto: () => _pickImage(context, 'takePhoto'),
       imageUrlBuilder: (imageId) => gateway.imageUrl(imageId),
       imageAccessToken: gateway.accessToken,
       onOpenSettings: () => _openSettings(context),
+      onBack: () => Navigator.of(context).pop(),
     );
   }
 
@@ -70,6 +151,8 @@ class AppShell extends StatelessWidget {
     BuildContext context, {
     String? conversationId,
     String? callId,
+    String? assistantName,
+    String? assistantRole,
   }) async {
     final completedConversationId = await Navigator.of(context).push<String>(
       MaterialPageRoute(
@@ -77,15 +160,17 @@ class AppShell extends StatelessWidget {
           gateway: gateway,
           conversationId: conversationId ?? chatController.conversationId,
           callId: callId,
-          assistantName: profile.assistantName ?? 'Bingo',
-          assistantRole: profile.role,
+          assistantName: assistantName ?? profile.role ?? 'Bingo',
+          assistantRole: assistantRole ?? profile.role,
           showCaptions: callCaptionsEnabled,
         ),
       ),
     );
-    if (completedConversationId != null) {
+    if (completedConversationId != null &&
+        completedConversationId == chatController.conversationId) {
       await chatController.reloadConversation(completedConversationId);
     }
+    await _rolesKey.currentState?.refresh();
   }
 
   Future<void> _openIncomingCall(
@@ -107,10 +192,13 @@ class AppShell extends StatelessWidget {
         context,
         conversationId: invitation.conversationId,
         callId: invitation.id,
+        assistantName: invitation.callerName,
+        assistantRole: invitation.callerRole,
       );
-    } else {
+    } else if (chatController.conversationId == invitation.conversationId) {
       await chatController.reloadConversation(invitation.conversationId);
     }
+    await _rolesKey.currentState?.refresh();
   }
 
   Future<void> _openSettings(BuildContext context) async {
@@ -124,7 +212,7 @@ class AppShell extends StatelessWidget {
           onEditProfile: (currentProfile) =>
               _openProfileSetup(settingsContext, currentProfile),
           onLogout: () {
-            Navigator.of(settingsContext).pop();
+            Navigator.of(settingsContext).popUntil((route) => route.isFirst);
             onLogout();
           },
         ),
@@ -139,10 +227,10 @@ class AppShell extends StatelessWidget {
   ) {
     return Navigator.of(context).push<UserProfile>(
       MaterialPageRoute(
-        builder: (profileContext) => ProfileSetupPage(
+        builder: (profileContext) => UserSetupPage(
           gateway: gateway,
           profile: currentProfile,
-          onCancel: () => Navigator.of(profileContext).pop(),
+          isEditing: true,
           onSaved: (updated) {
             onProfileSaved(updated);
             Navigator.of(profileContext).pop(updated);
@@ -150,5 +238,19 @@ class AppShell extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _openMy(BuildContext context) async {
+    await Navigator.of(context).push<void>(MaterialPageRoute(
+        builder: (myContext) => MyPage(
+            profile: profile,
+            loadPersonalities: gateway.getProfileOptions,
+            savePersonality: (personality) async {
+              final updated = await gateway.updatePersonality(personality);
+              if (mounted) onProfileSaved(updated);
+              return updated;
+            },
+            onEditUser: (current) => _openProfileSetup(myContext, current),
+            onOpenSettings: () => _openSettings(myContext))));
   }
 }

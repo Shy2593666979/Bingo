@@ -174,7 +174,7 @@ def test_profile_options_use_personality_and_role(client: TestClient) -> None:
     assert response.status_code == 200
     assert "tones" not in response.json()
     assert "温柔体贴" in response.json()["personalities"]
-    assert response.json()["roles"] == ["女朋友", "男朋友", "家长", "老师", "小孩", "同事"]
+    assert response.json()["roles"] == ["女朋友", "男朋友", "同事", "老师", "家长", "小朋友"]
 
 
 def test_registration_profile_and_persistent_login(client: TestClient) -> None:
@@ -454,7 +454,7 @@ def test_assistant_can_invite_user_to_realtime_call(client: TestClient) -> None:
 
     assert response.status_code == 200
     invitation = next(event for event in events if event["type"] == "incoming_call")
-    assert invitation["caller_name"] == "Bingo"
+    assert invitation["caller_name"] == "同事"
     assert invitation["caller_role"] == "同事"
     assert invitation["reason"] == "想听听你的声音"
     assert invitation["status"] == "ringing"

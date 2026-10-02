@@ -23,6 +23,7 @@ class ChatPage extends StatefulWidget {
     this.imageUrlBuilder,
     this.imageAccessToken,
     required this.onOpenSettings,
+    this.onBack,
     super.key,
   });
 
@@ -37,6 +38,7 @@ class ChatPage extends StatefulWidget {
   final String Function(String imageId)? imageUrlBuilder;
   final String? imageAccessToken;
   final VoidCallback onOpenSettings;
+  final VoidCallback? onBack;
 
   @override
   State<ChatPage> createState() => _ChatPageState();
@@ -122,6 +124,7 @@ class _ChatPageState extends State<ChatPage> {
                 assistantName: widget.assistantName,
                 assistantRole: widget.assistantRole,
                 onOpenSettings: widget.onOpenSettings,
+                onBack: widget.onBack,
               ),
               if (controller.errorMessage case final message?)
                 Container(
@@ -145,7 +148,9 @@ class _ChatPageState extends State<ChatPage> {
                 child: controller.timelineItems.isEmpty &&
                         !showWaiting &&
                         !showRecommendations
-                    ? _EmptyChat(onSuggestion: controller.send)
+                    ? _EmptyChat(
+                        onSuggestion: controller.send,
+                        assistantRole: widget.assistantRole)
                     : ListView.builder(
                         controller: _scrollController,
                         padding: const EdgeInsets.fromLTRB(18, 8, 18, 18),
@@ -279,11 +284,13 @@ class _ChatHeader extends StatelessWidget {
     required this.assistantName,
     required this.assistantRole,
     required this.onOpenSettings,
+    this.onBack,
   });
 
   final String assistantName;
   final String? assistantRole;
   final VoidCallback onOpenSettings;
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) {
@@ -291,6 +298,13 @@ class _ChatHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 14, 18, 14),
       child: Row(
         children: [
+          if (onBack != null) ...[
+            IconButton(
+                onPressed: onBack,
+                tooltip: '返回角色',
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 21)),
+            const SizedBox(width: 4),
+          ],
           AssistantAvatar(
             role: assistantRole,
             size: 62,
@@ -306,52 +320,10 @@ class _ChatHeader extends StatelessWidget {
                   ),
             ),
           ),
-          _HeaderButton(
-            icon: Icons.settings_rounded,
-            tooltip: '设置',
-            onPressed: onOpenSettings,
-          ),
         ],
       ),
     );
   }
-}
-
-class _HeaderButton extends StatelessWidget {
-  const _HeaderButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onPressed,
-  });
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) => Tooltip(
-        message: tooltip,
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(99),
-          child: _HeaderButtonFace(icon: icon),
-        ),
-      );
-}
-
-class _HeaderButtonFace extends StatelessWidget {
-  const _HeaderButtonFace({required this.icon});
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        width: 46,
-        height: 46,
-        decoration: BoxDecoration(
-          color: const Color(0xFFF0F6F3).withValues(alpha: 0.92),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, color: BingoPalette.ink),
-      );
 }
 
 class _MintBackgroundPainter extends CustomPainter {
@@ -470,13 +442,14 @@ class _RecommendationRows extends StatelessWidget {
 }
 
 class _EmptyChat extends StatelessWidget {
-  const _EmptyChat({required this.onSuggestion});
+  const _EmptyChat({required this.onSuggestion, this.assistantRole});
 
   final ValueChanged<String> onSuggestion;
+  final String? assistantRole;
 
   @override
   Widget build(BuildContext context) {
-    const suggestions = ['帮我整理今天的计划', '记住我的一个偏好', '解释一段技术概念'];
+    const suggestions = ['看一下今天有什么新闻', '今天天气怎么样', '今天有点累，陪我聊聊吧'];
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
@@ -494,7 +467,7 @@ class _EmptyChat extends StatelessWidget {
                   BoxShadow(color: Color(0x2020A077), blurRadius: 32),
                 ],
               ),
-              child: Image.asset('assets/images/bingo_logo.png'),
+              child: AssistantAvatar(role: assistantRole, size: 88),
             ),
             const SizedBox(height: 22),
             Text(

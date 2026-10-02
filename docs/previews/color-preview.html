@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bingo · 陪伴空间柔和配色预览</title>
+  <style>
+    :root{--ink:#183a31;--muted:#82958e;--green:#07997d;--line:#e3efea;--pale:#edf8f3}
+    *{box-sizing:border-box}body{margin:0;background:#eaf1ee;color:var(--ink);font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif}button,input{font:inherit}button{cursor:pointer;-webkit-tap-highlight-color:transparent}button:focus-visible,input:focus-visible{outline:3px solid #61cdb1;outline-offset:3px}svg{width:20px;height:20px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.symbols{position:absolute;width:0;height:0;overflow:hidden}
+    .workspace{min-height:100vh;display:flex;justify-content:center;align-items:flex-start;gap:64px;padding:42px 24px}.notes{width:300px;padding-top:80px}.eyebrow{font-size:12px;letter-spacing:3px;color:var(--green);font-weight:700}.notes h1{font-size:30px;line-height:1.45;margin:16px 0}.notes p{font-size:14px;line-height:1.9;color:#6e8279}.notes ul{padding:0;list-style:none;margin:28px 0}.notes li{padding:16px 0;border-bottom:1px solid #d8e5de;font-size:14px;line-height:1.7}.notes li strong{display:block;margin-bottom:4px}.notes li span{color:#6e8279;font-size:13px}.note-tag{display:inline-block;padding:8px 13px;background:#dcefe5;border-radius:12px;font-size:12px;color:#487563}
+    .phone{width:390px;height:844px;position:relative;overflow:hidden;border-radius:34px;background:#f4faf7;border:7px solid #fff;box-shadow:0 26px 70px #244d3a22}.screen{height:100%;overflow:auto;scrollbar-width:none;background:radial-gradient(ellipse at 95% 4%,#dcf4e980,transparent 45%),linear-gradient(#fbfdfb,#f1faf6)}.screen::-webkit-scrollbar{display:none}.top{position:sticky;top:0;z-index:3;padding:0 18px 16px;background:linear-gradient(120deg,#fbfefded,#f2fbf7f5);backdrop-filter:blur(18px);border-bottom:1px solid #e5f1eb80}.status{height:32px;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:600;padding:0 4px}.status-icons{display:flex;gap:5px;align-items:center}.status-icons svg{width:15px;height:15px;stroke-width:2}.status-icons .battery{width:21px}.header{height:64px;display:flex;align-items:center;justify-content:space-between;position:relative}.brand{width:40px;height:40px;border-radius:13px;padding:4px;background:#fff;box-shadow:0 3px 12px #18896709}.brand img{width:100%;height:100%;object-fit:cover;border-radius:9px}.header h2{position:absolute;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:21px;letter-spacing:.5px;margin:0;font-weight:750}.icon-button{display:grid;place-items:center;width:40px;height:40px;border:1px solid #dfede7;background:#ffffffb0;color:#365c4d;border-radius:14px}.icon-button svg{width:21px;height:21px}
+    .tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -18px;padding:2px 18px 12px}.tabs::-webkit-scrollbar{display:none}.tab{flex-shrink:0;background:#e9f4ef;color:#71877c;border:0;border-radius:22px;min-width:57px;height:34px;padding:0 15px;font-size:13px;transition:background .16s,color .16s}.tab[aria-pressed="true"]{background:linear-gradient(120deg,#11aa8c,#078d73);color:#fff;font-weight:650;box-shadow:0 3px 8px #0e9c7c1b}.search{display:flex;align-items:center;height:45px;padding:0 14px;gap:10px;border:1px solid #deebe4;background:#ffffffd9;border-radius:16px;box-shadow:0 4px 14px #24683f03}.search svg{color:#8b9e94;width:18px;height:18px}.search input{width:100%;min-width:0;border:0;outline:none;background:none;color:var(--ink);font-size:13px}.search input::placeholder{color:#97a89f}.search:focus-within{border-color:#72cdb1}.search input:focus-visible{outline:none}.clear{display:none;border:0;background:#eff5f1;border-radius:50%;height:22px;width:22px;align-items:center;justify-content:center;color:#82958e;padding:0}.clear svg{width:13px;height:13px}.clear.visible{display:flex}
+    .content{padding:0 16px 102px}.section-heading{height:45px;display:flex;align-items:center;justify-content:space-between;color:#82998c;font-size:11px}.section-heading strong{font-size:12px;font-weight:500;color:#668373}.section-heading span{font-size:11px}.card{background:#ffffffed;border-radius:23px;padding:16px 13px;margin-bottom:12px;border:1px solid #ffffff;box-shadow:0 3px 18px #376b4a03}.card-main{display:flex;gap:12px;align-items:center}.avatar{width:61px;height:61px;border-radius:50%;object-fit:cover;flex-shrink:0;background:#eaf5ec}.card-info{flex:1;min-width:0}.card-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}.card-heading h3{font-size:17px;line-height:1.5;margin:0;font-weight:700;letter-spacing:.2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.enter-wrap{position:relative;flex-shrink:0}.enter{height:31px;display:flex;align-items:center;gap:6px;border:0;border-radius:18px;padding:0 11px;color:#087d67;background:#eaf7f0;font-size:12px}.enter svg{width:15px;height:15px;fill:currentColor;stroke:none}.unread{position:absolute;right:-3px;top:-7px;display:grid;place-items:center;min-width:19px;height:19px;padding:0 4px;border-radius:12px;background:#ff4e63;color:#fff;border:2px solid #fff;font-size:10px;font-weight:650;pointer-events:none}.subtitle{margin:6px 0 0;font-size:11px;color:#8a9c91;line-height:1.6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.traits{display:flex;gap:5px;flex-wrap:wrap;margin-top:13px}.trait{display:flex;align-items:center;gap:4px;background:#edf8f2;color:#527267;border-radius:16px;padding:5px 7px;font-size:10px;white-space:nowrap}.trait svg{width:13px;height:13px;stroke-width:1.9}.trait.heart svg{color:#ff96b2;fill:currentColor;stroke:none}.trait.star svg{color:#f2bd42;fill:currentColor;stroke:none}.trait.leaf svg,.trait.shield svg{color:#10a18a;fill:currentColor;stroke:none}.trait.chat svg{color:#10a18a;fill:currentColor;stroke:none}.trait.book svg{color:#43b0c4}.trait.coffee svg{color:#ac9c92}.trait.bulb svg{color:#eab742}.trait.sprout svg{color:#0d9a82}.empty{text-align:center;color:var(--muted);padding:60px 10px;font-size:13px}
+    .bottom{position:absolute;bottom:0;left:0;right:0;z-index:4;background:linear-gradient(transparent,#f5fbf8 22%);padding:18px 18px 20px}.create{width:100%;height:50px;border:0;border-radius:25px;background:linear-gradient(120deg,#0ca286,#078e72);color:#fff;display:flex;align-items:center;justify-content:center;gap:9px;font-size:16px;font-weight:650;box-shadow:0 6px 16px #0789671a}.create svg{width:21px;height:21px;stroke-width:2}.toast{position:absolute;bottom:98px;left:50%;transform:translateX(-50%);background:#234b3fe8;color:#fff;padding:10px 16px;border-radius:14px;font-size:12px;z-index:8;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}.toast.visible{opacity:1}.sheet-backdrop{position:absolute;inset:0;background:#153d3144;z-index:6;display:none;align-items:flex-end}.sheet-backdrop.open{display:flex}.sheet{width:100%;border-radius:25px 25px 0 0;background:#fff;padding:23px 22px 32px}.sheet h3{margin:0 0 20px;font-size:18px}.sheet p{font-size:12px;color:#8a9c91;line-height:1.8}.sheet button{width:100%;border:1px solid var(--line);background:var(--pale);padding:12px;color:var(--green);border-radius:13px;margin-top:7px;text-align:left;font-size:13px}.sheet button.active{border-color:#67c6ab}.sheet .done{text-align:center;color:#fff;background:var(--green);border:0;margin-top:18px}
+    @media(max-width:740px){.workspace{padding:0;display:block}.notes{display:none}.phone{width:100%;max-width:440px;height:100dvh;margin:auto;border:0;border-radius:0;box-shadow:none}.status{height:29px}.bottom{padding-bottom:max(18px,env(safe-area-inset-bottom))}}@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+  
+    .compact .header{height:54px;gap:10px}
+    .compact .header h2{display:none}
+    .compact .brand{width:30px;height:30px;padding:2px;border-radius:10px;flex-shrink:0;box-shadow:none}
+    .compact .brand img{border-radius:8px}
+    .compact .icon-button{width:32px;height:36px;background:transparent;border:0;border-radius:10px;flex-shrink:0}
+    .compact .icon-button svg{width:20px;height:20px}
+    .compact .header .search{flex:1;min-width:0;height:36px;gap:7px;padding:0 11px;border-radius:13px;box-shadow:none}
+    .compact .search input{font-size:12px}
+    .compact .search svg{width:16px;height:16px}
+    .compact .top{padding:0 16px 9px}
+    .compact .status{height:28px}
+    .compact .tabs{margin:0 -16px;padding:0 16px 0;gap:6px}
+    .compact .tab{height:29px;min-width:51px;padding:0 12px;font-size:12px;background:transparent}
+    .compact .tab[aria-pressed="true"]{background:#139c80;box-shadow:none}
+    .compact .section-heading{display:none}
+    .compact .content{padding-top:13px}
+  
+    .minimal .tabs,.minimal #settings,.minimal .sheet-backdrop{display:none!important}
+    .minimal .header{height:56px;gap:12px}
+    .minimal .header .search{height:38px}
+    .minimal .top{padding-bottom:7px}
+    .minimal .content{padding-top:12px}
+  
+    .space{background:#e8eeea}
+    .space .screen{background:radial-gradient(ellipse at 0% 0%,#ccebdc80,transparent 38%),radial-gradient(ellipse at 100% 50%,#e0f4e980,transparent 55%),#f5faf7}
+    .space .top{background:linear-gradient(120deg,#f2fbf7ef,#f8fcf9ed);border-bottom:1px solid #e5f0e8;backdrop-filter:blur(18px);padding:0 20px 10px}
+    .space .status{height:29px;color:#667e6f;font-size:11px;padding:0 1px}
+    .space .header{height:65px;justify-content:space-between}
+    .space .brand{width:34px;height:34px;padding:0;background:transparent;box-shadow:none;border-radius:11px}
+    .space .brand img{border-radius:11px}
+    .space .header .space-heading{position:absolute;left:50%;transform:translateX(-50%);text-align:center;white-space:nowrap}
+    .space .header h2{display:block;position:static;transform:none;font-size:20px;color:#234d3b;letter-spacing:1px;margin:0;font-weight:700}
+    .space .space-heading p{font-size:10px;color:#9aae9c;letter-spacing:1px;margin:5px 0 0}
+    .space .my-button{display:grid;place-items:center;width:38px;height:38px;border:2px solid white;border-radius:50%;background:#e3f2e8;padding:0;box-shadow:0 2px 10px #2b76550d;overflow:hidden}
+    .space .my-button img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+    .space .content{padding-top:17px;padding-left:17px;padding-right:17px}
+    .space .bottom{padding:22px 20px 22px;background:linear-gradient(transparent,#f5faf7 28%)}
+    .space .sheet-backdrop.open{display:flex!important}
+    .space .sheet h3{text-align:center}
+    .space .my-preview{text-align:center;padding-bottom:14px}
+    .space .my-preview img{width:62px;height:62px;border-radius:50%;border:3px solid #f0f8f3}
+    .space .my-preview strong{display:block;font-size:19px;margin-top:10px}
+    .space .sheet button{background:#f4faf6;border-color:#e4efe7;color:#507362}
+    .space .sheet .done{background:#129a81;color:white;border:0}
+    .space .notes h1{color:#254c39}
+    @media(max-width:740px){.space .bottom{padding-bottom:max(20px,env(safe-area-inset-bottom))}}
+  
+    .palette-bar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:center;gap:10px;min-height:54px;padding:10px 14px;background:#ffffffee;border-bottom:1px solid #e5ece9;backdrop-filter:blur(16px);font-size:12px;color:#596c65}
+    .palette-bar button{border:1px solid #dbe5df;background:white;border-radius:20px;padding:8px 14px;color:#3a5148;font-size:12px}
+    .palette-bar button[aria-pressed="true"]{background:#d5eee4;border-color:#b5d9ca;color:#245a46;font-weight:600}
+    .palette-bar a{color:#426d5c;text-decoration:none;margin-left:8px}
+    .color-swatches{display:flex;gap:10px;margin:24px 0}.color-swatch{height:40px;width:40px;border-radius:14px;border:1px solid #dfe9e4}
+    .notes .note{padding:16px 0;border-bottom:1px solid #dce6df;font-size:14px;line-height:1.8}.notes .note strong{display:block;margin-bottom:5px}.notes .note span{font-size:13px;color:#718579}
+    body.soft-colors{--ink:#293c35;--muted:#71827b;--green:#38745f;--line:#e5ece8;--pale:#eff7f3;background:#eef2ef}
+    body.soft-colors .screen{background:radial-gradient(ellipse at 5% 0%,#e6f3ed,transparent 45%),#f8faf8!important}
+    body.soft-colors .top{background:#f8fbf9f2!important;border-bottom-color:#e9efeb!important}
+    body.soft-colors .header h2,body.soft-colors .notes h1{color:#293c35!important}
+    body.soft-colors .space-heading p,body.soft-colors .subtitle,body.soft-colors .intro p,body.soft-colors .avatar-caption{color:#73857c!important}
+    body.soft-colors .create,body.soft-colors .primary,body.soft-colors .sheet .done{background:linear-gradient(115deg,#c9eee1,#b5e5d5)!important;color:#245845!important;box-shadow:0 5px 14px #336a5010!important;border:1px solid #b2dccc!important}
+    body.soft-colors .enter,body.soft-colors .secondary,body.soft-colors .voice-foot button{background:#eef7f2!important;color:#3c715b!important}
+    body.soft-colors .trait{background:#f0f7f3!important;color:#567565!important}
+    body.soft-colors .trait.selected{background:#e1f2e9!important;color:#32624c!important;border-color:#a7cdb9!important}
+    body.soft-colors .trait.leaf svg,body.soft-colors .trait.chat svg,body.soft-colors .trait.shield svg,body.soft-colors .trait.sprout svg{color:#53a087!important}
+    body.soft-colors .camera{background:#d3eee3!important;color:#32694f!important;border-color:#f8fbf9!important}
+    body.soft-colors .panel,body.soft-colors .card{background:#fff!important;border-color:#ecf1ed!important}
+    body.soft-colors .sheet button:not(.done):not(.primary):not(.demo-button){background:#f1f7f3!important;color:#466959!important;border-color:#e2ece5!important}
+    body.soft-colors .sheet-backdrop,body.soft-colors .overlay{background:#29362e38!important}
+    body.soft-colors .reading,body.soft-colors .record-entry,body.soft-colors .voice-switch{background:#f1f7f3!important;color:#526f5e!important}
+    body.soft-colors .voice-switch button.active{background:#fff!important;color:#3a725a!important}
+    body.soft-colors .text-input,body.soft-colors .prompt{background:#f6f9f7!important;color:#354f41!important}
+    body.soft-colors .text-input::placeholder,body.soft-colors .prompt::placeholder{color:#7c8e83!important}
+    body.soft-colors .sheet p,body.soft-colors .hint,body.soft-colors .voice-foot,body.soft-colors .record-entry small,body.soft-colors .consent,body.soft-colors .field-line{color:#74887a!important}
+    body.soft-colors .bottom{background:linear-gradient(transparent,#f8faf8 28%)!important}
+    body.soft-colors .toast{background:#3c4c42f0!important}
+    body.soft-colors .sheet{background:#fff!important}
+    body.soft-colors .my-button{background:#eaf3ed!important}
+    body.soft-colors .notes .eyebrow{color:#628773!important}
+    @media(max-width:740px){.phone{height:calc(100dvh - 55px)!important}.palette-bar{gap:6px;font-size:11px}.palette-bar button{padding:7px 10px}.palette-bar a{margin-left:0}.palette-label{display:none}}
+
+  </style>
+</head>
+<body class="compact minimal space soft-colors">
+  <nav class="palette-bar" aria-label="配色方案切换"><span class="palette-label">配色预览</span><button type="button" id="soft-tone" aria-pressed="true">柔和薄荷</button><button type="button" id="original-tone" aria-pressed="false">对比原配色</button><a href="create-companion-soft.html">看创建页</a></nav>
+  <svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+    <symbol id="search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="tune" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/><circle cx="8" cy="6" r="2" fill="white"/><circle cx="16" cy="12" r="2" fill="white"/><circle cx="9" cy="18" r="2" fill="white"/></symbol>
+    <symbol id="chat" viewBox="0 0 24 24"><path d="M12 2c-5.8 0-10 3.8-10 8.7 0 2.8 1.5 5.2 4 6.8L4.6 22l5-2.8c.8.2 1.6.3 2.4.3 5.8 0 10-3.8 10-8.8S17.8 2 12 2Z"/><circle cx="7.5" cy="10.7" r="1" fill="white"/><circle cx="12" cy="10.7" r="1" fill="white"/><circle cx="16.5" cy="10.7" r="1" fill="white"/></symbol>
+    <symbol id="heart" viewBox="0 0 24 24"><path d="M12 21S2 15 2 8a5.7 5.7 0 0 1 10-3.4A5.7 5.7 0 0 1 22 8c0 7-10 13-10 13Z"/></symbol>
+    <symbol id="star" viewBox="0 0 24 24"><path d="m12 1 3.4 7 7.6 1.1-5.5 5.4 1.3 7.5-6.8-3.6L5.2 22l1.3-7.5L1 9.1 8.6 8Z"/></symbol>
+    <symbol id="leaf" viewBox="0 0 24 24"><path d="M22 2C10 1 2 7 3 14c.5 3.5 3 6 7 6C18 20 21 12 22 2Z"/><path d="M2 22 17 7" stroke="white" stroke-width="1.5"/></symbol>
+    <symbol id="shield" viewBox="0 0 24 24"><path d="m12 1 10 4-2 10c-1 4-8 8-8 8s-7-4-8-8L2 5Z"/><path d="m7 12 3 3 7-7" stroke="white" stroke-width="2"/></symbol>
+    <symbol id="coffee" viewBox="0 0 24 24"><path d="M3 9h13v7a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4ZM16 10h2a3 3 0 1 1 0 6h-2M2 23h17M7 2c-2 2 2 2 0 4M12 2c-2 2 2 2 0 4"/></symbol>
+    <symbol id="bulb" viewBox="0 0 24 24"><path d="M8 16c0-3-4-3-4-8a8 8 0 0 1 16 0c0 5-4 5-4 8ZM9 20h6M10 23h4"/></symbol>
+    <symbol id="book" viewBox="0 0 24 24"><path d="M12 5C9 2 5 2 2 3v16c4-1 7-1 10 2 3-3 6-3 10-2V3c-3-1-7-1-10 2ZM12 5v16"/></symbol>
+    <symbol id="sprout" viewBox="0 0 24 24"><path d="M12 22V10M12 13C4 14 1 9 2 3c7-1 11 4 10 10ZM12 10C12 3 17 1 22 2c1 6-3 10-10 8ZM6 22h12"/></symbol>
+    <symbol id="plus" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></symbol>
+    <symbol id="close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="wifi" viewBox="0 0 24 24"><path d="M2 7a16 16 0 0 1 20 0M5 11a11 11 0 0 1 14 0M8 15a6 6 0 0 1 8 0M12 19h.01"/></symbol>
+    <symbol id="battery" viewBox="0 0 27 24"><rect x="2" y="6" width="21" height="12" rx="3"/><path d="M26 10v4M6 9h13v6H6Z" fill="currentColor"/></symbol>
+  </defs></svg>
+  <main class="workspace">
+    <aside class="notes"><div class="eyebrow">BINGO · SOFT MINT</div><h1>少一点浓绿，<br>多一点轻松。</h1><p>保留卡片和页面结构，只优化背景、按钮与选中状态。用奶白与浅薄荷做大面积底色，绿色留在图标和重点文字上。</p><div class="color-swatches"><span class="color-swatch" style="background:#f8faf8" title="奶白背景"></span><span class="color-swatch" style="background:#fff" title="白色卡片"></span><span class="color-swatch" style="background:#c9eee1" title="浅薄荷按钮"></span><span class="color-swatch" style="background:#53a087" title="图标点缀"></span></div><div class="note"><strong>主按钮不再是一整块深绿</strong><span>浅薄荷渐变配深绿文字，减轻视觉重量，同时保持清晰可读。</span></div><div class="note"><strong>选中态更轻，背景更干净</strong><span>特征标签、声音选择和弹窗使用淡绿与白色，不叠加浓重绿色。</span></div><div class="note"><strong>图标颜色与未读红点保留</strong><span>粉色爱心、黄色星星依旧有辨识度。演示数据仅用于预览。</span></div><p>上方可以切换原配色作对比；仅为 HTML 设计稿，尚未修改 APP。</p></aside>
+    <section class="phone" aria-label="角色列表界面预览">
+      <div class="screen" id="screen">
+        <div class="top">
+          <div class="status" aria-hidden="true"><span>09:41</span><div class="status-icons"><svg><use href="#wifi"/></svg><svg class="battery"><use href="#battery"/></svg></div></div>
+          <header class="header"><div class="brand"><img src="../../apps/mobile/assets/images/bingo_logo.png" alt="Bingo"></div><div class="space-heading"><h2>陪伴空间</h2><p>在这里，慢慢聊</p></div><button class="my-button" id="my-entry" aria-label="打开我的"><img src="../../apps/mobile/assets/images/bingo_logo.png" alt="用户默认头像"></button></header>
+        </div>
+        <div class="content"><div class="section-heading"><strong>你的伙伴</strong><span id="count"></span></div><div id="cards"></div></div>
+      </div>
+      <footer class="bottom"><button class="create" id="create"><svg aria-hidden="true"><use href="#plus"/></svg>创建伙伴</button></footer>
+      <div class="toast" id="toast" role="status"></div>
+      <div class="sheet-backdrop" id="sheet-backdrop"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title"><h3 id="sheet-title">我的</h3><div class="my-preview"><img src="../../apps/mobile/assets/images/bingo_logo.png" alt="用户头像"><strong>小雨</strong><p>女 · 2000-01-01（演示资料）</p></div><button data-menu="个人资料">个人资料　›</button><button data-menu="聊天性格">聊天性格　›</button><button data-menu="应用设置">应用设置　›</button><button class="done" id="done">返回陪伴空间</button></div></div>
+    </section>
+  </main>
+  <script>
+    const roles = [
+      {name:'甜甜',type:'女朋友',image:'girlfriend',description:'亲密、体贴的女性伴侣',categories:['陪伴','恋人','治愈'],unread:2,traits:[['主动关心','heart'],['温柔体贴','leaf'],['甜蜜互动','heart']]},
+      {name:'暖暖',type:'男朋友',image:'boyfriend',description:'亲密、可靠的男性伴侣',categories:['陪伴','恋人','治愈'],unread:0,traits:[['安心陪伴','shield'],['耐心倾听','chat'],['鼓励支持','star']]},
+      {name:'小周',type:'同事',image:'colleague',description:'可靠且有边界感的工作伙伴',categories:['朋友','生活'],unread:3,traits:[['工作搭子','coffee'],['思路梳理','bulb'],['高效协作','shield']]},
+      {name:'小田老师',type:'老师',image:'teacher',description:'耐心讲解并帮助用户成长',categories:['成长','陪伴'],unread:100,traits:[['耐心讲解','book'],['成长引导','sprout'],['答疑解惑','bulb']]},
+      {name:'文清',type:'家长',image:'parent',description:'关心生活并提供稳重建议',categories:['陪伴','生活','治愈'],unread:12,traits:[['生活关怀','coffee'],['暖心叮嘱','heart'],['沉稳可靠','shield']]},
+      {name:'星星',type:'小朋友',image:'child',description:'自然活泼的孩子角色',categories:['陪伴','成长'],unread:5,traits:[['阳光开朗','star'],['有趣好聊','chat'],['一起成长','sprout']]}
+    ];
+
+    const cards=document.getElementById('cards');
+    const backdrop=document.getElementById('sheet-backdrop');
+    let toastTimer;
+    const icon=name=>`<svg aria-hidden="true"><use href="#${name}"/></svg>`;
+    function notify(message){const toast=document.getElementById('toast');toast.textContent=message;toast.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('visible'),2000)}
+    for(const role of roles){
+      const card=document.createElement('article');card.className='card';card.tabIndex=0;card.setAttribute('aria-label',`查看${role.name}详情`);
+      card.innerHTML=`<div class="card-main"><img class="avatar" src="../../apps/mobile/assets/images/${role.image}.png" alt="${role.name}头像"><div class="card-info"><div class="card-heading"><h3>${role.name}</h3><div class="enter-wrap"><button class="enter" aria-label="进入${role.name}的聊天">${icon('chat')}进入</button>${role.unread?`<span class="unread" aria-label="${role.unread}条演示未读消息">${role.unread>99?'99+':role.unread}</span>`:''}</div></div><p class="subtitle">${role.type} · ${role.description}</p></div></div><div class="traits">${role.traits.map(([label,symbol])=>`<span class="trait ${symbol}">${icon(symbol)}${label}</span>`).join('')}</div>`;
+      card.addEventListener('click',()=>notify(`${role.name} · 角色详情入口（演示）`));
+      card.addEventListener('keydown',event=>{if(event.target===card&&(event.key==='Enter'||event.key===' ')){event.preventDefault();notify(`${role.name} · 角色详情入口（演示）`)}});
+      card.querySelector('.enter').addEventListener('click',event=>{event.stopPropagation();notify(`进入${role.name}的聊天（演示）`)});
+      cards.append(card);
+    }
+    document.getElementById('create').addEventListener('click',()=>location.href='create-companion-soft.html');
+    document.getElementById('my-entry').addEventListener('click',()=>{backdrop.classList.add('open');backdrop.querySelector('[data-menu]').focus()});
+    function closeMy(){backdrop.classList.remove('open');document.getElementById('my-entry').focus()}
+    document.getElementById('done').addEventListener('click',closeMy);
+    backdrop.addEventListener('click',event=>{if(event.target===backdrop)closeMy()});
+    document.addEventListener('keydown',event=>{if(event.key==='Escape'&&backdrop.classList.contains('open'))closeMy()});
+    for(const button of document.querySelectorAll('[data-menu]'))button.addEventListener('click',()=>notify(button.dataset.menu+'页面入口（此版聚焦陪伴空间外观）'));
+
+  </script>
+<script>
+    const softTone = document.getElementById('soft-tone');
+    const originalTone = document.getElementById('original-tone');
+    function applyTone(soft) {
+      document.body.classList.toggle('soft-colors', soft);
+      softTone.setAttribute('aria-pressed', String(soft));
+      originalTone.setAttribute('aria-pressed', String(!soft));
+    }
+    softTone.addEventListener('click', () => applyTone(true));
+    originalTone.addEventListener('click', () => applyTone(false));
+  </script>
+</body>
+</html>

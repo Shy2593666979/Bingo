@@ -1,5 +1,6 @@
 import 'package:bingo/app.dart';
 import 'package:bingo/features/auth/data/auth_token_store.dart';
+import 'package:bingo/features/auth/presentation/password_recovery_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -33,8 +34,10 @@ void main() {
 
     await tester.ensureVisible(find.text('忘记密码？'));
     await tester.tap(find.text('忘记密码？'));
-    await tester.pump();
-    expect(find.text('敬请期待'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.byType(PasswordRecoveryPage), findsOneWidget);
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
 
     await tester.ensureVisible(find.text('验证码登录'));
     await tester.tap(find.text('验证码登录'));

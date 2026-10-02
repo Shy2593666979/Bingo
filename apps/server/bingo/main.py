@@ -18,6 +18,7 @@ from bingo.api import (
     memories,
     push,
     realtime_calls,
+    roles,
 )
 from bingo.api.middleware import RequestLoggingMiddleware
 from bingo.background import EngagementService
@@ -26,6 +27,7 @@ from bingo.db.session import Database
 from bingo.push import PushService, create_push_provider
 from bingo.services.chat_runs import ChatRunService
 from bingo.services.logging import configure_logging, log_event
+from bingo.services.voice_cloning import VoiceCloningService
 from bingo.tools import create_tool_registry
 
 logger = logging.getLogger(__name__)
@@ -66,6 +68,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         engagement=engagement_service,
     )
     chat_runs = ChatRunService(database.session_factory, runtime)
+    voice_cloning = VoiceCloningService(database, resolved_settings)
 
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
@@ -77,12 +80,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         application.state.engagement = engagement_service
         application.state.settings = resolved_settings
         application.state.push = push_service
+        application.state.voice_cloning = voice_cloning
+        await voice_cloning.start()
         await push_service.start()
         if engagement_service is not None:
             await engagement_service.start()
         log_event(logger, logging.INFO, "application.started")
         yield
         await chat_runs.close()
+        await voice_cloning.close()
         if engagement_service is not None:
             await engagement_service.close()
         await push_service.close()
@@ -117,4 +123,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.include_router(push.router, prefix=resolved_settings.server.api_prefix)
     application.include_router(asr.router, prefix=resolved_settings.server.api_prefix)
     application.include_router(realtime_calls.router, prefix=resolved_settings.server.api_prefix)
+    application.include_router(roles.router, prefix=resolved_settings.server.api_prefix)
     return application
