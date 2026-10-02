@@ -7,6 +7,7 @@ import 'package:bingo/core/widgets/center_toast.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/auth/presentation/avatar_crop_page.dart';
 import 'package:bingo/features/auth/presentation/voice_record_page.dart';
+import 'package:bingo/features/auth/presentation/voice_clone_progress.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/roles/role_traits.dart';
 import 'package:flutter/material.dart';
@@ -37,6 +38,7 @@ class _RoleEditorPageState extends State<RoleEditorPage>
   bool _playing = false;
   bool _saved = false;
   bool _cloned = false;
+  bool _cloning = false;
   bool _expandedTraits = false;
   bool _systemVoice = true;
   bool _voiceExpanded = false;
@@ -123,6 +125,7 @@ class _RoleEditorPageState extends State<RoleEditorPage>
     if (audio == null || !mounted) return;
     setState(() {
       _busy = true;
+      _cloning = true;
       _error = null;
       _progress = '正在上传录音…';
     });
@@ -133,6 +136,14 @@ class _RoleEditorPageState extends State<RoleEditorPage>
       final deadline = DateTime.now().add(const Duration(minutes: 5));
       while (DateTime.now().isBefore(deadline)) {
         final status = await widget.gateway.voiceJob(job);
+        if (!mounted) return;
+        setState(() => _progress = switch (status['stage']) {
+              'pending' => '录音已收到，等待处理…',
+              'uploading' => '正在准备录音下载…',
+              'cloning' => '阿里云正在复刻声音…',
+              'verifying' => '正在验证音色是否可用…',
+              _ => '正在复刻声音，请稍等…',
+            });
         if (status['status'] == 'ready') {
           if (mounted) {
             setState(() {
@@ -159,6 +170,7 @@ class _RoleEditorPageState extends State<RoleEditorPage>
       if (mounted) {
         setState(() {
           _busy = false;
+          _cloning = false;
           _progress = '';
         });
       }
@@ -577,165 +589,170 @@ class _RoleEditorPageState extends State<RoleEditorPage>
         : (voices.firstOrNull?.displayName ?? '系统默认');
     return PopScope(
         canPop: !_busy,
-        child: Scaffold(
-          backgroundColor: BingoPalette.ice,
-          appBar: AppBar(
-              centerTitle: true,
-              title: Text(widget.role == null ? '创建伙伴' : '编辑伙伴')),
-          body: DecoratedBox(
-              decoration:
-                  const BoxDecoration(gradient: BingoPalette.softGradient),
-              child: SafeArea(
-                  child: AbsorbPointer(
-                      absorbing: _busy,
-                      child: Form(
-                          key: _form,
-                          child: ListView(
-                              padding:
-                                  const EdgeInsets.fromLTRB(20, 12, 20, 20),
-                              children: [
-                                Center(
-                                    child: InkWell(
-                                        onTap: _chooseAvatar,
-                                        borderRadius: BorderRadius.circular(50),
-                                        child: Stack(children: [
-                                          ClipOval(
-                                              child: _avatarData == null
-                                                  ? Image.asset(
-                                                      'assets/images/bingo_logo.png',
-                                                      width: 88,
-                                                      height: 88)
-                                                  : Image.memory(
-                                                      base64Decode(
-                                                          _avatarData!),
-                                                      width: 88,
-                                                      height: 88,
-                                                      fit: BoxFit.cover)),
-                                          Positioned(
-                                              right: 0,
-                                              bottom: 0,
-                                              child: Container(
-                                                  padding:
-                                                      const EdgeInsets.all(7),
-                                                  decoration:
-                                                      const BoxDecoration(
-                                                          color:
-                                                              BingoPalette
-                                                                  .avatarButton,
-                                                          shape:
-                                                              BoxShape.circle),
-                                                  child: const Icon(
-                                                      Icons
-                                                          .photo_camera_outlined,
-                                                      color: BingoPalette
-                                                          .avatarButtonInk,
-                                                      size: 17))),
-                                        ]))),
-                                Center(
-                                    child: TextButton(
-                                        onPressed: _chooseAvatar,
-                                        style: TextButton.styleFrom(
-                                            foregroundColor:
-                                                BingoPalette.avatarButtonInk),
-                                        child: const Text('更换头像'))),
-                                const Center(
-                                    child: Text('让陪伴，有自己的样子',
-                                        style: TextStyle(
-                                            fontSize: 19,
-                                            fontWeight: FontWeight.w700))),
-                                const SizedBox(height: 6),
-                                const Text('一个名字，一份默契，一个熟悉的声音。',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        color: Color(0xFF7D918A))),
-                                const SizedBox(height: 22),
-                                _panel(
-                                    '伙伴昵称',
-                                    Icons.person_outline_rounded,
-                                    TextFormField(
-                                        controller: _name,
-                                        maxLength: 30,
-                                        decoration: const InputDecoration(
-                                            hintText: '给 TA 起一个亲切的名字'),
-                                        validator: (value) =>
-                                            (value?.trim().isEmpty ?? true)
-                                                ? '请输入伙伴昵称'
-                                                : null)),
-                                _panel(
-                                    '伙伴设定',
-                                    Icons.edit_note_rounded,
-                                    Column(children: [
+        child: Stack(children: [
+          Scaffold(
+            backgroundColor: BingoPalette.ice,
+            appBar: AppBar(
+                centerTitle: true,
+                title: Text(widget.role == null ? '创建伙伴' : '编辑伙伴')),
+            body: DecoratedBox(
+                decoration:
+                    const BoxDecoration(gradient: BingoPalette.softGradient),
+                child: SafeArea(
+                    child: AbsorbPointer(
+                        absorbing: _busy,
+                        child: Form(
+                            key: _form,
+                            child: ListView(
+                                padding:
+                                    const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                                children: [
+                                  Center(
+                                      child: InkWell(
+                                          onTap: _chooseAvatar,
+                                          borderRadius:
+                                              BorderRadius.circular(50),
+                                          child: Stack(children: [
+                                            ClipOval(
+                                                child: _avatarData == null
+                                                    ? Image.asset(
+                                                        'assets/images/bingo_logo.png',
+                                                        width: 88,
+                                                        height: 88)
+                                                    : Image.memory(
+                                                        base64Decode(
+                                                            _avatarData!),
+                                                        width: 88,
+                                                        height: 88,
+                                                        fit: BoxFit.cover)),
+                                            Positioned(
+                                                right: 0,
+                                                bottom: 0,
+                                                child: Container(
+                                                    padding:
+                                                        const EdgeInsets.all(7),
+                                                    decoration:
+                                                        const BoxDecoration(
+                                                            color:
+                                                                BingoPalette
+                                                                    .avatarButton,
+                                                            shape: BoxShape
+                                                                .circle),
+                                                    child: const Icon(
+                                                        Icons
+                                                            .photo_camera_outlined,
+                                                        color: BingoPalette
+                                                            .avatarButtonInk,
+                                                        size: 17))),
+                                          ]))),
+                                  Center(
+                                      child: TextButton(
+                                          onPressed: _chooseAvatar,
+                                          style: TextButton.styleFrom(
+                                              foregroundColor:
+                                                  BingoPalette.avatarButtonInk),
+                                          child: const Text('更换头像'))),
+                                  const Center(
+                                      child: Text('让陪伴，有自己的样子',
+                                          style: TextStyle(
+                                              fontSize: 19,
+                                              fontWeight: FontWeight.w700))),
+                                  const SizedBox(height: 6),
+                                  const Text('一个名字，一份默契，一个熟悉的声音。',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: Color(0xFF7D918A))),
+                                  const SizedBox(height: 22),
+                                  _panel(
+                                      '伙伴昵称',
+                                      Icons.person_outline_rounded,
                                       TextFormField(
-                                          controller: _prompt,
-                                          minLines: 3,
-                                          maxLines: 7,
-                                          maxLength: 2000,
+                                          controller: _name,
+                                          maxLength: 30,
                                           decoration: const InputDecoration(
-                                              hintText:
-                                                  'TA 是谁？怎样说话？你希望 TA 怎样陪伴你？'),
+                                              hintText: '给 TA 起一个亲切的名字'),
                                           validator: (value) =>
                                               (value?.trim().isEmpty ?? true)
-                                                  ? '请描述这个伙伴'
-                                                  : null),
-                                      Align(
-                                          alignment: Alignment.centerRight,
-                                          child: TextButton(
-                                              onPressed: () {
-                                                _prompt.text =
-                                                    '你是一位温柔、有耐心的陪伴伙伴。认真倾听我的心情，用自然亲切的语言交流，给予理解和鼓励。';
-                                              },
-                                              child: const Text('试试这个设定'))),
-                                    ])),
-                                _panel('陪伴特征', Icons.auto_awesome_outlined,
-                                    _traitPicker()),
-                                _panel('伙伴声音', Icons.graphic_eq_rounded,
-                                    _voicePicker(voiceLabel)),
-                                if (_busy)
-                                  Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 16),
-                                      child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            const SizedBox.square(
-                                                dimension: 18,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                        strokeWidth: 2)),
-                                            const SizedBox(width: 12),
-                                            Flexible(child: Text(_progress)),
-                                          ])),
-                                if (_error != null)
-                                  Text(_error!,
-                                      style: TextStyle(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .error)),
-                                if (widget.role != null)
-                                  TextButton(
-                                      onPressed: _delete,
-                                      child: Text('删除伙伴',
-                                          style: TextStyle(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .error))),
-                              ]))))),
-          bottomNavigationBar: SafeArea(
-              child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
-                  child: SizedBox(
-                      height: 54,
-                      child: FilledButton(
-                          onPressed: _busy ? null : _save,
-                          style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFF129A81),
-                              shape: const StadiumBorder()),
-                          child: Text(widget.role == null ? '创建伙伴' : '保存修改',
-                              style: const TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w700)))))),
-        ));
+                                                  ? '请输入伙伴昵称'
+                                                  : null)),
+                                  _panel(
+                                      '伙伴设定',
+                                      Icons.edit_note_rounded,
+                                      Column(children: [
+                                        TextFormField(
+                                            controller: _prompt,
+                                            minLines: 3,
+                                            maxLines: 7,
+                                            maxLength: 2000,
+                                            decoration: const InputDecoration(
+                                                hintText:
+                                                    'TA 是谁？怎样说话？你希望 TA 怎样陪伴你？'),
+                                            validator: (value) =>
+                                                (value?.trim().isEmpty ?? true)
+                                                    ? '请描述这个伙伴'
+                                                    : null),
+                                        Align(
+                                            alignment: Alignment.centerRight,
+                                            child: TextButton(
+                                                onPressed: () {
+                                                  _prompt.text =
+                                                      '你是一位温柔、有耐心的陪伴伙伴。认真倾听我的心情，用自然亲切的语言交流，给予理解和鼓励。';
+                                                },
+                                                child: const Text('试试这个设定'))),
+                                      ])),
+                                  _panel('陪伴特征', Icons.auto_awesome_outlined,
+                                      _traitPicker()),
+                                  _panel('伙伴声音', Icons.graphic_eq_rounded,
+                                      _voicePicker(voiceLabel)),
+                                  if (_busy)
+                                    Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 16),
+                                        child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              const SizedBox.square(
+                                                  dimension: 18,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                          strokeWidth: 2)),
+                                              const SizedBox(width: 12),
+                                              Flexible(child: Text(_progress)),
+                                            ])),
+                                  if (_error != null)
+                                    Text(_error!,
+                                        style: TextStyle(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .error)),
+                                  if (widget.role != null)
+                                    TextButton(
+                                        onPressed: _delete,
+                                        child: Text('删除伙伴',
+                                            style: TextStyle(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .error))),
+                                ]))))),
+            bottomNavigationBar: SafeArea(
+                child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
+                    child: SizedBox(
+                        height: 54,
+                        child: FilledButton(
+                            onPressed: _busy ? null : _save,
+                            style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFF129A81),
+                                shape: const StadiumBorder()),
+                            child: Text(widget.role == null ? '创建伙伴' : '保存修改',
+                                style: const TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w700)))))),
+          ),
+          if (_cloning)
+            Positioned.fill(child: VoiceCloneProgress(message: _progress)),
+        ]));
   }
 }

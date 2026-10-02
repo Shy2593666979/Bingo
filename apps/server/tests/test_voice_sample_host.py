@@ -8,6 +8,37 @@ from bingo.db.models import VoiceJob
 from bingo.services.voice_cloning import VoiceCloningService
 
 
+@pytest.mark.asyncio
+async def test_upload_502_falls_back_to_public_backend(monkeypatch):
+    mock_http(monkeypatch, lambda request: httpx.Response(502))
+    service = VoiceCloningService(None, Settings())
+    job = VoiceJob(
+        user_id="user",
+        role_id="role",
+        sample=base64.b64encode(b"wav").decode(),
+        public_base_url="https://agentchat.cloud/bingo/api/v1",
+        sample_token="random",
+    )
+    url, uploaded = await service.sample_url(job)
+    assert url == "https://agentchat.cloud/bingo/api/v1/role-voice-samples/random"
+    assert uploaded is None
+
+
+@pytest.mark.asyncio
+async def test_upload_failure_does_not_use_private_backend(monkeypatch):
+    mock_http(monkeypatch, lambda request: httpx.Response(502))
+    service = VoiceCloningService(None, Settings())
+    job = VoiceJob(
+        user_id="user",
+        role_id="role",
+        sample=base64.b64encode(b"wav").decode(),
+        public_base_url="https://127.0.0.1/api/v1",
+        sample_token="random",
+    )
+    with pytest.raises(httpx.HTTPStatusError):
+        await service.sample_url(job)
+
+
 def mock_http(monkeypatch, handler):
     client_type = httpx.AsyncClient
     monkeypatch.setattr(

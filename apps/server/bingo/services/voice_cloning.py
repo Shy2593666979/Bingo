@@ -6,6 +6,7 @@ import logging
 import wave
 from collections import OrderedDict
 from datetime import timedelta
+from ipaddress import ip_address
 from time import monotonic
 from urllib.parse import urlsplit
 
@@ -47,6 +48,7 @@ class VoiceCloningService:
         self.cleanup_worker: asyncio.Task | None = None
         self.preview_cache: OrderedDict[str, tuple[float, bytes]] = OrderedDict()
         self.preview_tasks: dict[str, asyncio.Task] = {}
+        self.stages: dict[str, str] = {}
 
     @property
     def endpoint(self) -> str:
@@ -160,6 +162,44 @@ class VoiceCloningService:
         except Exception as error:
             logger.warning("Temporary voice sample cleanup failed: %s", type(error).__name__)
 
+    def public_sample_url(self, job: VoiceJob) -> str | None:
+        parsed = urlsplit(job.public_base_url)
+        host = parsed.hostname or ""
+        if (
+            parsed.scheme != "https"
+            or not host
+            or parsed.username
+            or parsed.password
+            or parsed.query
+            or parsed.fragment
+            or host == "localhost"
+            or host.endswith(".local")
+        ):
+            return None
+        try:
+            if not ip_address(host).is_global:
+                return None
+        except ValueError:
+            pass
+        return f"{job.public_base_url.rstrip('/')}/role-voice-samples/{job.sample_token}"
+
+    async def sample_url(self, job: VoiceJob) -> tuple[str, str | None]:
+        public_url = self.public_sample_url(job)
+        if self.settings.voice_cloning.sample_host == "public_url":
+            if not public_url:
+                raise ValueError("录音下载需要公网 HTTPS 地址")
+            return public_url, None
+        try:
+            uploaded = await self.upload_sample(job)
+            return uploaded, uploaded
+        except (httpx.HTTPError, ValueError) as error:
+            if not public_url:
+                raise
+            logger.warning(
+                "Voice upload unavailable; using backend download: %s", type(error).__name__
+            )
+            return public_url, None
+
     async def process(self, job_id: str) -> None:
         async with self.database.session_factory() as session:
             job = await session.get(VoiceJob, job_id)
@@ -196,12 +236,9 @@ class VoiceCloningService:
                         "",
                     )
                     if not voice:
-                        sample_url = (
-                            f"{job.public_base_url}/role-voice-samples/{job.sample_token}"
-                        )
-                        if self.settings.voice_cloning.sample_host == "yukisbox":
-                            uploaded_url = await self.upload_sample(job)
-                            sample_url = uploaded_url
+                        self.stages[job.id] = "uploading"
+                        sample_url, uploaded_url = await self.sample_url(job)
+                        self.stages[job.id] = "cloning"
                         created = await self.request(
                             "create_voice",
                             prefix=prefix,
@@ -211,6 +248,7 @@ class VoiceCloningService:
                         voice = created.get("voice_id", "")
                     if not voice:
                         raise ValueError("未生成可用音色，请重新录制")
+                    self.stages[job.id] = "verifying"
                     await self.verify(voice)
                     await session.refresh(job)
                     role = await session.get(Role, job.role_id)
@@ -250,11 +288,19 @@ class VoiceCloningService:
                 job.error = None
             except asyncio.CancelledError:
                 raise
-            except Exception:
-                logger.exception("Voice job failed: %s", job.id)
+            except Exception as error:
+                stage = self.stages.get(job.id, "processing")
+                logger.error(
+                    "Voice job failed: %s stage=%s error=%s", job.id, stage, type(error).__name__
+                )
                 job.status = "failed"
-                job.error = "音色处理失败，请检查网络或重新录制后尝试"
+                job.error = (
+                    "录音上传服务暂时不可用，请稍后重试"
+                    if stage == "uploading"
+                    else "音色处理失败，请稍后重试或重新录制清晰的声音"
+                )
             finally:
+                self.stages.pop(job.id, None)
                 if job.status in {"ready", "failed"}:
                     job.sample = None
                     job.sample_token = None
@@ -324,9 +370,10 @@ class VoiceCloningService:
         try:
             audio = await self.generate_preview(voice)
             self.preview_cache[voice] = (monotonic(), audio)
-            while len(self.preview_cache) > 16 or sum(
-                len(entry[1]) for entry in self.preview_cache.values()
-            ) > 32 * 1024 * 1024:
+            while (
+                len(self.preview_cache) > 16
+                or sum(len(entry[1]) for entry in self.preview_cache.values()) > 32 * 1024 * 1024
+            ):
                 self.preview_cache.popitem(last=False)
             return audio
         finally:

@@ -26,7 +26,10 @@ def client(tmp_path, monkeypatch):
         app={"environment": "test"},
         database={"url": f"sqlite+aiosqlite:///{tmp_path / 'custom.db'}"},
         realtime_call={"api_key": "test-key"},
-        voice_cloning={"sample_host": "public_url"},
+        voice_cloning={
+            "sample_host": "public_url",
+            "public_base_url": "https://bingo.example/api/v1",
+        },
     )
     with TestClient(create_app(settings)) as connection:
         response = connection.post(
@@ -64,7 +67,12 @@ def test_builtin_nicknames_preserve_role_identity(client):
     }
     roles = client.get("/api/v1/roles").json()
     assert [role["name"] for role in roles] == [
-        "女朋友", "男朋友", "同事", "老师", "家长", "小朋友"
+        "女朋友",
+        "男朋友",
+        "同事",
+        "老师",
+        "家长",
+        "小朋友",
     ]
     assert {role["name"]: role["nickname"] for role in roles} == expected
     for role in roles:

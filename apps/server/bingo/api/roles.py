@@ -336,12 +336,17 @@ async def clone_voice(
 
 @router.get("/voice-jobs/{identifier}")
 async def voice_job(
-    identifier: str, user: CurrentUserDependency, session: SessionDependency
+    identifier: str, user: CurrentUserDependency, session: SessionDependency, request: Request
 ) -> dict:
     job = await session.get(VoiceJob, identifier)
     if not job or job.user_id != user.id or job.kind != "clone":
         raise HTTPException(404, "复刻任务不存在")
-    return {"id": job.id, "status": job.status, "error": job.error}
+    return {
+        "id": job.id,
+        "status": job.status,
+        "error": job.error,
+        "stage": request.app.state.voice_cloning.stages.get(job.id, job.status),
+    }
 
 
 @router.get("/role-voice-samples/{token}")
