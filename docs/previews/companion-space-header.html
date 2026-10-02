@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bingo · 陪伴空间顶部预览</title>
+  <style>
+    :root{--ink:#1c302b;--muted:#85928f;--mint:#129a81;--soft:#e9f8f2}
+    *{box-sizing:border-box}
+    body{margin:0;background:#edf3f0;color:var(--ink);font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif}
+    button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+    button:focus-visible{outline:3px solid #6cd0b2;outline-offset:4px}
+    svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+    .symbols{position:absolute;width:0;height:0;overflow:hidden}
+    .workspace{min-height:100vh;display:flex;justify-content:center;align-items:flex-start;gap:52px;padding:36px 24px}
+    .notes{width:260px;padding-top:100px}
+    .notes h2{font-size:25px;line-height:1.6;margin:0 0 12px;font-weight:700}
+    .notes p{font-size:14px;color:#7a8b83;line-height:1.9;margin:0 0 24px}
+    .preview-controls{display:flex;gap:8px;flex-wrap:wrap}
+    .preview-controls button{border:1px solid #d5e6dd;background:#f8fcfa;color:#56776a;border-radius:14px;padding:11px 15px;font-size:13px}
+    .preview-controls button.selected{background:#dff3e9;border-color:#a9d7c4;color:#26745d}
+    .phone{position:relative;width:390px;height:844px;border:7px solid #fff;border-radius:35px;overflow:hidden;background:#f5fbf8;box-shadow:0 24px 80px #315c4020;isolation:isolate}
+    .screen{height:100%;display:flex;flex-direction:column;background:radial-gradient(ellipse at 95% 0,#e6f7ed,transparent 47%),linear-gradient(135deg,#f8fdfc,#f3fbf7)}
+    .status{height:30px;flex-shrink:0;padding:8px 22px 0;display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:600}
+    .status-icons{display:flex;gap:5px;align-items:center}
+    .status-icons svg{width:14px;height:14px;stroke-width:2}
+    .status-icons .battery{width:21px}
+    .header{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:19px 18px 20px;flex-shrink:0}
+    .heading{min-width:0;text-align:left}
+    .heading h1{font-size:23px;font-weight:800;line-height:1.35;letter-spacing:.3px;margin:0}
+    .heading p{font-size:12px;color:var(--muted);line-height:1.5;margin:5px 0 0;letter-spacing:.35px}
+    .user{width:44px;height:44px;flex-shrink:0;padding:3px;border:0;background:transparent;border-radius:12px}
+    .user img{display:block;width:100%;height:100%;object-fit:cover;border-radius:8px}
+    .cards{flex:1;min-height:0;overflow:auto;padding:0 16px 4px;scrollbar-width:none}
+    .cards::-webkit-scrollbar{display:none}
+    .partner{background:#fffffff0;border-radius:25px;padding:14px;margin-bottom:12px;cursor:pointer}
+    .partner-main{display:flex;align-items:center;gap:12px}
+    .avatar{width:64px;height:64px;object-fit:cover;flex-shrink:0;border-radius:50%;background:#edf5f0}
+    .partner-info{flex:1;min-width:0}
+    .partner-heading{display:flex;align-items:center;gap:6px}
+    .partner-heading h2{font-size:18px;line-height:1.5;font-weight:800;flex:1;min-width:0;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .enter{height:32px;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 12px;background:var(--soft);border:0;border-radius:20px;color:#078b74;font-size:12px;flex-shrink:0}
+    .enter svg{width:16px;height:16px}
+    .description{color:var(--muted);font-size:12px;line-height:1.6;margin:6px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .traits{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+    .trait{display:flex;align-items:center;gap:5px;font-size:10px;line-height:1.5;background:#edf8f4;border-radius:15px;padding:4px 8px;white-space:nowrap;color:#3e6559}
+    .trait svg{width:14px;height:14px}
+    .heart{color:#ff92ae}.heart svg,.star svg{fill:currentColor;stroke:none}
+    .leaf,.shield,.chat,.sprout,.game{color:#119f86}.star,.bulb,.sun{color:#f3bd3d}.book{color:#45b4cc}.coffee{color:#ad9a8e}
+    .trait span{color:#3e6559}
+    .bottom{flex-shrink:0;padding:10px 20px 18px;background:#f3fbf7}
+    .create{width:100%;height:56px;display:flex;align-items:center;justify-content:center;gap:10px;border:0;border-radius:30px;background:var(--mint);color:white;font-size:18px;font-weight:700}
+    .create svg{width:25px;height:25px}
+    .overlay{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:#142e253d;padding:28px}
+    .overlay[hidden]{display:none}
+    .dialog{width:100%;background:#fff;border-radius:24px;padding:27px 24px 24px;text-align:center;box-shadow:0 16px 50px #172c2720}
+    .voice-icon{display:inline-grid;place-items:center;width:56px;height:56px;background:#edf9f3;color:#129a81;border-radius:19px;margin-bottom:14px}
+    .voice-icon svg{width:32px;height:32px;stroke-width:2.2}
+    .dialog h2{font-size:19px;line-height:1.5;margin:0;font-weight:700}
+    .progress{height:7px;border-radius:8px;overflow:hidden;background:#e5f4ee;margin:23px 0 17px;position:relative}
+    .progress::after{content:"";position:absolute;inset:0;width:38%;border-radius:8px;background:#28ae91;animation:loading 1.5s ease-in-out infinite}
+    .stage{font-size:14px;line-height:1.7;margin:0;color:#405b50;min-height:24px}
+    .steps{margin:13px 0 8px;font-size:11px;line-height:1.8;color:#85928f}
+    .hint{font-size:11px;line-height:1.8;color:#97a29c;margin:0}
+    .demo-stage{margin:16px 0 0;border:0;background:#eef8f3;color:#487866;font-size:12px;padding:9px 13px;border-radius:10px}
+    .close-preview{position:absolute;top:18px;right:18px;display:grid;place-items:center;width:34px;height:34px;border:0;border-radius:50%;background:#ffffffde;color:#55796a}
+    .toast{position:absolute;bottom:90px;left:24px;right:24px;text-align:center;background:#294d40ed;color:#fff;border-radius:14px;padding:13px 16px;font-size:13px;z-index:6}
+    .toast[hidden]{display:none}
+    @keyframes loading{0%,100%{transform:translateX(0)}50%{transform:translateX(163%)}}
+    @media(max-width:720px){.workspace{display:block;padding:16px 0 0}.notes{width:100%;max-width:390px;padding:0 20px 14px;margin:auto}.notes h2,.notes p{display:none}.preview-controls{justify-content:center}.preview-controls button{padding:8px 14px}.phone{width:100%;max-width:420px;height:calc(100dvh - 66px);min-height:500px;margin:auto;border:0;border-radius:0;box-shadow:none}.bottom{padding-bottom:max(18px,env(safe-area-inset-bottom))}}
+    @media(max-width:350px){.header{padding-left:16px;padding-right:16px}.heading h1{font-size:22px}.partner{padding:12px}.avatar{width:56px;height:56px}.partner-main{gap:10px}.traits{gap:5px}.trait{padding:4px 6px}.partner-heading h2{font-size:17px}}
+    @media(prefers-reduced-motion:reduce){.progress::after{animation:none;left:31%}}
+  </style>
+</head>
+<body>
+  <svg class="symbols" aria-hidden="true"><defs>
+    <symbol id="chat" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M12 2C6.5 2 2 5.8 2 10.5c0 2.7 1.5 5.2 4 6.7l-1 4 5-2.4c.7.1 1.3.2 2 .2 5.5 0 10-3.8 10-8.5S17.5 2 12 2Z"/><circle cx="7.5" cy="10.5" r="1" fill="white" stroke="none"/><circle cx="12" cy="10.5" r="1" fill="white" stroke="none"/><circle cx="16.5" cy="10.5" r="1" fill="white" stroke="none"/></symbol>
+    <symbol id="heart" viewBox="0 0 24 24"><path d="M12 21S2 15 2 8.5C2 2 10 1 12 7c2-6 10-5 10 1.5C22 15 12 21 12 21Z"/></symbol>
+    <symbol id="leaf" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M21 2C8 1 2 6 4 15c6 8 18 2 17-13Z"/><path stroke="#edf8f4" d="M5 17 16 7"/><path d="m3 21 5-8"/></symbol>
+    <symbol id="shield" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="m12 2 9 4-2 10-7 6-7-6L3 6Z"/><path stroke="white" d="m8 11 3 3 5-6"/></symbol>
+    <symbol id="star" viewBox="0 0 24 24"><path d="m12 1 3.4 7.1 7.8 1.2-5.6 5.5 1.3 7.7-6.9-3.7-6.9 3.7 1.3-7.7L.8 9.3l7.8-1.2Z"/></symbol>
+    <symbol id="book" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M2 3h7l3 2 3-2h7v16h-7l-3 2-3-2H2Z"/><path stroke="white" d="M12 6v12M5 7h3M5 10h3M16 7h3M16 10h3"/></symbol>
+    <symbol id="sprout" viewBox="0 0 24 24"><path d="M12 22V10"/><path fill="currentColor" stroke="none" d="M11 13C3 15 1 7 3 4c8-1 10 3 8 9Zm2-5c0-7 7-8 10-6 0 7-5 10-10 6Z"/></symbol>
+    <symbol id="bulb" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M12 1a8 8 0 0 0-5 14v3h10v-3a8 8 0 0 0-5-14Z"/><path d="M9 21h6M11 23h2"/></symbol>
+    <symbol id="coffee" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M3 8h13v5a6.5 6.5 0 0 1-13 0Z"/><path d="M16 9h3a3 3 0 0 1 0 6h-3M3 21h16M7 2v3M12 1v4"/></symbol>
+    <symbol id="sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="currentColor" stroke="none"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3M4 4l2 2M18 18l2 2M4 20l2-2M18 6l2-2"/></symbol>
+    <symbol id="game" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M6 5h12c3 1 6 13 3 15-2 1-5-4-7-4h-4c-2 0-5 5-7 4C0 18 3 6 6 5Z"/><path stroke="white" d="M7 8v6M4 11h6"/><circle cx="16" cy="9" r="1" fill="white" stroke="none"/><circle cx="19" cy="12" r="1" fill="white" stroke="none"/></symbol>
+    <symbol id="plus" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="white" stroke="none"/><path stroke="#129a81" stroke-width="2.5" d="M12 7v10M7 12h10"/></symbol>
+    <symbol id="voice" viewBox="0 0 24 24"><path d="M3 10v4M7 6v12M12 3v18M17 7v10M21 10v4"/></symbol>
+    <symbol id="close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+  </defs></svg>
+  <main class="workspace">
+    <aside class="notes">
+      <h2>陪伴，从一句<br>慢慢聊开始。</h2>
+      <p>去掉顶部左侧 Logo，让标题与小字自然左对齐。右侧保留用户头像，伙伴卡片沿用现有样式。</p>
+      <div class="preview-controls" aria-label="预览切换">
+        <button type="button" class="selected" id="show-space" aria-pressed="true">陪伴空间</button>
+        <button type="button" id="show-voice" aria-pressed="false">复刻进度</button>
+      </div>
+    </aside>
+    <section class="phone" aria-label="手机页面设计预览">
+      <div class="screen">
+        <div class="status" aria-hidden="true"><span>9:41</span><span class="status-icons"><svg viewBox="0 0 20 16"><path d="M2 14V11M6 14V8M10 14V5M14 14V2"/></svg><svg viewBox="0 0 20 16"><path d="M2 5c4-4 12-4 16 0M5 8c3-3 7-3 10 0M8 11c1-1 3-1 4 0"/><circle cx="10" cy="14" r="1" fill="currentColor" stroke="none"/></svg><svg class="battery" viewBox="0 0 25 15"><rect x="1" y="2" width="20" height="11" rx="3"/><rect x="4" y="5" width="13" height="5" rx="1" fill="currentColor" stroke="none"/><path d="M24 6v3"/></svg></span></div>
+        <header class="header">
+          <div class="heading"><h1>陪伴空间</h1><p>在这里，慢慢聊~</p></div>
+          <button class="user" type="button" aria-label="我的" title="我的"><img src="../../apps/mobile/assets/images/bingo_logo.png" alt="用户默认头像"></button>
+        </header>
+        <div class="cards" id="partners"></div>
+        <footer class="bottom"><button class="create" type="button"><svg aria-hidden="true"><use href="#plus"/></svg>创建伙伴</button></footer>
+      </div>
+      <div class="overlay" id="voice-overlay" hidden>
+        <button class="close-preview" type="button" aria-label="关闭进度预览"><svg aria-hidden="true"><use href="#close"/></svg></button>
+        <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="voice-title">
+          <span class="voice-icon"><svg aria-hidden="true"><use href="#voice"/></svg></span>
+          <h2 id="voice-title">正在复刻伙伴声音</h2>
+          <div class="progress" role="progressbar" aria-label="声音复刻处理中"></div>
+          <p class="stage" id="stage" aria-live="polite">正在复刻声音，请稍等…</p>
+          <p class="steps">上传录音 → 复刻声音 → 验证音色</p>
+          <p class="hint">处理时间由声音服务决定，请稍候</p>
+          <button class="demo-stage" type="button">切换阶段 · 仅预览</button>
+        </section>
+      </div>
+      <div class="toast" role="status" hidden></div>
+    </section>
+  </main>
+  <script>
+    const partners = [
+      {name:'甜甜',avatar:'girlfriend',type:'女朋友',description:'亲密、体贴的女性陪伴',traits:[['heart','主动关心'],['leaf','温柔体贴'],['heart','甜蜜互动']]},
+      {name:'暖暖',avatar:'boyfriend',type:'男朋友',description:'亲密、可靠的男性伴侣',traits:[['shield','安心陪伴'],['chat','耐心倾听'],['star','鼓励支持']]},
+      {name:'小周',avatar:'colleague',type:'同事',description:'可靠且有边界感的工作伙伴',traits:[['coffee','工作搭子'],['bulb','思路梳理'],['shield','高效协作']]},
+      {name:'小田老师',avatar:'teacher',type:'老师',description:'耐心讲解并帮助用户成长',traits:[['book','耐心讲解'],['sprout','成长引导'],['bulb','答疑解惑']]},
+      {name:'文清',avatar:'parent',type:'家长',description:'关心生活并提供稳重建议',traits:[['coffee','生活关怀'],['heart','暖心叮嘱'],['shield','沉稳可靠']]},
+      {name:'星星',avatar:'child',type:'小朋友',description:'自然活泼的孩子角色',traits:[['star','天马行空'],['sun','童真快乐'],['game','分享快乐']]}
+    ];
+    const cards = document.getElementById('partners');
+    cards.innerHTML = partners.map(partner => `<article class="partner"><div class="partner-main"><img class="avatar" src="../../apps/mobile/assets/images/${partner.avatar}.png" alt="${partner.name}头像"><div class="partner-info"><div class="partner-heading"><h2>${partner.name}</h2><button class="enter" type="button" aria-label="进入与${partner.name}的聊天"><svg aria-hidden="true"><use href="#chat"/></svg>进入</button></div><p class="description">${partner.type} · ${partner.description}</p></div></div><div class="traits">${partner.traits.map(([icon,label]) => `<span class="trait ${icon}"><svg aria-hidden="true"><use href="#${icon}"/></svg><span>${label}</span></span>`).join('')}</div></article>`).join('');
+    const overlay = document.getElementById('voice-overlay');
+    const spaceButton = document.getElementById('show-space');
+    const voiceButton = document.getElementById('show-voice');
+    const stage = document.getElementById('stage');
+    const stages = ['正在上传录音…','正在复刻声音，请稍等…','正在验证音色是否可用…'];
+    let stageIndex = 1;
+    let toastTimer;
+    function showVoice(visible) {
+      overlay.hidden = !visible;
+      document.querySelector('.screen').inert = visible;
+      spaceButton.classList.toggle('selected',!visible);
+      voiceButton.classList.toggle('selected',visible);
+      spaceButton.setAttribute('aria-pressed',String(!visible));
+      voiceButton.setAttribute('aria-pressed',String(visible));
+      if (visible) document.querySelector('.demo-stage').focus();
+      else spaceButton.focus();
+    }
+    function notify(message) {
+      const toast = document.querySelector('.toast');
+      clearTimeout(toastTimer);
+      toast.textContent = message;
+      toast.hidden = false;
+      toastTimer = setTimeout(() => {toast.hidden = true;},1800);
+    }
+    spaceButton.addEventListener('click',() => showVoice(false));
+    voiceButton.addEventListener('click',() => showVoice(true));
+    document.querySelector('.close-preview').addEventListener('click',() => showVoice(false));
+    document.querySelector('.demo-stage').addEventListener('click',() => {stageIndex = (stageIndex + 1) % stages.length;stage.textContent = stages[stageIndex];});
+    document.querySelector('.user').addEventListener('click',() => notify('点击用户头像进入「我的」'));
+    document.querySelector('.create').addEventListener('click',() => notify('创建一位新的陪伴伙伴'));
+    cards.addEventListener('click',event => {const card = event.target.closest('.partner');if (!card) return;notify(event.target.closest('.enter') ? `进入与${card.querySelector('h2').textContent}的聊天` : `查看${card.querySelector('h2').textContent}的伙伴详情`);});
+    document.addEventListener('keydown',event => {if (event.key === 'Escape' && !overlay.hidden) showVoice(false);});
+    if (new URLSearchParams(window.location.search).get('preview') === 'voice') showVoice(true);
+  </script>
+</body>
+</html>

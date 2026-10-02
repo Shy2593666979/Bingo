@@ -60,6 +60,15 @@ void main() {
     expect(
         (image.image as AssetImage).assetName, 'assets/images/bingo_logo.png');
     await tester.enterText(find.byType(TextFormField), '小雨');
+    await tester.pumpAndSettle();
+    final nicknameCard = find.ancestor(
+        of: find.byType(TextFormField),
+        matching: find.byWidgetPredicate((widget) =>
+            widget is Material && widget.clipBehavior == Clip.antiAlias));
+    final labelBounds = tester.getRect(find.text('用户昵称'));
+    final cardBounds = tester.getRect(nicknameCard.first);
+    expect(labelBounds.top, greaterThanOrEqualTo(cardBounds.top));
+    expect(labelBounds.bottom, lessThanOrEqualTo(cardBounds.bottom));
     tester.testTextInput.hide();
     await tester.tap(find.text('女'));
     await tester.ensureVisible(find.text('用户生日'));

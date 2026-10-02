@@ -5,10 +5,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from bingo.config import Settings
-from bingo.db.models import VoiceJob
+from bingo.db.models import User, VoiceJob
+from bingo.db.repositories import ConversationRepository
 from bingo.db.time import beijing_now
 from bingo.main import create_app
 from bingo.services.voice_cloning import VoiceCloningService
+from tests.api_support import api_payload
 
 
 @pytest.fixture
@@ -39,7 +41,7 @@ def client(tmp_path, monkeypatch):
                 "password": "password123",
             },
         )
-        connection.headers["Authorization"] = f"Bearer {response.json()['access_token']}"
+        connection.headers["Authorization"] = f"Bearer {api_payload(response)['access_token']}"
         yield connection
 
 
@@ -53,7 +55,7 @@ def create_role(client, name="知心姐姐", **values):
         },
     )
     assert response.status_code == 201, response.text
-    return response.json()
+    return api_payload(response)
 
 
 def test_builtin_nicknames_preserve_role_identity(client):
@@ -65,7 +67,7 @@ def test_builtin_nicknames_preserve_role_identity(client):
         "小朋友": "星星",
         "家长": "文清",
     }
-    roles = client.get("/api/v1/roles").json()
+    roles = api_payload(client.get("/api/v1/roles"))
     assert [role["name"] for role in roles] == [
         "女朋友",
         "男朋友",
@@ -79,7 +81,7 @@ def test_builtin_nicknames_preserve_role_identity(client):
         assert role["role_type"] == role["name"]
         opened = client.post(f"/api/v1/roles/{role['id']}/conversation")
         assert opened.status_code == 200
-        profile = client.get("/api/v1/me").json()
+        profile = api_payload(client.get("/api/v1/me"))
         assert profile["role"] == role["name"]
         assert profile["role_id"] == role["id"]
         assert profile["assistant_name"] == role["nickname"]
@@ -88,8 +90,114 @@ def test_builtin_nicknames_preserve_role_identity(client):
     assert custom["role_type"] == "自定义角色"
 
 
+def test_optional_role_identity_and_personality_round_trip(client):
+    role = create_role(client, role_type="", personality="幽默风趣")
+    assert role["role_type"] == ""
+    assert role["personality"] == "幽默风趣"
+    changed = client.put(
+        f"/api/v1/roles/{role['id']}",
+        json={
+            "name": role["name"],
+            "prompt": role["prompt"],
+            "role_type": " 旅行搭子 ",
+            "personality": "理性严谨",
+        },
+    )
+    assert changed.status_code == 200
+    assert api_payload(changed)["role_type"] == "旅行搭子"
+    assert api_payload(changed)["personality"] == "理性严谨"
+    cleared = client.put(
+        f"/api/v1/roles/{role['id']}",
+        json={
+            "name": role["name"],
+            "prompt": role["prompt"],
+            "role_type": "  ",
+        },
+    )
+    assert api_payload(cleared)["role_type"] == ""
+    assert api_payload(cleared)["personality"] == "理性严谨"
+    listed = {item["id"]: item for item in api_payload(client.get("/api/v1/roles"))}
+    assert listed[role["id"]]["role_type"] == ""
+    assert (
+        client.put(
+            f"/api/v1/roles/{role['id']}",
+            json={
+                "name": role["name"],
+                "prompt": role["prompt"],
+                "personality": "invalid",
+            },
+        ).status_code
+        == 422
+    )
+
+
+def test_builtin_personalities_are_private_and_used_in_chat_context(client):
+    roles = api_payload(client.get("/api/v1/roles"))
+    for role in roles:
+        updated = client.put(
+            f"/api/v1/roles/{role['id']}",
+            json={
+                "name": "不应修改共享名称",
+                "prompt": "不应修改共享设定",
+                "personality": "幽默风趣",
+                "role_type": "不应修改身份",
+            },
+        )
+        assert updated.status_code == 200
+        assert api_payload(updated)["nickname"] == role["nickname"]
+        assert api_payload(updated)["prompt"] == role["prompt"]
+        assert api_payload(updated)["role_type"] == role["role_type"]
+        assert api_payload(updated)["personality"] == "幽默风趣"
+        assert client.delete(f"/api/v1/roles/{role['id']}").status_code == 404
+    opened = api_payload(client.post(f"/api/v1/roles/{roles[0]['id']}/conversation"))
+    user_id = api_payload(client.get("/api/v1/me"))["id"]
+
+    async def context_personality():
+        async with client.app.state.database.session_factory() as session:
+            user = await session.get(User, user_id)
+            context = await ConversationRepository(session, user_id).context_user(
+                user, opened["id"]
+            )
+            return context.personality, user.personality
+
+    selected, original = client.portal.call(context_personality)
+    assert selected == "幽默风趣"
+    assert original != "幽默风趣"
+    other = api_payload(
+        client.post(
+            "/api/v1/auth/register",
+            json={
+                "phone": "13800138009",
+                "password": "password123",
+            },
+        )
+    )
+    client.headers["Authorization"] = f"Bearer {other['access_token']}"
+    assert all(
+        role["personality"] != "幽默风趣" for role in api_payload(client.get("/api/v1/roles"))
+    )
+
+
+def test_custom_personality_is_independent_of_other_partners(client):
+    first = create_role(client, name="第一个伙伴", personality="幽默风趣")
+    second = create_role(client, name="第二个伙伴", personality="沉稳克制")
+    user_id = api_payload(client.get("/api/v1/me"))["id"]
+    for role, expected in [(first, "幽默风趣"), (second, "沉稳克制")]:
+        conversation = api_payload(client.post(f"/api/v1/roles/{role['id']}/conversation"))
+
+        async def context_personality(conversation_id=conversation["id"]):
+            async with client.app.state.database.session_factory() as session:
+                user = await session.get(User, user_id)
+                context = await ConversationRepository(session, user_id).context_user(
+                    user, conversation_id
+                )
+                return context.personality
+
+        assert client.portal.call(context_personality) == expected
+
+
 def test_custom_role_selection_and_builtin_compatibility(client):
-    before = client.get("/api/v1/profile/options").json()
+    before = api_payload(client.get("/api/v1/profile/options"))
     assert len(before["roles"]) == 6
     role = create_role(client)
     assert role["avatar_data"] is None
@@ -104,9 +212,9 @@ def test_custom_role_selection_and_builtin_compatibility(client):
         },
     )
     assert response.status_code == 200
-    assert response.json()["role"] == "知心姐姐"
-    assert response.json()["role_id"] == role["id"]
-    assert "知心姐姐" in client.get("/api/v1/profile/options").json()["roles"]
+    assert api_payload(response)["role"] == "知心姐姐"
+    assert api_payload(response)["role_id"] == role["id"]
+    assert "知心姐姐" in api_payload(client.get("/api/v1/profile/options"))["roles"]
     response = client.put(
         "/api/v1/me/profile",
         json={
@@ -126,7 +234,7 @@ def test_role_labels_are_persisted_and_validated(client):
     response = client.put(
         f"/api/v1/roles/{role['id']}", json={"name": role["name"], "prompt": "新设定"}
     )
-    assert response.json()["traits"] == role["traits"]
+    assert api_payload(response)["traits"] == role["traits"]
     response = client.post(
         "/api/v1/roles",
         json={
@@ -150,20 +258,22 @@ def test_legacy_child_name_still_selects_the_same_builtin_role(client):
         },
     )
     assert response.status_code == 200
-    assert response.json()["role"] == "小朋友"
+    assert api_payload(response)["role"] == "小朋友"
 
 
 def test_private_roles_cannot_be_read_selected_or_mutated_by_another_user(client):
     role = create_role(client)
-    other = client.post(
-        "/api/v1/auth/register",
-        json={
-            "phone": "13900139000",
-            "password": "password123",
-        },
-    ).json()
+    other = api_payload(
+        client.post(
+            "/api/v1/auth/register",
+            json={
+                "phone": "13900139000",
+                "password": "password123",
+            },
+        )
+    )
     client.headers["Authorization"] = f"Bearer {other['access_token']}"
-    assert role["id"] not in {item["id"] for item in client.get("/api/v1/roles").json()}
+    assert role["id"] not in {item["id"] for item in api_payload(client.get("/api/v1/roles"))}
     assert client.delete(f"/api/v1/roles/{role['id']}").status_code == 404
     assert (
         client.put(
@@ -192,7 +302,7 @@ def test_private_roles_cannot_be_read_selected_or_mutated_by_another_user(client
 
 def test_drafts_and_duplicate_names(client):
     role = create_role(client, draft=True)
-    assert role["id"] not in {item["id"] for item in client.get("/api/v1/roles").json()}
+    assert role["id"] not in {item["id"] for item in api_payload(client.get("/api/v1/roles"))}
     assert (
         client.post(
             "/api/v1/roles",
@@ -213,7 +323,7 @@ def test_drafts_and_duplicate_names(client):
         ).status_code
         == 200
     )
-    assert role["id"] in {item["id"] for item in client.get("/api/v1/roles").json()}
+    assert role["id"] in {item["id"] for item in api_payload(client.get("/api/v1/roles"))}
 
 
 def test_short_recordings_and_consent_are_checked_server_side(client):
@@ -227,7 +337,7 @@ def test_short_recordings_and_consent_are_checked_server_side(client):
         },
     )
     assert response.status_code == 422
-    assert "时间太短" in response.json()["detail"]
+    assert "时间太短" in api_payload(response)["detail"]
     assert (
         client.post(
             endpoint,
@@ -243,7 +353,7 @@ def test_short_recordings_and_consent_are_checked_server_side(client):
         endpoint, json={"audio": base64.b64encode(bytes(32000 * 20)).decode(), "consent": True}
     )
     assert response.status_code == 422
-    assert "没有检测到声音" in response.json()["detail"]
+    assert "没有检测到声音" in api_payload(response)["detail"]
 
 
 def test_clone_job_cleans_sample_and_delete_invalidates_reused_voice(client, monkeypatch):
@@ -267,7 +377,7 @@ def test_clone_job_cleans_sample_and_delete_invalidates_reused_voice(client, mon
         },
     )
     assert response.status_code == 202
-    identifier = response.json()["id"]
+    identifier = api_payload(response)["id"]
 
     async def finish_jobs():
         tasks = list(client.app.state.voice_cloning.tasks)
@@ -277,7 +387,7 @@ def test_clone_job_cleans_sample_and_delete_invalidates_reused_voice(client, mon
             await asyncio.gather(*tasks)
 
     client.portal.call(finish_jobs)
-    assert client.get(f"/api/v1/voice-jobs/{identifier}").json()["status"] == "ready"
+    assert api_payload(client.get(f"/api/v1/voice-jobs/{identifier}"))["status"] == "ready"
 
     async def check_cleanup():
         async with client.app.state.database.session_factory() as session:
@@ -299,8 +409,8 @@ def test_clone_job_cleans_sample_and_delete_invalidates_reused_voice(client, mon
     )
     assert client.delete(f"/api/v1/roles/{role['id']}").status_code == 204
     client.portal.call(finish_jobs)
-    assert client.get("/api/v1/me").json()["role"] == "女朋友"
-    remaining = client.get("/api/v1/roles").json()
+    assert api_payload(client.get("/api/v1/me"))["role"] == "女朋友"
+    remaining = api_payload(client.get("/api/v1/roles"))
     fallback = next(item for item in remaining if item["name"] == "女朋友")
     assert (
         next(item for item in remaining if item["id"] == second["id"])["voice_source_id"]
@@ -312,7 +422,7 @@ def test_clone_job_cleans_sample_and_delete_invalidates_reused_voice(client, mon
 
 def test_voice_sample_is_temporary_and_unavailable_after_role_deletion(client):
     role = create_role(client)
-    user_id = client.get("/api/v1/me").json()["id"]
+    user_id = api_payload(client.get("/api/v1/me"))["id"]
 
     async def add_sample():
         async with client.app.state.database.session_factory() as session:
@@ -354,7 +464,7 @@ def test_failed_clone_retry_recovers_existing_provider_voice_without_recreating(
         "audio": base64.b64encode(b"\xe8\x03\x18\xfc" * (8000 * 20)).decode(),
         "consent": True,
     }
-    first = client.post(f"/api/v1/roles/{role['id']}/voice-clone", json=payload).json()
+    first = api_payload(client.post(f"/api/v1/roles/{role['id']}/voice-clone", json=payload))
 
     async def finish_jobs():
         import asyncio
@@ -364,11 +474,11 @@ def test_failed_clone_retry_recovers_existing_provider_voice_without_recreating(
             await asyncio.gather(*tasks)
 
     client.portal.call(finish_jobs)
-    assert client.get(f"/api/v1/voice-jobs/{first['id']}").json()["status"] == "failed"
-    second = client.post(f"/api/v1/roles/{role['id']}/voice-clone", json=payload).json()
+    assert api_payload(client.get(f"/api/v1/voice-jobs/{first['id']}"))["status"] == "failed"
+    second = api_payload(client.post(f"/api/v1/roles/{role['id']}/voice-clone", json=payload))
     client.portal.call(finish_jobs)
     assert second["id"] == first["id"]
-    assert client.get(f"/api/v1/voice-jobs/{second['id']}").json()["status"] == "ready"
+    assert api_payload(client.get(f"/api/v1/voice-jobs/{second['id']}"))["status"] == "ready"
     assert len(created) == 1
     assert len(recovered) == 1
 
@@ -435,6 +545,6 @@ def test_yukisbox_clone_passes_uploaded_url_and_always_cleans_it(
             await asyncio.gather(*tasks)
 
     client.portal.call(finish_jobs)
-    status = client.get(f"/api/v1/voice-jobs/{response.json()['id']}").json()["status"]
+    status = api_payload(client.get(f"/api/v1/voice-jobs/{api_payload(response)['id']}"))["status"]
     assert status == ("failed" if provider_fails else "ready")
     assert events == ["upload", "create", "cleanup"]

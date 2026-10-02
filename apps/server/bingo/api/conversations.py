@@ -1,15 +1,14 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, Query, Response
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bingo.api.dependencies import CurrentUserDependency, get_session
-from bingo.db.models import Conversation
-from bingo.db.repositories import ConversationRepository
-from bingo.db.time import beijing_now
+from bingo.api.response import EnvelopeRoute
 from bingo.schemas.chat import ConversationResponse, MessageResponse
+from bingo.services import conversations as conversations_service
 
-router = APIRouter(tags=["conversations"])
+router = APIRouter(tags=["conversations"], route_class=EnvelopeRoute)
 SessionDependency = Annotated[AsyncSession, Depends(get_session)]
 
 
@@ -17,11 +16,9 @@ SessionDependency = Annotated[AsyncSession, Depends(get_session)]
 async def mark_conversation_read(
     conversation_id: str, session: SessionDependency, user: CurrentUserDependency
 ) -> Response:
-    conversation = await session.get(Conversation, conversation_id)
-    if not conversation or conversation.user_id != user.id:
-        raise HTTPException(404, "对话不存在")
-    conversation.last_read_at = beijing_now()
-    await session.commit()
+    await conversations_service.mark_conversation_read(
+        conversation_id=conversation_id, session=session, user=user
+    )
     return Response(status_code=204)
 
 
@@ -31,11 +28,7 @@ async def list_conversations(
     user: CurrentUserDependency,
     limit: int = Query(default=50, ge=1, le=200),
 ) -> list[ConversationResponse]:
-    conversations = await ConversationRepository(session, user.id).list_conversations(limit)
-    return [
-        ConversationResponse.model_validate(conversation, from_attributes=True)
-        for conversation in conversations
-    ]
+    return await conversations_service.list_conversations(session=session, user=user, limit=limit)
 
 
 @router.get("/conversations/{conversation_id}/messages", response_model=list[MessageResponse])
@@ -45,5 +38,6 @@ async def list_messages(
     user: CurrentUserDependency,
     limit: int = Query(default=50, ge=1, le=200),
 ) -> list[MessageResponse]:
-    messages = await ConversationRepository(session, user.id).list_messages(conversation_id, limit)
-    return [MessageResponse.model_validate(message, from_attributes=True) for message in messages]
+    return await conversations_service.list_messages(
+        conversation_id=conversation_id, session=session, user=user, limit=limit
+    )

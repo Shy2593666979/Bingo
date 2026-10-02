@@ -242,12 +242,13 @@ def _upgrade_role_schema(connection) -> None:
     additions = {
         "owner_id": "VARCHAR(36)",
         "display_name": "VARCHAR(30)",
+        "role_type": "VARCHAR(30)",
         "avatar_data": "TEXT",
         "voice_source_id": "VARCHAR(36)",
         "owned_voice": "VARCHAR(255) NOT NULL DEFAULT ''",
         "deleted": "BOOLEAN NOT NULL DEFAULT 0",
-        "categories_json": "TEXT NOT NULL DEFAULT '[\"陪伴\", \"朋友\"]'",
-        "traits_json": "TEXT NOT NULL DEFAULT '[\"善于倾听\", \"陪伴聊天\"]'",
+        "categories_json": 'TEXT NOT NULL DEFAULT \'["陪伴", "朋友"]\'',
+        "traits_json": 'TEXT NOT NULL DEFAULT \'["善于倾听", "陪伴聊天"]\'',
     }
     for column, definition in additions.items():
         if column not in role_columns:

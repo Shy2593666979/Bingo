@@ -56,6 +56,7 @@ import java.util.UUID
 import java.util.concurrent.LinkedBlockingQueue
 
 class MainActivity : FlutterActivity() {
+    private var regionLocation: RegionLocationController? = null
     private lateinit var localChatDatabase: LocalChatDatabase
     private var audioEventSink: EventChannel.EventSink? = null
     private var pendingAudioStartResult: MethodChannel.Result? = null
@@ -225,6 +226,9 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        regionLocation = RegionLocationController(this)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "bingo/region_location")
+            .setMethodCallHandler(regionLocation)
         localChatDatabase = LocalChatDatabase(this)
 
         val masterKey = MasterKey.Builder(this)
@@ -1009,9 +1013,15 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
+        regionLocation?.close()
         stopPreviewAudio()
         stopIncomingCallRinging()
         super.onDestroy()
+    }
+
+    override fun onStop() {
+        regionLocation?.cancelForBackground()
+        super.onStop()
     }
 
     override fun onRequestPermissionsResult(
@@ -1020,6 +1030,7 @@ class MainActivity : FlutterActivity() {
         grantResults: IntArray,
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        regionLocation?.onPermissionResult(requestCode)
         if (requestCode == AUDIO_PERMISSION_REQUEST) {
             val callback = pendingAudioStartResult ?: return
             pendingAudioStartResult = null

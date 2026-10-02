@@ -13,6 +13,7 @@ class _Gateway implements RoleGateway {
             id: 'girlfriend',
             name: '女朋友',
             builtin: true,
+            description: '温柔陪伴',
             categories: ['陪伴', '恋人'],
             traits: ['温柔体贴', '主动关心'],
             messageCount: 12),
@@ -20,6 +21,7 @@ class _Gateway implements RoleGateway {
             id: 'teacher',
             name: '老师',
             builtin: true,
+            description: '耐心答疑',
             categories: ['陪伴', '成长'],
             traits: ['耐心讲解', '答疑解惑']),
       ];

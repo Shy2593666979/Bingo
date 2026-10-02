@@ -25,6 +25,7 @@ from bingo.services.chat_runs import ChatRunService
 from bingo.tools import create_tool_registry
 from bingo.tools.base import BaseTool, ToolContext, ToolResult
 from bingo.tools.registry import ToolRegistry
+from tests.api_support import api_payload
 
 
 @pytest.fixture
@@ -40,7 +41,7 @@ def client(tmp_path: Path) -> TestClient:
             "/api/v1/auth/register",
             json={"phone": "13800138000", "password": "password123"},
         )
-        token = registration.json()["access_token"]
+        token = api_payload(registration)["access_token"]
         test_client.headers["Authorization"] = f"Bearer {token}"
         test_client.put(
             "/api/v1/me/profile",
@@ -58,7 +59,7 @@ def test_health(client: TestClient) -> None:
     response = client.get("/api/v1/health")
 
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    assert api_payload(response) == {"status": "ok"}
     assert response.headers["x-request-id"]
 
 
@@ -73,12 +74,12 @@ def test_image_chat_uses_image_model_and_persists_messages(client: TestClient) -
     )
 
     assert response.status_code == 200
-    payload = response.json()
+    payload = api_payload(response)
     assert payload["content"] == "Image received: 这是什么？"
     messages = client.get(f"/api/v1/conversations/{payload['conversation_id']}/messages")
     assert messages.status_code == 200
-    assert [item["role"] for item in messages.json()] == ["user", "assistant"]
-    user_message = messages.json()[0]
+    assert [item["role"] for item in api_payload(messages)] == ["user", "assistant"]
+    user_message = api_payload(messages)[0]
     assert user_message["content"] == "这是什么？"
     assert user_message["image_id"]
     image_response = client.get(f"/api/v1/chat/images/{user_message['image_id']}")
@@ -150,8 +151,8 @@ def test_registers_and_deactivates_push_device(client: TestClient) -> None:
     )
 
     assert registration.status_code == 200
-    assert registration.json()["provider"] == "getui"
-    assert registration.json()["active"] is True
+    assert api_payload(registration)["provider"] == "getui"
+    assert api_payload(registration)["active"] is True
 
     removed = client.delete("/api/v1/push/devices/installation-001")
     assert removed.status_code == 204
@@ -165,16 +166,16 @@ def test_asr_reports_missing_configuration(client: TestClient) -> None:
     )
 
     assert response.status_code == 503
-    assert "DashScope" in response.json()["detail"]
+    assert "DashScope" in api_payload(response)["detail"]
 
 
 def test_profile_options_use_personality_and_role(client: TestClient) -> None:
     response = client.get("/api/v1/profile/options")
 
     assert response.status_code == 200
-    assert "tones" not in response.json()
-    assert "温柔体贴" in response.json()["personalities"]
-    assert response.json()["roles"] == ["女朋友", "男朋友", "同事", "老师", "家长", "小朋友"]
+    assert "tones" not in api_payload(response)
+    assert "温柔体贴" in api_payload(response)["personalities"]
+    assert api_payload(response)["roles"] == ["女朋友", "男朋友", "同事", "老师", "家长", "小朋友"]
 
 
 def test_registration_profile_and_persistent_login(client: TestClient) -> None:
@@ -188,8 +189,8 @@ def test_registration_profile_and_persistent_login(client: TestClient) -> None:
         },
     )
     assert profile.status_code == 200
-    assert profile.json()["onboarding_complete"] is True
-    assert profile.json()["role"] == "女朋友"
+    assert api_payload(profile)["onboarding_complete"] is True
+    assert api_payload(profile)["role"] == "女朋友"
 
     client.headers.pop("Authorization")
     login = client.post(
@@ -197,8 +198,8 @@ def test_registration_profile_and_persistent_login(client: TestClient) -> None:
         json={"phone": "13800138000", "password": "password123"},
     )
     assert login.status_code == 200
-    client.headers["Authorization"] = f"Bearer {login.json()['access_token']}"
-    assert client.get("/api/v1/me").json()["assistant_name"] == "小宾"
+    client.headers["Authorization"] = f"Bearer {api_payload(login)['access_token']}"
+    assert api_payload(client.get("/api/v1/me"))["assistant_name"] == "小宾"
 
 
 def test_profile_rejects_role_not_present_in_role_table(client: TestClient) -> None:
@@ -219,13 +220,13 @@ def test_chat_and_history(client: TestClient) -> None:
     response = client.post("/api/v1/chat", json={"content": "hello"})
 
     assert response.status_code == 200
-    body = response.json()
+    body = api_payload(response)
     assert body["content"] == "You said: hello"
 
     history = client.get(f"/api/v1/conversations/{body['conversation_id']}/messages")
     assert history.status_code == 200
-    assert [message["role"] for message in history.json()] == ["user", "assistant"]
-    assert [message["status"] for message in history.json()] == ["completed", "completed"]
+    assert [message["role"] for message in api_payload(history)] == ["user", "assistant"]
+    assert [message["status"] for message in api_payload(history)] == ["completed", "completed"]
 
 
 def test_lists_conversations(client: TestClient) -> None:
@@ -234,15 +235,15 @@ def test_lists_conversations(client: TestClient) -> None:
     response = client.get("/api/v1/conversations")
 
     assert response.status_code == 200
-    assert response.json()[0]["title"] == "first topic"
+    assert api_payload(response)[0]["title"] == "first topic"
 
 
 def test_reuses_single_conversation_when_client_omits_id(client: TestClient) -> None:
     first = client.post("/api/v1/chat", json={"content": "first"})
     second = client.post("/api/v1/chat", json={"content": "second"})
 
-    assert second.json()["conversation_id"] == first.json()["conversation_id"]
-    assert len(client.get("/api/v1/conversations").json()) == 1
+    assert api_payload(second)["conversation_id"] == api_payload(first)["conversation_id"]
+    assert len(api_payload(client.get("/api/v1/conversations"))) == 1
 
 
 def test_conversations_are_isolated_between_users(client: TestClient) -> None:
@@ -251,10 +252,10 @@ def test_conversations_are_isolated_between_users(client: TestClient) -> None:
         "/api/v1/auth/register",
         json={"phone": "13900139000", "password": "password456"},
     )
-    client.headers["Authorization"] = f"Bearer {second.json()['access_token']}"
+    client.headers["Authorization"] = f"Bearer {api_payload(second)['access_token']}"
 
-    assert client.get("/api/v1/conversations").json() == []
-    assert client.get("/api/v1/memories").json() == []
+    assert api_payload(client.get("/api/v1/conversations")) == []
+    assert api_payload(client.get("/api/v1/memories")) == []
 
 
 def test_http_stream_splits_assistant_reply_at_sentence_boundaries(
@@ -296,11 +297,11 @@ def test_explicit_memory_can_be_listed_and_deleted(client: TestClient) -> None:
 
     memories = client.get("/api/v1/memories")
     assert memories.status_code == 200
-    assert memories.json()[0]["content"] == "我喜欢浅烘咖啡"
+    assert api_payload(memories)[0]["content"] == "我喜欢浅烘咖啡"
 
-    deleted = client.delete(f"/api/v1/memories/{memories.json()[0]['id']}")
+    deleted = client.delete(f"/api/v1/memories/{api_payload(memories)[0]['id']}")
     assert deleted.status_code == 204
-    assert client.get("/api/v1/memories").json() == []
+    assert api_payload(client.get("/api/v1/memories")) == []
 
 
 def test_rejects_empty_message(client: TestClient) -> None:
@@ -419,18 +420,18 @@ def test_alarm_tool_streams_approval_and_enforces_state(client: TestClient) -> N
     action_id = approval["action_id"]
     approved = client.post(f"/api/v1/device-actions/{action_id}/approve")
     assert approved.status_code == 200
-    assert approved.json()["status"] == "approved"
+    assert api_payload(approved)["status"] == "approved"
 
     repeated = client.post(f"/api/v1/device-actions/{action_id}/approve")
     assert repeated.status_code == 200
-    assert repeated.json()["status"] == "approved"
+    assert api_payload(repeated)["status"] == "approved"
 
     completed = client.post(
         f"/api/v1/device-actions/{action_id}/complete",
         json={"status": "succeeded", "result": "alarm UI opened"},
     )
     assert completed.status_code == 200
-    assert completed.json()["status"] == "succeeded"
+    assert api_payload(completed)["status"] == "succeeded"
 
 
 def test_assistant_can_invite_user_to_realtime_call(client: TestClient) -> None:
@@ -461,12 +462,12 @@ def test_assistant_can_invite_user_to_realtime_call(client: TestClient) -> None:
 
     pending = client.get("/api/v1/call-invitations/pending")
     assert pending.status_code == 200
-    assert pending.json()["id"] == invitation["call_id"]
+    assert api_payload(pending)["id"] == invitation["call_id"]
 
     accepted = client.post(f"/api/v1/call-invitations/{invitation['call_id']}/accept")
     assert accepted.status_code == 200
-    assert accepted.json()["status"] == "accepted"
-    assert client.get("/api/v1/call-invitations/pending").json() is None
+    assert api_payload(accepted)["status"] == "accepted"
+    assert api_payload(client.get("/api/v1/call-invitations/pending")) is None
 
 
 def test_expired_call_creates_one_missed_call_record(client: TestClient) -> None:
@@ -502,7 +503,9 @@ def test_expired_call_creates_one_missed_call_record(client: TestClient) -> None
     repeated = client.post(f"/api/v1/call-invitations/{invitation['call_id']}/miss")
     assert repeated.status_code == 204
 
-    messages = client.get(f"/api/v1/conversations/{invitation['conversation_id']}/messages").json()
+    messages = api_payload(
+        client.get(f"/api/v1/conversations/{invitation['conversation_id']}/messages")
+    )
     missed_calls = [
         message
         for message in messages

@@ -105,7 +105,7 @@ class _RoleDetailPageState extends State<RoleDetailPage> {
                           style: const TextStyle(
                               fontSize: 29, fontWeight: FontWeight.w800)),
                       const SizedBox(height: 7),
-                      Text(role.typeLabel,
+                      Text(role.typeLabel.isEmpty ? '陪伴伙伴' : role.typeLabel,
                           style: const TextStyle(
                               color: Color(0xFF7D918A), fontSize: 14)),
                     ])),
@@ -121,7 +121,11 @@ class _RoleDetailPageState extends State<RoleDetailPage> {
                       const TextStyle(color: Color(0xFF7D918A), height: 1.6)),
             ])),
             _surface(Row(children: [
-              Expanded(child: _stat('伙伴身份', role.typeLabel, 'heart')),
+              Expanded(
+                  child: _stat(
+                      '伙伴身份',
+                      role.typeLabel.isEmpty ? '陪伴伙伴' : role.typeLabel,
+                      'heart')),
               Expanded(child: _stat('对话消息', '${role.messageCount} 条', 'chat')),
               Expanded(child: _stat('未读消息', '${role.unreadCount} 条', 'book'))
             ])),

@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 
 from bingo.config import Settings
 from bingo.main import create_app
+from tests.api_support import api_payload
 
 
 @pytest.fixture
@@ -12,9 +13,11 @@ def client(tmp_path):
         database={"url": f"sqlite+aiosqlite:///{tmp_path / 'account.db'}"},
     )
     with TestClient(create_app(settings)) as connection:
-        result = connection.post(
-            "/api/v1/auth/register", json={"phone": "13800138000", "password": "original123"}
-        ).json()
+        result = api_payload(
+            connection.post(
+                "/api/v1/auth/register", json={"phone": "13800138000", "password": "original123"}
+            )
+        )
         connection.headers["Authorization"] = "Bearer " + result["access_token"]
         connection.put(
             "/api/v1/me/profile",
@@ -31,8 +34,8 @@ def client(tmp_path):
 def recovery(client):
     result = client.post("/api/v1/me/recovery-profile", json={"birthday": "2000-05-01"})
     assert result.status_code == 200
-    assert client.get("/api/v1/me").json()["birthday"] == "2000-05-01"
-    return result.json()["recovery_code"]
+    assert api_payload(client.get("/api/v1/me"))["birthday"] == "2000-05-01"
+    return api_payload(result)["recovery_code"]
 
 
 def reset_payload(code):
@@ -49,7 +52,7 @@ def test_reset_revokes_sessions_and_rotates_recovery_code(client):
     code = recovery(client)
     result = client.post("/api/v1/auth/reset-password", json=reset_payload(code))
     assert result.status_code == 200
-    assert result.json()["recovery_code"] != code
+    assert api_payload(result)["recovery_code"] != code
     assert client.get("/api/v1/me").status_code == 401
     assert client.post("/api/v1/auth/reset-password", json=reset_payload(code)).status_code == 400
     assert (
@@ -68,7 +71,7 @@ def test_reset_revokes_sessions_and_rotates_recovery_code(client):
 
 def test_public_profile_does_not_reveal_recovery_hash(client):
     recovery(client)
-    assert "recovery_hash" not in client.get("/api/v1/me").json()
+    assert "recovery_hash" not in api_payload(client.get("/api/v1/me"))
     assert (
         client.post("/api/v1/me/recovery-profile", json={"birthday": "2000-05-01"}).status_code
         == 409
@@ -80,9 +83,11 @@ def test_birthday_and_username_are_not_sufficient_to_reset(client):
     assert (
         client.post("/api/v1/auth/reset-password", json=reset_payload("x" * 32)).status_code == 400
     )
-    assert client.post(
-        "/api/v1/auth/reset-password", json={**reset_payload("x" * 32), "phone": "13900139000"}
-    ).json() == {"detail": "找回信息验证失败，请检查后重试"}
+    assert api_payload(
+        client.post(
+            "/api/v1/auth/reset-password", json={**reset_payload("x" * 32), "phone": "13900139000"}
+        )
+    ) == {"detail": "找回信息验证失败，请检查后重试"}
 
 
 def test_recovery_rate_limit(client):

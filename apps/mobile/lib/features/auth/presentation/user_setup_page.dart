@@ -6,6 +6,7 @@ import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/auth/presentation/avatar_crop_page.dart';
 import 'package:bingo/features/auth/presentation/password_recovery_page.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
+import 'package:bingo/shared/widgets/user_avatar.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -169,27 +170,11 @@ class _UserSetupPageState extends State<UserSetupPage> {
                                 label: '选择用户头像',
                                 button: true,
                                 child: InkWell(
-                                    customBorder: const CircleBorder(),
+                                    borderRadius: BorderRadius.circular(20),
                                     onTap: _busy ? null : _chooseAvatar,
                                     child: Stack(children: [
-                                      Container(
-                                          padding: const EdgeInsets.all(5),
-                                          decoration: const BoxDecoration(
-                                              color: Colors.white,
-                                              shape: BoxShape.circle),
-                                          child: ClipOval(
-                                              child: _avatarData == null
-                                                  ? Image.asset(
-                                                      'assets/images/bingo_logo.png',
-                                                      width: 96,
-                                                      height: 96,
-                                                      fit: BoxFit.cover)
-                                                  : Image.memory(
-                                                      base64Decode(
-                                                          _avatarData!),
-                                                      width: 96,
-                                                      height: 96,
-                                                      fit: BoxFit.cover))),
+                                      UserAvatar(
+                                          avatarData: _avatarData, size: 96),
                                       Positioned(
                                           right: 0,
                                           bottom: 0,
@@ -214,20 +199,22 @@ class _UserSetupPageState extends State<UserSetupPage> {
                             style: TextStyle(fontSize: 12, color: Colors.grey)),
                         const SizedBox(height: 28),
                         _card(
-                            child: TextFormField(
-                                controller: _nickname,
-                                enabled: !_busy,
-                                maxLength: 30,
-                                textInputAction: TextInputAction.done,
-                                decoration: const InputDecoration(
-                                    labelText: '用户昵称',
-                                    hintText: '希望我们怎么称呼你',
-                                    counterText: '',
-                                    prefixIcon: Icon(Icons.person_outline)),
-                                validator: (value) =>
-                                    value == null || value.trim().isEmpty
-                                        ? '请输入昵称'
-                                        : null)),
+                            child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: TextFormField(
+                                    controller: _nickname,
+                                    enabled: !_busy,
+                                    maxLength: 30,
+                                    textInputAction: TextInputAction.done,
+                                    decoration: const InputDecoration(
+                                        labelText: '用户昵称',
+                                        hintText: '希望我们怎么称呼你',
+                                        counterText: '',
+                                        prefixIcon: Icon(Icons.person_outline)),
+                                    validator: (value) =>
+                                        value == null || value.trim().isEmpty
+                                            ? '请输入昵称'
+                                            : null))),
                         const SizedBox(height: 16),
                         _card(
                             child: Padding(

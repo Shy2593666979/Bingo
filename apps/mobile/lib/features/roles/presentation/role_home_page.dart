@@ -9,6 +9,8 @@ import 'package:bingo/features/roles/data/local_role_order_store.dart';
 import 'package:bingo/features/roles/presentation/role_detail_page.dart';
 import 'package:bingo/shared/widgets/assistant_avatar.dart';
 import 'package:bingo/shared/widgets/user_avatar.dart';
+import 'package:bingo/shared/widgets/partner_swipe_card.dart';
+import 'package:bingo/core/role_avatar_store.dart';
 import 'package:flutter/material.dart';
 
 class RoleHomePage extends StatefulWidget {
@@ -160,7 +162,7 @@ class RoleHomePageState extends State<RoleHomePage>
             userAvatarData: widget.userAvatarData,
             gateway: widget.gateway,
             onChat: _open,
-            onEdit: role.builtin ? null : () => _edit(role))));
+            onEdit: () => _edit(role))));
     await refresh();
   }
 
@@ -175,149 +177,200 @@ class RoleHomePageState extends State<RoleHomePage>
   Widget build(BuildContext context) {
     final roles = _roles;
     return DecoratedBox(
-        decoration: const BoxDecoration(gradient: BingoPalette.softGradient),
-        child: SafeArea(
-            child: Column(children: [
-          Padding(
-              padding: const EdgeInsets.fromLTRB(18, 14, 18, 12),
-              child: Row(children: [
-                SizedBox(
-                    width: 54,
-                    child: Center(
-                        child: Image.asset('assets/images/bingo_logo.png',
-                            width: 34, height: 34))),
-                const Expanded(
-                    child: Column(children: [
-                  Text('陪伴空间',
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-                  SizedBox(height: 3),
-                  Text('在这里，慢慢聊',
-                      style: TextStyle(fontSize: 10, color: Color(0xFF85928F))),
-                ])),
-                IconButton(
-                    tooltip: '我的',
-                    onPressed: widget.onOpenSettings,
-                    icon: UserAvatar(
-                        avatarData: widget.userAvatarData, size: 38)),
-              ])),
-          Expanded(
-              child: RefreshIndicator(
-                  onRefresh: refresh,
-                  child: roles != null && roles.isNotEmpty
-                      ? ReorderableListView.builder(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          buildDefaultDragHandles: false,
-                          itemCount: roles.length,
-                          onReorderStart: (_) => _dragging = true,
-                          onReorderEnd: (_) => _dragging = false,
-                          onReorderItem: _reorder,
-                          proxyDecorator: (child, index, animation) => Material(
-                              color: Colors.transparent,
-                              elevation: 6,
-                              borderRadius: BorderRadius.circular(25),
-                              child: child),
-                          header: _error == null
-                              ? null
-                              : TextButton(
-                                  onPressed: refresh, child: Text(_error!)),
-                          itemBuilder: (context, index) =>
-                              ReorderableDelayedDragStartListener(
-                                  key: ValueKey(roles[index].id),
-                                  enabled: _openingId == null,
-                                  index: index,
-                                  child: _card(roles[index])))
-                      : ListView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          children: [
-                              if (_error != null)
-                                Column(children: [
-                                  Text(_error!),
-                                  TextButton(
-                                      onPressed: refresh,
-                                      child: const Text('重新加载'))
-                                ]),
-                              if (_roles == null && _error == null)
-                                const Padding(
-                                    padding: EdgeInsets.all(50),
-                                    child: Center(
-                                        child: CircularProgressIndicator())),
-                              if (roles != null && roles.isEmpty)
-                                const Padding(
-                                    padding: EdgeInsets.all(40),
-                                    child:
-                                        Center(child: Text('还没有伙伴，创建一位新的伙伴吧'))),
-                              ...?roles?.map(_card),
-                            ]))),
-          Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
-              child: SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: FilledButton.icon(
-                      onPressed: _openingId == null ? _edit : null,
-                      icon: const Icon(Icons.add_circle_rounded, size: 25),
-                      label: const Text('创建伙伴',
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.w700)),
-                      style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF129A81),
-                          shape: const StadiumBorder())))),
-        ])));
+        decoration:
+            const BoxDecoration(gradient: BingoPalette.companionGradient),
+        child: DecoratedBox(
+            key: const ValueKey('companion-background'),
+            decoration:
+                const BoxDecoration(gradient: BingoPalette.companionGlow),
+            child: SafeArea(
+                child: Column(children: [
+              Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 19, 18, 20),
+                  child: Row(children: [
+                    const Expanded(
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                          Text('陪伴空间',
+                              style: TextStyle(
+                                  fontSize: 23, fontWeight: FontWeight.w800)),
+                          SizedBox(height: 5),
+                          Text('在这里，慢慢聊~',
+                              style: TextStyle(
+                                  fontSize: 12, color: Color(0xFF85928F))),
+                        ])),
+                    IconButton(
+                        tooltip: '我的',
+                        onPressed: widget.onOpenSettings,
+                        icon: UserAvatar(
+                            avatarData: widget.userAvatarData, size: 42)),
+                  ])),
+              Expanded(
+                  child: RefreshIndicator(
+                      onRefresh: refresh,
+                      child: roles != null && roles.isNotEmpty
+                          ? ReorderableListView.builder(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
+                              buildDefaultDragHandles: false,
+                              itemCount: roles.length,
+                              onReorderStart: (_) => _dragging = true,
+                              onReorderEnd: (_) => _dragging = false,
+                              onReorderItem: _reorder,
+                              proxyDecorator: (child, index, animation) =>
+                                  Material(
+                                      color: Colors.transparent,
+                                      elevation: 6,
+                                      borderRadius: BorderRadius.circular(25),
+                                      child: child),
+                              header: _error == null
+                                  ? null
+                                  : TextButton(
+                                      onPressed: refresh, child: Text(_error!)),
+                              itemBuilder: (context, index) =>
+                                  ReorderableDelayedDragStartListener(
+                                      key: ValueKey(roles[index].id),
+                                      enabled: _openingId == null,
+                                      index: index,
+                                      child: _card(roles[index])))
+                          : ListView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
+                              children: [
+                                  if (_error != null)
+                                    Column(children: [
+                                      Text(_error!),
+                                      TextButton(
+                                          onPressed: refresh,
+                                          child: const Text('重新加载'))
+                                    ]),
+                                  if (_roles == null && _error == null)
+                                    const Padding(
+                                        padding: EdgeInsets.all(50),
+                                        child: Center(
+                                            child:
+                                                CircularProgressIndicator())),
+                                  if (roles != null && roles.isEmpty)
+                                    const Padding(
+                                        padding: EdgeInsets.all(40),
+                                        child: Center(
+                                            child: Text('还没有伙伴，创建一位新的伙伴吧'))),
+                                  ...?roles?.map(_card),
+                                ]))),
+              Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
+                  child: SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: FilledButton.icon(
+                          onPressed: _openingId == null ? _edit : null,
+                          icon: const Icon(Icons.add_circle_rounded, size: 25),
+                          label: const Text('创建伙伴',
+                              style: TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.w700)),
+                          style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF129A81),
+                              shape: const StadiumBorder())))),
+            ]))));
   }
 
   Widget _card(RoleOption role) => Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Material(
-          color: Colors.white.withValues(alpha: .93),
-          borderRadius: BorderRadius.circular(25),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-              onTap: _openingId == null ? () => _detail(role) : null,
-              child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(children: [
-                    Row(children: [
-                      AssistantAvatar(role: role.name, size: 64),
-                      const SizedBox(width: 12),
-                      Expanded(
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                            Row(children: [
-                              Expanded(
-                                  child: Text(role.displayName,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w800))),
-                              _enterButton(role),
-                            ]),
-                            const SizedBox(height: 6),
-                            Text('${role.typeLabel} · ${role.description}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    fontSize: 12, color: Color(0xFF85928F))),
-                          ])),
-                    ]),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                        width: double.infinity,
-                        child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child:
-                                Row(mainAxisSize: MainAxisSize.min, children: [
-                              for (final label in role.traits)
-                                Padding(
-                                    padding: const EdgeInsets.only(right: 8),
-                                    child: TraitBadge(label)),
-                            ]))),
-                  ])))));
+      child: PartnerSwipeCard(
+          enabled: _openingId == null && !_dragging,
+          onEdit: () => _edit(role),
+          onDelete: role.builtin ? null : () => _deleteRole(role),
+          child: Material(
+              color: Colors.white.withValues(alpha: .93),
+              borderRadius: BorderRadius.circular(25),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                  onTap: _openingId == null ? () => _detail(role) : null,
+                  child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(children: [
+                        Row(children: [
+                          AssistantAvatar(role: role.name, size: 64),
+                          const SizedBox(width: 12),
+                          Expanded(
+                              child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                Row(children: [
+                                  Expanded(
+                                      child: Text(role.displayName,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w800))),
+                                  _enterButton(role),
+                                ]),
+                                const SizedBox(height: 6),
+                                Text(role.cardDescription,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF85928F))),
+                              ])),
+                        ]),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                            width: double.infinity,
+                            child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      for (final label in role.traits)
+                                        Padding(
+                                            padding:
+                                                const EdgeInsets.only(right: 8),
+                                            child: TraitBadge(label)),
+                                    ]))),
+                      ]))))));
+
+  Future<void> _deleteRole(RoleOption role) async {
+    if (_openingId != null || role.builtin) return;
+    final affected = (_roles ?? [])
+        .where((item) => item.id != role.id && item.voiceSourceId == role.id)
+        .length;
+    final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+                title: Text('删除${role.displayName}？'),
+                content: Text('删除后，该伙伴的专属音色也会失效。'
+                    '${affected > 0 ? '\n另外 $affected 位伙伴使用了这个音色，将自动切回系统默认音色。' : ''}'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('取消')),
+                  TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('删除',
+                          style: TextStyle(color: Color(0xFFC3676D)))),
+                ]));
+    if (confirmed != true || !mounted) return;
+    setState(() => _openingId = role.id);
+    try {
+      await widget.gateway.deleteRole(role.id);
+      RoleAvatarStore.set(role.name, null);
+      await refresh();
+      await widget.onRolesChanged?.call();
+    } on Exception catch (error) {
+      if (mounted) {
+        showCenterToast(
+            context, error is ApiException ? error.message : '删除失败，请稍后重试');
+      }
+    } finally {
+      if (mounted) setState(() => _openingId = null);
+    }
+  }
 
   Widget _enterButton(RoleOption role) =>
       Stack(clipBehavior: Clip.none, children: [

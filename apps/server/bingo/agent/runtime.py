@@ -49,6 +49,7 @@ class AgentRuntime:
         persona: str,
         timezone: str,
         engagement: EngagementService | None = None,
+        location=None,
     ) -> None:
         self._llm = llm
         self._tools = tools
@@ -56,6 +57,7 @@ class AgentRuntime:
         self._persona = persona
         self._timezone = timezone
         self._engagement = engagement
+        self._location = location
         self._runs = AgentRunCoordinator()
 
     async def begin_run(
@@ -98,7 +100,11 @@ class AgentRuntime:
             memories = await MemoryRepository(session, user.id).list(role_id=user.role_id)
             role = await RoleRepository(session).get(user.role_id)
             context = self._context(
-                user, history, memories, role_prompt=role.prompt if role else ""
+                user,
+                history,
+                memories,
+                role_prompt=role.context_prompt if role else "",
+                current_location=await self._current_location(user.id),
             )
             if image_data_urls and context and context[-1].role == "user":
                 context[-1] = ModelMessage(
@@ -240,7 +246,13 @@ class AgentRuntime:
         messages = await repository.list_messages(conversation.id)
         memories = await MemoryRepository(session, user.id).list(role_id=user.role_id)
         role = await RoleRepository(session).get(user.role_id)
-        history = self._context(user, messages, memories, role_prompt=role.prompt if role else "")
+        history = self._context(
+            user,
+            messages,
+            memories,
+            role_prompt=role.context_prompt if role else "",
+            current_location=await self._current_location(user.id),
+        )
         if image_data_urls and history and history[-1].role == "user":
             history[-1] = ModelMessage(
                 role="user", content=content, image_data_urls=image_data_urls
@@ -468,6 +480,7 @@ class AgentRuntime:
         memories: list[Memory],
         *,
         role_prompt: str = "",
+        current_location: str = "",
     ) -> list[ModelMessage]:
         return build_context(
             messages,
@@ -478,7 +491,12 @@ class AgentRuntime:
             role=user.role or "朋友",
             timezone=self._timezone,
             role_prompt=role_prompt,
+            current_location=current_location,
         )
+
+    async def _current_location(self, user_id: str) -> str:
+        region = await self._location.current(user_id) if self._location else None
+        return region["display"] if region else ""
 
     async def _remember_explicit_fact(
         self, session: AsyncSession, user_id: str, content: str

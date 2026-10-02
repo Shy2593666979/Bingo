@@ -43,6 +43,47 @@ class _RoleHomeGateway implements RoleGateway {
 }
 
 void main() {
+  testWidgets(
+      'companion header is left aligned with a square logo profile entry',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    var profileOpened = false;
+    await tester.pumpWidget(MaterialApp(
+        theme: buildBingoTheme(),
+        home: Scaffold(
+            body: RoleHomePage(
+                userId: 'header-test',
+                orderStore: MemoryRoleOrderStore(),
+                gateway: _RoleHomeGateway(),
+                onOpenRole: (_) async {},
+                onOpenSettings: () => profileOpened = true))));
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(find.text('陪伴空间')).dx, 18);
+    expect(tester.getTopLeft(find.text('在这里，慢慢聊~')).dx, 18);
+    final profile = find.byTooltip('我的');
+    final button = tester.widget<IconButton>(find.byWidgetPredicate(
+        (widget) => widget is IconButton && widget.tooltip == '我的'));
+    expect(button.style?.backgroundColor?.resolve({}), isNull);
+    expect(button.style?.side?.resolve({}), isNull);
+    expect(find.descendant(of: profile, matching: find.byType(ClipOval)),
+        findsNothing);
+    final logos = find.byWidgetPredicate((widget) =>
+        widget is Image &&
+        widget.image is AssetImage &&
+        (widget.image as AssetImage).assetName ==
+            'assets/images/bingo_logo.png');
+    expect(logos, findsOneWidget);
+    final background = tester.widget<DecoratedBox>(
+        find.byKey(const ValueKey('companion-background')));
+    expect((background.decoration as BoxDecoration).gradient,
+        BingoPalette.companionGlow);
+    await tester.tap(profile);
+    expect(profileOpened, isTrue);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('long-press drag saves locally and survives refresh and remount',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(360, 800));

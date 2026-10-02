@@ -25,6 +25,18 @@ abstract final class BingoPalette {
     end: Alignment.bottomRight,
     colors: [Color(0xFFFFFFFF), Color(0xFFF3FBF8), Color(0xFFFBFDFC)],
   );
+
+  static const companionGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFF8FDFC), Color(0xFFF3FBF7)],
+  );
+
+  static const companionGlow = RadialGradient(
+    center: Alignment(0.9, -1),
+    radius: 1,
+    colors: [Color(0xFFE6F7ED), Color(0x00E6F7ED)],
+  );
 }
 
 ThemeData buildBingoTheme() {

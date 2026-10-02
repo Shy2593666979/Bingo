@@ -86,6 +86,7 @@ class RoleOption {
       required this.builtin,
       this.nickname,
       this.roleType,
+      this.personality,
       this.prompt = '',
       this.avatarData,
       this.voiceSourceId,
@@ -104,8 +105,12 @@ class RoleOption {
   final bool builtin;
   final String? nickname;
   final String? roleType;
+  final String? personality;
   String get displayName => nickname ?? name;
   String get typeLabel => roleType ?? (builtin ? name : '自定义角色');
+  String get cardDescription => [typeLabel.trim(), description.trim()]
+      .where((part) => part.isNotEmpty)
+      .join(' · ');
   final String prompt;
   final String? avatarData;
   final String? voiceSourceId;
@@ -126,6 +131,7 @@ class RoleOption {
       builtin: json['builtin'] as bool,
       nickname: json['nickname'] as String?,
       roleType: json['role_type'] as String?,
+      personality: json['personality'] as String?,
       prompt: json['prompt'] as String? ?? '',
       avatarData: json['avatar_data'] as String?,
       voiceSourceId: json['voice_source_id'] as String?,

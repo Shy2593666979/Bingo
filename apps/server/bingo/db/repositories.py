@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
 
-from fastapi import HTTPException
 from sqlalchemy import delete, or_
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -17,9 +16,11 @@ from bingo.db.models import (
     PushDevice,
     PushOutbox,
     Role,
+    RolePreference,
     User,
 )
 from bingo.db.time import beijing_now
+from bingo.services.exceptions import ServiceError
 from bingo.services.security import hash_token, new_access_token
 
 
@@ -42,7 +43,7 @@ class ConversationRepository:
                 )
             ).first()
             if conversation is None:
-                raise HTTPException(404, "对话不存在")
+                raise ServiceError(404, "对话不存在")
         if conversation is not None:
             return conversation
         if role_id is None:
@@ -73,9 +74,15 @@ class ConversationRepository:
             return user
         role = await self._session.get(Role, conversation.role_id)
         if not role or role.deleted or not role.enabled or role.owner_id not in {None, user.id}:
-            raise HTTPException(404, "角色已失效，请重新选择")
+            raise ServiceError(404, "角色已失效，请重新选择")
+        preference = await self._session.get(RolePreference, (user.id, role.id))
         return user.model_copy(
-            update={"role_id": role.id, "role": role.visible_name, "assistant_name": role.nickname}
+            update={
+                "role_id": role.id,
+                "role": role.visible_name,
+                "assistant_name": role.nickname,
+                "personality": preference.personality if preference else user.personality,
+            }
         )
 
     async def add_message(

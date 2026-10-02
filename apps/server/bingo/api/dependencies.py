@@ -1,4 +1,5 @@
 from collections.abc import AsyncIterator
+from dataclasses import replace
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, status
@@ -6,9 +7,22 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bingo.db.models import User
-from bingo.db.repositories import AuthSessionRepository
+from bingo.services.auth import require_user
+from bingo.services.context import ServiceContext
 
 bearer_scheme = HTTPBearer(auto_error=False)
+
+
+def get_service_context(request: Request) -> ServiceContext:
+    return replace(
+        request.app.state.services,
+        runtime=request.app.state.runtime,
+        chat_runs=request.app.state.chat_runs,
+        voice_cloning=request.app.state.voice_cloning,
+        engagement=request.app.state.engagement,
+        public_base_url=str(request.base_url).rstrip("/"),
+        client_address=request.client.host if request.client else "unknown",
+    )
 
 
 async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
@@ -38,14 +52,7 @@ async def get_current_user(
     token: AccessTokenDependency,
     session: SessionDependency,
 ) -> User:
-    user = await AuthSessionRepository(session).get_user(token)
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="登录已失效，请重新登录",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return user
+    return await require_user(session, token)
 
 
 CurrentUserDependency = Annotated[User, Depends(get_current_user)]

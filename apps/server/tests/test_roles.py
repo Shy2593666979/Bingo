@@ -35,8 +35,7 @@ async def test_existing_role_table_is_upgraded_and_seeded_with_voices(tmp_path: 
             roles = await RoleRepository(session).list_enabled()
             voices = {role.code: role.voice for role in roles}
         assert voices["boyfriend"] == (
-            "qwen-audio-3.1-realtime-plus-selfvoice2-"
-            "d25f4b945c284a3385381230a2bb2052"
+            "qwen-audio-3.1-realtime-plus-selfvoice2-d25f4b945c284a3385381230a2bb2052"
         )
         assert voices["girlfriend"] == "longanqian_v3.1"
         assert voices["parent"].startswith("qwen-audio-3.1-realtime-plus-parent-")

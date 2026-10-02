@@ -315,6 +315,8 @@ abstract interface class RoleGateway {
       {String? id,
       required String name,
       required String prompt,
+      String? roleType,
+      String? personality,
       String? avatarData,
       String? voiceSourceId,
       List<String>? categories,
@@ -572,7 +574,7 @@ class HttpApiGateway
       var message = '语音识别失败 (${response.statusCode})';
       try {
         final error = jsonDecode(payload) as Map<String, dynamic>;
-        final detail = error['detail'];
+        final detail = error['message'] ?? error['detail'];
         if (detail is String) {
           message = detail;
         } else if (detail is List && detail.isNotEmpty && detail.first is Map) {
@@ -583,7 +585,7 @@ class HttpApiGateway
       }
       throw ApiException(message, statusCode: response.statusCode);
     }
-    final result = jsonDecode(payload) as Map<String, dynamic>;
+    final result = _decodeResponse(payload) as Map<String, dynamic>;
     return (result['text'] as String? ?? '').trim();
   }
 
@@ -880,6 +882,8 @@ class HttpApiGateway
       {String? id,
       required String name,
       required String prompt,
+      String? roleType,
+      String? personality,
       String? avatarData,
       String? voiceSourceId,
       List<String>? categories,
@@ -890,6 +894,8 @@ class HttpApiGateway
         body: {
           'name': name,
           'prompt': prompt,
+          if (roleType != null) 'role_type': roleType,
+          if (personality != null) 'personality': personality,
           'avatar_data': avatarData,
           'voice_source_id': voiceSourceId,
           'draft': draft,
@@ -942,13 +948,35 @@ class HttpApiGateway
       var message = '请求失败 (${response.statusCode})';
       try {
         final error = jsonDecode(payload) as Map<String, dynamic>;
-        message = error['detail'] as String? ?? message;
+        message = (error['message'] ?? error['detail']) as String? ?? message;
       } on FormatException {
         if (payload.isNotEmpty) message = payload;
       }
       throw ApiException(message, statusCode: response.statusCode);
     }
-    return payload.isEmpty ? null : jsonDecode(payload);
+    return _decodeResponse(payload);
+  }
+
+  Object? _decodeResponse(String payload) {
+    if (payload.isEmpty) return null;
+    final decoded = jsonDecode(payload);
+    if (decoded is Map<String, dynamic> &&
+        decoded.containsKey('code') &&
+        decoded.containsKey('data')) {
+      if (decoded['code'] != 0) {
+        throw ApiException(decoded['message']?.toString() ?? '请求失败');
+      }
+      return decoded['data'];
+    }
+    return decoded;
+  }
+
+  Future<void> saveCurrentRegion(Map<String, String> region) async {
+    await _request('PUT', config.endpoint('/me/location'), body: region);
+  }
+
+  Future<void> clearCurrentRegion() async {
+    await _request('DELETE', config.endpoint('/me/location'));
   }
 
   void _prepareRequest(HttpClientRequest request, {bool authenticated = true}) {

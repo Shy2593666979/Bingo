@@ -21,11 +21,13 @@ class UserAvatar extends StatelessWidget {
             width: size,
             height: size,
             fit: BoxFit.cover,
+            frameBuilder: (_, child, frame, synchronouslyLoaded) =>
+                ClipOval(child: child),
             errorBuilder: (_, __, ___) => _defaultAvatar());
       } on FormatException {
         image = _defaultAvatar();
       }
     }
-    return SizedBox.square(dimension: size, child: ClipOval(child: image));
+    return SizedBox.square(dimension: size, child: image);
   }
 }

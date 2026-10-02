@@ -17,6 +17,7 @@ from bingo.db.session import Database
 from bingo.db.time import beijing_now
 from bingo.main import create_app
 from bingo.roles import role_id
+from tests.api_support import api_payload
 
 
 @pytest.fixture
@@ -27,13 +28,15 @@ def client(tmp_path):
         model={"provider": "echo"},
     )
     with TestClient(create_app(settings)) as connection:
-        result = connection.post(
-            "/api/v1/auth/register",
-            json={
-                "phone": "13800138000",
-                "password": "password123",
-            },
-        ).json()
+        result = api_payload(
+            connection.post(
+                "/api/v1/auth/register",
+                json={
+                    "phone": "13800138000",
+                    "password": "password123",
+                },
+            )
+        )
         connection.headers["Authorization"] = f"Bearer {result['access_token']}"
         connection.put(
             "/api/v1/me/profile",
@@ -50,7 +53,7 @@ def client(tmp_path):
 def open_role(client, code):
     response = client.post(f"/api/v1/roles/{role_id(code)}/conversation")
     assert response.status_code == 200, response.text
-    return response.json()["id"]
+    return api_payload(response)["id"]
 
 
 def send(client, conversation, content):
@@ -62,7 +65,7 @@ def send(client, conversation, content):
         },
     )
     assert response.status_code == 200, response.text
-    return response.json()
+    return api_payload(response)
 
 
 def test_role_threads_restore_history_and_context_even_after_switching(client):
@@ -83,39 +86,41 @@ def test_role_threads_restore_history_and_context_even_after_switching(client):
     assert "只告诉男朋友的故事" not in "\n".join(item.content for item in captured[-1])
     assert "女朋友" in captured[-1][0].content
     assert open_role(client, "girlfriend") == girlfriend
-    messages = client.get(f"/api/v1/conversations/{boyfriend}/messages").json()
+    messages = api_payload(client.get(f"/api/v1/conversations/{boyfriend}/messages"))
     assert len(messages) == 2
     assert messages[0]["content"] == "只告诉男朋友的故事"
-    assert len(client.get("/api/v1/conversations").json()) == 2
+    assert len(api_payload(client.get("/api/v1/conversations"))) == 2
 
 
 def test_unread_and_access_are_separate_for_each_user_and_role(client):
     girlfriend = open_role(client, "girlfriend")
     boyfriend = open_role(client, "boyfriend")
     send(client, girlfriend, "你好")
-    roles = {item["name"]: item for item in client.get("/api/v1/roles").json()}
+    roles = {item["name"]: item for item in api_payload(client.get("/api/v1/roles"))}
     assert roles["女朋友"]["unread_count"] == 1
     assert roles["男朋友"]["unread_count"] == 0
     assert client.post(f"/api/v1/conversations/{girlfriend}/read").status_code == 204
-    roles = {item["name"]: item for item in client.get("/api/v1/roles").json()}
+    roles = {item["name"]: item for item in api_payload(client.get("/api/v1/roles"))}
     assert roles["女朋友"]["unread_count"] == 0
-    registration = client.post(
-        "/api/v1/auth/register",
-        json={
-            "phone": "13900138000",
-            "password": "password123",
-        },
-    ).json()
+    registration = api_payload(
+        client.post(
+            "/api/v1/auth/register",
+            json={
+                "phone": "13900138000",
+                "password": "password123",
+            },
+        )
+    )
     client.headers["Authorization"] = f"Bearer {registration['access_token']}"
     assert client.post(f"/api/v1/conversations/{boyfriend}/read").status_code == 404
     assert open_role(client, "boyfriend") != boyfriend
-    assert client.get(f"/api/v1/conversations/{girlfriend}/messages").json() == []
+    assert api_payload(client.get(f"/api/v1/conversations/{girlfriend}/messages")) == []
 
 
 def test_memories_do_not_cross_roles(client):
     girlfriend = open_role(client, "girlfriend")
     open_role(client, "boyfriend")
-    user_id = client.get("/api/v1/me").json()["id"]
+    user_id = api_payload(client.get("/api/v1/me"))["id"]
 
     async def setup():
         async with client.app.state.database.session_factory() as session:

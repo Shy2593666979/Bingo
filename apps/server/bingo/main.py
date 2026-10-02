@@ -15,17 +15,22 @@ from bingo.api import (
     conversations,
     device_actions,
     engagement,
+    location,
     memories,
     push,
     realtime_calls,
     roles,
 )
+from bingo.api.exceptions import register_exception_handlers
 from bingo.api.middleware import RequestLoggingMiddleware
+from bingo.api.response import EnvelopeRoute
 from bingo.background import EngagementService
 from bingo.config import Settings, get_settings
 from bingo.db.session import Database
 from bingo.push import PushService, create_push_provider
 from bingo.services.chat_runs import ChatRunService
+from bingo.services.context import ServiceContext
+from bingo.services.location import LocationService
 from bingo.services.logging import configure_logging, log_event
 from bingo.services.voice_cloning import VoiceCloningService
 from bingo.tools import create_tool_registry
@@ -59,6 +64,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
     )
     tool_registry = create_tool_registry()
+    location_service = LocationService(resolved_settings.redis.url)
     runtime = AgentRuntime(
         model_client,
         tool_registry,
@@ -66,6 +72,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         persona=resolved_settings.agent.assistant_persona,
         timezone=resolved_settings.app.timezone,
         engagement=engagement_service,
+        location=location_service,
     )
     chat_runs = ChatRunService(database.session_factory, runtime)
     voice_cloning = VoiceCloningService(database, resolved_settings)
@@ -81,6 +88,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         application.state.settings = resolved_settings
         application.state.push = push_service
         application.state.voice_cloning = voice_cloning
+        application.state.location = location_service
+        application.state.services = ServiceContext(
+            resolved_settings,
+            database,
+            runtime,
+            chat_runs,
+            voice_cloning,
+            engagement_service,
+            location=location_service,
+        )
         await voice_cloning.start()
         await push_service.start()
         if engagement_service is not None:
@@ -89,6 +106,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         yield
         await chat_runs.close()
         await voice_cloning.close()
+        await location_service.close()
         if engagement_service is not None:
             await engagement_service.close()
         await push_service.close()
@@ -101,6 +119,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     application.add_middleware(RequestLoggingMiddleware)
+    application.router.route_class = EnvelopeRoute
+    register_exception_handlers(application)
     application.add_middleware(
         CORSMiddleware,
         allow_origins=resolved_settings.server.cors_origins,
@@ -124,4 +144,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.include_router(asr.router, prefix=resolved_settings.server.api_prefix)
     application.include_router(realtime_calls.router, prefix=resolved_settings.server.api_prefix)
     application.include_router(roles.router, prefix=resolved_settings.server.api_prefix)
+    application.include_router(location.router, prefix=resolved_settings.server.api_prefix)
     return application

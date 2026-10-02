@@ -14,6 +14,7 @@ def build_context(
     role: str,
     timezone: str,
     role_prompt: str = "",
+    current_location: str = "",
 ) -> list[ModelMessage]:
     system_prompt = SYSTEM_PROMPT.format(
         assistant_name=assistant_name,
@@ -27,6 +28,8 @@ def build_context(
         role_memories=_format_memories(memories, "role"),
         relationship_memories=_format_memories(memories, "user_role"),
     )
+    if current_location:
+        system_prompt += f"\n用户当前位置：{current_location}"
     history = [
         ModelMessage(
             role=message.role,

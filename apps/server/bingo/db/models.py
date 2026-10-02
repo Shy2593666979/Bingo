@@ -34,6 +34,7 @@ class Role(SQLModel, table=True):
     sort_order: int = Field(default=0, sa_column=Column(Integer, nullable=False))
     owner_id: str | None = Field(default=None, index=True, max_length=36)
     display_name: str | None = Field(default=None, max_length=30)
+    role_type: str | None = Field(default=None, max_length=30)
     avatar_data: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
     voice_source_id: str | None = Field(default=None, max_length=36, index=True)
     owned_voice: str = Field(default="", max_length=255)
@@ -53,6 +54,13 @@ class Role(SQLModel, table=True):
             return BUILTIN_NICKNAMES.get(self.code, self.visible_name)
         return self.visible_name
 
+    @property
+    def context_prompt(self) -> str:
+        if self.owner_id is None or self.role_type is None:
+            return self.prompt
+        identity = self.role_type or "陪伴伙伴，没有固定的角色身份"
+        return f"你的伙伴角色是{identity}。\n{self.prompt}"
+
     created_at: datetime = Field(
         default_factory=beijing_now,
         sa_column=Column(BeijingDateTime(), nullable=False),
@@ -61,6 +69,14 @@ class Role(SQLModel, table=True):
         default_factory=beijing_now,
         sa_column=Column(BeijingDateTime(), nullable=False),
     )
+
+
+class RolePreference(SQLModel, table=True):
+    __tablename__ = "role_preferences"
+
+    user_id: str = Field(primary_key=True, max_length=36)
+    role_id: str = Field(primary_key=True, max_length=36)
+    personality: str = Field(max_length=30)
 
 
 class VoiceJob(SQLModel, table=True):
