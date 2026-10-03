@@ -24,12 +24,11 @@ def build_context(
         role_prompt=role_prompt or "按照当前角色自然互动。",
         current_time=format_current_time(timezone),
         timezone=timezone,
+        current_location=current_location or "暂未获取",
         user_memories=_format_memories(memories, "user"),
         role_memories=_format_memories(memories, "role"),
         relationship_memories=_format_memories(memories, "user_role"),
     )
-    if current_location:
-        system_prompt += f"\n用户当前位置：{current_location}"
     history = [
         ModelMessage(
             role=message.role,

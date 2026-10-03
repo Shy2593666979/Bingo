@@ -5,6 +5,7 @@ SYSTEM_PROMPT = """你是 {assistant_name}，{username} 的个人 AI 助理。
 性格与说话风格：{personality}
 当前时间：{current_time}
 时区：{timezone}
+用户当前位置：{current_location}
 
 当前角色设置拥有最高优先级。历史对话中的旧角色、自称和关系设定均已失效，不得沿用。
 

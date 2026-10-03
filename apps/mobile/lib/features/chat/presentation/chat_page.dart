@@ -4,6 +4,7 @@ import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/chat/models/chat_message.dart';
 import 'package:bingo/features/chat/presentation/chat_controller.dart';
+import 'package:bingo/features/chat/presentation/chat_starters.dart';
 import 'package:bingo/features/chat/presentation/widgets/device_action_card.dart';
 import 'package:bingo/features/chat/presentation/widgets/message_bubble.dart';
 import 'package:bingo/features/chat/presentation/widgets/message_input.dart';
@@ -449,25 +450,19 @@ class _EmptyChat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const suggestions = ['看一下今天有什么新闻', '今天天气怎么样', '今天有点累，陪我聊聊吧'];
+    final suggestions = chatStartersForRole(assistantRole);
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 104,
-              height: 104,
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.8),
-                borderRadius: BorderRadius.circular(32),
-                boxShadow: const [
-                  BoxShadow(color: Color(0x2020A077), blurRadius: 32),
-                ],
+            SizedBox.square(
+              key: const ValueKey('empty-chat-avatar'),
+              dimension: 104,
+              child: Center(
+                child: AssistantAvatar(role: assistantRole, size: 88),
               ),
-              child: AssistantAvatar(role: assistantRole, size: 88),
             ),
             const SizedBox(height: 22),
             Text(
@@ -476,24 +471,20 @@ class _EmptyChat extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              '我会记住重要的事，也会一直接着聊',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: const Color(0xFF7A829B),
-                  ),
-            ),
             const SizedBox(height: 24),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 8,
-              runSpacing: 8,
+            Column(
               children: [
-                for (final suggestion in suggestions)
-                  ActionChip(
-                    label: Text(suggestion),
-                    onPressed: () => onSuggestion(suggestion),
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    for (var index = 0; index < 2; index++) ...[
+                      if (index > 0) const SizedBox(width: 8),
+                      Flexible(child: _suggestion(suggestions[index])),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 8),
+                _suggestion(suggestions[2]),
               ],
             ),
           ],
@@ -501,4 +492,10 @@ class _EmptyChat extends StatelessWidget {
       ),
     );
   }
+
+  Widget _suggestion(String text) => ActionChip(
+        label: Text(text,
+            textAlign: TextAlign.center, softWrap: true, maxLines: 3),
+        onPressed: () => onSuggestion(text),
+      );
 }

@@ -1,5 +1,24 @@
 from bingo.agent.context import build_context
 from bingo.db.models import Memory, Message
+from bingo.prompts import SYSTEM_PROMPT
+
+
+def test_location_is_a_system_template_field() -> None:
+    assert "用户当前位置：{current_location}" in SYSTEM_PROMPT
+    context = build_context(
+        [],
+        [],
+        username="小明",
+        assistant_name="Bingo",
+        personality="温柔体贴",
+        role="朋友",
+        timezone="Asia/Shanghai",
+        current_location="北京市海淀区",
+    )
+    prompt = context[0].content
+    assert prompt.count("用户当前位置：") == 1
+    assert "用户当前位置：北京市海淀区" in prompt
+    assert prompt.index("用户当前位置：") < prompt.index("用户全局记忆：")
 
 
 def test_context_contains_persona_time_and_memory() -> None:

@@ -96,7 +96,7 @@ def test_system_prompt_contains_only_one_region_line():
     assert [line for line in prompt.splitlines() if "用户当前位置" in line] == [
         "用户当前位置：河南省郑州市金水区"
     ]
-    assert "用户当前位置" not in build_context([], [], **parameters)[0].content
+    assert "用户当前位置：暂未获取" in build_context([], [], **parameters)[0].content
 
 
 def test_location_routes_require_login_and_return_envelope(tmp_path: Path):

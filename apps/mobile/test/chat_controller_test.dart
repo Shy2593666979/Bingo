@@ -683,7 +683,10 @@ void main() {
   testWidgets(
       'empty chat uses selected avatar and new suggestions without settings',
       (tester) async {
-    final controller = ChatController(gateway: FakeChatGateway());
+    await tester.binding.setSurfaceSize(const Size(360, 780));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final gateway = FakeChatGateway();
+    final controller = ChatController(gateway: gateway);
     await tester.pumpWidget(MaterialApp(
         home: ChatPage(
             controller: controller,
@@ -695,15 +698,42 @@ void main() {
             onOpenSettings: () {})));
     await tester.pumpAndSettle();
     expect(find.text('今天想聊点什么？'), findsOneWidget);
-    expect(find.text('看一下今天有什么新闻'), findsOneWidget);
-    expect(find.text('今天天气怎么样'), findsOneWidget);
-    expect(find.text('今天有点累，陪我聊聊吧'), findsOneWidget);
+    expect(find.text('今天不太开心，安慰我一下吧'), findsOneWidget);
+    expect(find.text('有件事让我纠结，陪我一起想想'), findsOneWidget);
+    expect(find.text('睡前陪我聊一会儿吧'), findsOneWidget);
+    expect(find.text('我会记住重要的事，也会一直接着聊'), findsNothing);
+    expect(find.text('看一下今天有什么新闻'), findsNothing);
     expect(find.text('帮我整理今天的计划'), findsNothing);
     expect(find.byIcon(Icons.settings_rounded), findsNothing);
     final avatars =
         tester.widgetList<AssistantAvatar>(find.byType(AssistantAvatar));
     expect(avatars.length, 2);
     expect(avatars.every((avatar) => avatar.role == '男朋友'), isTrue);
+    final welcomeAvatar = find.byKey(const ValueKey('empty-chat-avatar'));
+    expect(tester.getSize(welcomeAvatar), const Size(104, 104));
+    expect(find.descendant(of: welcomeAvatar, matching: find.byType(ClipOval)),
+        findsOneWidget);
+    expect(
+        find.descendant(of: welcomeAvatar, matching: find.byType(DecoratedBox)),
+        findsNothing);
+    final first =
+        tester.getCenter(find.widgetWithText(ActionChip, '今天不太开心，安慰我一下吧'));
+    final second =
+        tester.getCenter(find.widgetWithText(ActionChip, '有件事让我纠结，陪我一起想想'));
+    final third =
+        tester.getCenter(find.widgetWithText(ActionChip, '睡前陪我聊一会儿吧'));
+    expect(first.dy, second.dy);
+    expect(first.dx, lessThan(third.dx));
+    expect(second.dx, greaterThan(third.dx));
+    expect(third.dy, greaterThan(first.dy));
+    final firstLabel = tester.widget<Text>(find.text('今天不太开心，安慰我一下吧'));
+    expect(firstLabel.softWrap, isTrue);
+    expect(firstLabel.maxLines, 3);
+    expect(tester.getSize(find.text('今天不太开心，安慰我一下吧')).height, greaterThan(25));
+    await tester.tap(find.text('今天不太开心，安慰我一下吧'));
+    await tester.pumpAndSettle();
+    expect(gateway.lastContent, '今天不太开心，安慰我一下吧');
+    expect(find.text('第一句。'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
     controller.dispose();
   });
