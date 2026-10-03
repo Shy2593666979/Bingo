@@ -49,6 +49,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         create_push_provider(resolved_settings),
         poll_seconds=resolved_settings.push.worker_poll_seconds,
     )
+    location_service = LocationService(resolved_settings.redis.url)
     engagement_service = (
         None
         if resolved_settings.app.environment == "test"
@@ -61,10 +62,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             poll_seconds=resolved_settings.engagement.worker_poll_seconds,
             push_service=push_service,
             timezone=resolved_settings.app.timezone,
+            location=location_service,
         )
     )
     tool_registry = create_tool_registry()
-    location_service = LocationService(resolved_settings.redis.url)
     runtime = AgentRuntime(
         model_client,
         tool_registry,

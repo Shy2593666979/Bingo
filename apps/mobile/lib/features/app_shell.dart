@@ -43,9 +43,7 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   final _location = const RegionLocationService();
-  bool _locationEnabled = true;
   bool _locating = false;
-  String? _currentRegion;
   int _locationGeneration = 0;
   ChatController get chatController => widget.chatController;
   HttpApiGateway get gateway => widget.gateway;
@@ -86,10 +84,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     try {
       final enabled = await _location.isEnabled(userId);
       if (!active()) return;
-      _locationEnabled = enabled;
       if (!enabled) {
         await gateway.clearCurrentRegion();
-        if (active()) setState(() => _currentRegion = null);
         return;
       }
       final region = await _location.current(retry: retry);
@@ -99,33 +95,11 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       } else {
         await gateway.saveCurrentRegion(region);
       }
-      if (active()) setState(() => _currentRegion = region?.values.join());
     } on Exception {
-      if (active()) setState(() => _currentRegion = null);
+      return;
     } finally {
       if (generation == _locationGeneration) _locating = false;
     }
-  }
-
-  Future<String?> _setLocationEnabled(bool enabled) async {
-    _locationGeneration++;
-    await _location.setEnabled(profile.id, enabled);
-    if (mounted) {
-      setState(() {
-        _locationEnabled = enabled;
-        _currentRegion = null;
-      });
-    }
-    if (!enabled) {
-      await _location.cancel();
-      _locating = false;
-      await gateway.clearCurrentRegion();
-    } else {
-      await _location.cancel();
-      _locating = false;
-      await _refreshLocation(retry: true);
-    }
-    return _currentRegion;
   }
 
   void _onChatChanged() {
@@ -315,9 +289,6 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   Future<void> _openMy(BuildContext context) async {
     await Navigator.of(context).push<void>(MaterialPageRoute(
         builder: (myContext) => MyPage(
-            locationEnabled: _locationEnabled,
-            currentRegion: _currentRegion,
-            onLocationChanged: _setLocationEnabled,
             profile: profile,
             loadPersonalities: gateway.getProfileOptions,
             savePersonality: (personality) async {

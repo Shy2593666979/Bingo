@@ -71,8 +71,6 @@ engagement:
   worker_poll_seconds: 2
   follow_up_delays_seconds:
     - 3600
-    - 10800
-    - 36000
   recommendation_delay_seconds: 18000
 
 push:

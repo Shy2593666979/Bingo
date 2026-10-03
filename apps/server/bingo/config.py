@@ -100,7 +100,7 @@ class RedisSettings(BaseModel):
 
 class EngagementSettings(BaseModel):
     worker_poll_seconds: float = 2.0
-    follow_up_delays_seconds: tuple[int, int, int] = (3600, 10800, 36000)
+    follow_up_delays_seconds: tuple[int, ...] = (3600,)
     recommendation_delay_seconds: int = 18000
 
 

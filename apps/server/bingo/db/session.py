@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import (
 from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from bingo.db.models import Role
+from bingo.db.models import MorningGreeting, Role
 from bingo.db.time import BEIJING_TIMEZONE
 from bingo.roles import BUILTIN_ROLES, role_id
 from bingo.roles.catalog import BUILTIN_NICKNAMES
@@ -32,6 +32,7 @@ class Database:
             await connection.run_sync(_seed_builtin_roles)
             await connection.run_sync(_upgrade_local_sqlite_schema)
             await connection.run_sync(_upgrade_role_conversations)
+            await connection.run_sync(_upgrade_morning_greetings)
 
     async def dispose(self) -> None:
         await self.engine.dispose()
@@ -39,6 +40,34 @@ class Database:
     async def session(self) -> AsyncIterator[AsyncSession]:
         async with self.session_factory() as session:
             yield session
+
+
+def _upgrade_morning_greetings(connection) -> None:
+    if connection.dialect.name != "sqlite":
+        return
+    columns = {
+        row[1] for row in connection.exec_driver_sql("PRAGMA table_info(morning_greetings)")
+    }
+    if "partner_key" in columns:
+        return
+    connection.exec_driver_sql(
+        "CREATE TEMP TABLE morning_greetings_upgrade AS SELECT * FROM morning_greetings"
+    )
+    connection.exec_driver_sql("DROP TABLE morning_greetings")
+    MorningGreeting.__table__.create(connection)
+    connection.exec_driver_sql(
+        """
+        INSERT INTO morning_greetings
+            (id, user_id, conversation_id, partner_key, greeting_date,
+             scheduled_at, status, attempts, claim_until)
+        SELECT greeting.id, greeting.user_id, greeting.conversation_id,
+               COALESCE(conversation.role_id, greeting.conversation_id), greeting.greeting_date,
+               greeting.scheduled_at, greeting.status, greeting.attempts, greeting.claim_until
+        FROM morning_greetings_upgrade AS greeting
+        LEFT JOIN conversations AS conversation ON conversation.id = greeting.conversation_id
+        """
+    )
+    connection.exec_driver_sql("DROP TABLE morning_greetings_upgrade")
 
 
 def _upgrade_local_sqlite_schema(connection) -> None:

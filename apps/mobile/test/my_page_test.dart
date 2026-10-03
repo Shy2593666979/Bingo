@@ -33,6 +33,8 @@ void main() {
             onEditUser: (_) async => null,
             onOpenSettings: () async => settingsOpened = true)));
     expect(find.text('我的'), findsOneWidget);
+    expect(find.text('使用当前地区'), findsNothing);
+    expect(find.byType(SwitchListTile), findsNothing);
     expect(find.byIcon(Icons.settings_rounded), findsOneWidget);
     expect(find.byIcon(Icons.tune_rounded), findsNothing);
     expect(find.text('小雨'), findsOneWidget);

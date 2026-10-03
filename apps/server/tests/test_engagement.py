@@ -7,6 +7,7 @@ from sqlmodel import select
 from bingo.agent.model_client import ModelMessage
 from bingo.background.broker import InMemoryTaskBroker
 from bingo.background.service import EngagementService
+from bingo.config import Settings
 from bingo.db.models import Conversation, MemoryCheckpoint, Message, User
 from bingo.db.repositories import MemoryRepository, ProactiveMessageRepository, RoleRepository
 from bingo.db.session import Database
@@ -27,6 +28,32 @@ class EngagementModel:
         if "主动回访" in prompt:
             return f"主动关心 {hash(prompt) % 100000}"
         return "[]"
+
+
+@pytest.mark.asyncio
+async def test_only_one_hour_followup_is_scheduled_and_legacy_stages_are_ignored(tmp_path):
+    assert Settings().engagement.follow_up_delays_seconds == (3600,)
+    database, service, user_id, conversation_id = await _build_service(tmp_path)
+    service._follow_up_delays = (3600,)
+    try:
+        version = await service.record_user_activity(user_id)
+        await service.schedule_after_turn(
+            user_id=user_id,
+            conversation_id=conversation_id,
+            activity_version=version,
+            completed_message_id="completed-message",
+        )
+        followups = [job for _, _, job in service._broker._jobs if job.kind == "follow_up"]
+        assert len(followups) == 1 and followups[0].payload["stage"] == 1
+        for stage in (2, 3):
+            await service._create_follow_up(
+                {"stage": stage, "user_id": user_id, "conversation_id": conversation_id}
+            )
+        async with database.session_factory() as session:
+            assert await ProactiveMessageRepository(session, user_id).list_pending() == []
+    finally:
+        await service.close()
+        await database.dispose()
 
 
 async def _build_service(tmp_path: Path) -> tuple[Database, EngagementService, str, str]:
@@ -88,8 +115,8 @@ async def test_extracts_memory_and_creates_engagement_content(tmp_path: Path) ->
         assert [(item.category, item.content) for item in memories] == [
             ("preference", "用户喜欢浅烘咖啡")
         ]
-        assert len(proactive) == 3
-        assert len({message.content for _, message in proactive}) == 3
+        assert len(proactive) == 1
+        assert proactive[0][0].stage == 1
         assert len(await service.get_recommendations(user_id)) == 3
         assert checkpoint.last_message_id == "completed-message"
     finally:

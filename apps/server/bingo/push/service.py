@@ -47,7 +47,14 @@ class PushService:
                 await self._worker
         await self._provider.close()
 
-    async def enqueue(self, proactive: ProactiveMessage, title: str, body: str) -> int:
+    async def enqueue(
+        self,
+        proactive: ProactiveMessage,
+        title: str,
+        body: str,
+        *,
+        session: AsyncSession | None = None,
+    ) -> int:
         if not self.enabled:
             return 0
         payload = {
@@ -57,14 +64,21 @@ class PushService:
             "conversation_id": proactive.conversation_id,
             "sent_at": proactive.created_at.isoformat(),
         }
-        async with self._session_factory() as session:
-            count = await PushOutboxRepository(session).enqueue_for_user(
+
+        async def enqueue_in_session(target: AsyncSession) -> int:
+            return await PushOutboxRepository(target).enqueue_for_user(
                 user_id=proactive.user_id,
                 proactive_message_id=proactive.id,
                 title=title,
                 body=body,
                 payload_json=json.dumps(payload, ensure_ascii=False),
             )
+
+        if session is None:
+            async with self._session_factory() as owned_session:
+                count = await enqueue_in_session(owned_session)
+        else:
+            count = await enqueue_in_session(session)
         log_event(
             logger,
             logging.INFO,

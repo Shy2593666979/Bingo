@@ -15,6 +15,7 @@ from bingo.background.broker import (
     RedisTaskBroker,
     TaskBroker,
 )
+from bingo.background.morning import MorningGreetingService
 from bingo.db.models import Message
 from bingo.db.repositories import (
     ConversationRepository,
@@ -31,6 +32,7 @@ from bingo.prompts import (
     RECOMMENDATIONS_PROMPT,
 )
 from bingo.push import PushService
+from bingo.services.location import LocationService
 from bingo.services.logging import log_event
 from bingo.utils.time import format_current_time
 
@@ -46,29 +48,41 @@ class EngagementService:
         llm: ModelClient,
         *,
         redis_url: str | None,
-        follow_up_delays: tuple[int, int, int],
+        follow_up_delays: tuple[int, ...],
         recommendation_delay: int,
         poll_seconds: float,
         push_service: PushService | None = None,
         timezone: str = "Asia/Shanghai",
+        location: LocationService | None = None,
     ) -> None:
         self._session_factory = session_factory
         self._llm = llm
         self._broker: TaskBroker = RedisTaskBroker(redis_url) if redis_url else InMemoryTaskBroker()
-        self._follow_up_delays = follow_up_delays
+        self._follow_up_delays = follow_up_delays[:1]
         self._recommendation_delay = recommendation_delay
         self._poll_seconds = poll_seconds
         self._push_service = push_service
         self._timezone = timezone
         self._worker: asyncio.Task[None] | None = None
         self._recommendation_locks: dict[str, asyncio.Lock] = {}
+        self._morning = MorningGreetingService(
+            session_factory, llm, location=location, push_service=push_service, timezone=timezone
+        )
+        self._morning_worker: asyncio.Task[None] | None = None
 
     async def start(self) -> None:
         if isinstance(self._broker, RedisTaskBroker):
             await self._broker.start()
         self._worker = asyncio.create_task(self._run_worker(), name="bingo-background-worker")
+        self._morning_worker = asyncio.create_task(
+            self._run_morning_worker(), name="bingo-morning-worker"
+        )
 
     async def close(self) -> None:
+        if self._morning_worker is not None:
+            self._morning_worker.cancel()
+            with suppress(asyncio.CancelledError):
+                await self._morning_worker
         if self._worker is not None:
             self._worker.cancel()
             with suppress(asyncio.CancelledError):
@@ -194,6 +208,18 @@ class EngagementService:
                 )
                 await asyncio.sleep(self._poll_seconds)
 
+    async def _run_morning_worker(self) -> None:
+        while True:
+            try:
+                await self._morning.process()
+            except asyncio.CancelledError:
+                raise
+            except Exception as error:
+                log_event(
+                    logger, logging.ERROR, "morning.scan_failed", error_type=type(error).__name__
+                )
+            await asyncio.sleep(30)
+
     async def _execute(self, job: BackgroundJob) -> None:
         started_at = time.perf_counter()
         if job.kind != "memory_extract" and not await self._is_current(job.payload):
@@ -281,6 +307,8 @@ class EngagementService:
 
     async def _create_follow_up(self, payload: dict[str, Any]) -> None:
         stage = int(payload["stage"])
+        if stage != 1:
+            return
         async with self._session_factory() as session:
             user = await UserRepository(session).get(payload["user_id"])
             if user is None:

@@ -566,6 +566,21 @@ class ProactiveMessageRepository:
         assistant_role: str | None = None,
         role_id: str | None = None,
     ) -> ProactiveMessage:
+        proactive = await self.create_uncommitted(
+            conversation_id, content, stage, assistant_role, role_id
+        )
+        await self._session.commit()
+        await self._session.refresh(proactive)
+        return proactive
+
+    async def create_uncommitted(
+        self,
+        conversation_id: str,
+        content: str,
+        stage: int,
+        assistant_role: str | None = None,
+        role_id: str | None = None,
+    ) -> ProactiveMessage:
         message = Message(
             conversation_id=conversation_id,
             role="assistant",
@@ -582,8 +597,7 @@ class ProactiveMessageRepository:
             stage=stage,
         )
         self._session.add(proactive)
-        await self._session.commit()
-        await self._session.refresh(proactive)
+        await self._session.flush()
         return proactive
 
     async def list_pending(self, limit: int = 20) -> list[tuple[ProactiveMessage, Message]]:
