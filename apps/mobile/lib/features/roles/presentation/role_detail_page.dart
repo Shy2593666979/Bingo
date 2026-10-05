@@ -5,6 +5,7 @@ import 'package:bingo/features/chat/models/chat_message.dart';
 import 'package:bingo/features/roles/role_traits.dart';
 import 'package:bingo/shared/widgets/assistant_avatar.dart';
 import 'package:bingo/shared/widgets/user_avatar.dart';
+import 'package:bingo/features/chat/presentation/widgets/location_card.dart';
 import 'package:flutter/material.dart';
 
 class RoleDetailPage extends StatefulWidget {
@@ -149,27 +150,47 @@ class _RoleDetailPageState extends State<RoleDetailPage> {
               ...?_messages?.map((message) => Padding(
                   padding: const EdgeInsets.only(bottom: 14),
                   child: Row(
+                      mainAxisAlignment: message.role == ChatRole.user
+                          ? MainAxisAlignment.end
+                          : MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (message.role == ChatRole.assistant)
-                          AssistantAvatar(role: role.name, size: 34)
-                        else
+                        if (message.role != ChatRole.user) ...[
+                          AssistantAvatar(role: role.name, size: 34),
+                          const SizedBox(width: 10),
+                        ],
+                        Flexible(
+                            child: message.location != null
+                                ? LocationCard(
+                                    location: message.location!,
+                                    mapUrl: message.location!.hasCoordinates &&
+                                            widget.gateway is LocationGateway
+                                        ? (widget.gateway as LocationGateway)
+                                            .locationMapUrl(message.location!)
+                                        : null,
+                                    accessToken:
+                                        widget.gateway is HttpApiGateway
+                                            ? (widget.gateway as HttpApiGateway)
+                                                .accessToken
+                                            : null)
+                                : Container(
+                                    padding: const EdgeInsets.all(14),
+                                    decoration: BoxDecoration(
+                                        color: message.role == ChatRole.user
+                                            ? BingoPalette.userBubble
+                                            : const Color(0xFFEDF8F5),
+                                        borderRadius:
+                                            BorderRadius.circular(20)),
+                                    child: Text(
+                                        message.content.isEmpty ? '[图片或通话消息]' : message.content,
+                                        maxLines: 4,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(height: 1.5)))),
+                        if (message.role == ChatRole.user) ...[
+                          const SizedBox(width: 10),
                           UserAvatar(
                               avatarData: widget.userAvatarData, size: 34),
-                        const SizedBox(width: 10),
-                        Flexible(
-                            child: Container(
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                    color: const Color(0xFFEDF8F5),
-                                    borderRadius: BorderRadius.circular(20)),
-                                child: Text(
-                                    message.content.isEmpty
-                                        ? '[图片或通话消息]'
-                                        : message.content,
-                                    maxLines: 4,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(height: 1.5)))),
+                        ],
                       ]))),
             ])),
           ])),

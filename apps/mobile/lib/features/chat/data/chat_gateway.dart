@@ -7,6 +7,7 @@ import 'package:bingo/core/config/app_config.dart';
 import 'package:bingo/core/role_avatar_store.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/chat/models/chat_message.dart';
+import 'package:bingo/features/chat/models/chat_location.dart';
 
 class ApiException implements Exception {
   const ApiException(this.message, {this.statusCode});
@@ -361,6 +362,20 @@ abstract interface class RoleConversationGateway {
   Future<void> clearConversationRecommendations(String conversationId);
 }
 
+abstract interface class LocationGateway {
+  Stream<ChatStreamEvent> sendLocation(
+      {String? conversationId,
+      required ChatLocation location,
+      required String runId,
+      String? supersedesRunId});
+  Future<List<ChatLocation>> searchLocations(String keywords,
+      {String city = ''});
+  Future<({ChatLocation location, List<ChatLocation> places})> reverseLocation(
+      double longitude, double latitude,
+      {String coordinateSystem = 'GCJ-02'});
+  String locationMapUrl(ChatLocation location, {int zoom = 15});
+}
+
 class HttpApiGateway
     implements
         AuthGateway,
@@ -378,7 +393,8 @@ class HttpApiGateway
         CallInvitationGateway,
         MemoryGateway,
         EngagementGateway,
-        PushGateway {
+        PushGateway,
+        LocationGateway {
   HttpApiGateway({required this.config});
 
   final AppConfig config;
@@ -420,6 +436,63 @@ class HttpApiGateway
             .replace(queryParameters: {'conversation_id': conversationId}));
   }
 
+  @override
+  String locationMapUrl(ChatLocation location, {int zoom = 15}) =>
+      config.endpoint('/locations/map').replace(queryParameters: {
+        'longitude': '${location.longitude}',
+        'latitude': '${location.latitude}',
+        'zoom': '$zoom'
+      }).toString();
+
+  @override
+  Future<List<ChatLocation>> searchLocations(String keywords,
+      {String city = ''}) async {
+    final json = await _request(
+            'GET',
+            config
+                .endpoint('/locations/search')
+                .replace(queryParameters: {'keywords': keywords, 'city': city}))
+        as Map<String, dynamic>;
+    return (json['places'] as List)
+        .map((item) =>
+            ChatLocation.fromJson(Map<String, dynamic>.from(item as Map)))
+        .toList();
+  }
+
+  @override
+  Future<({ChatLocation location, List<ChatLocation> places})> reverseLocation(
+      double longitude, double latitude,
+      {String coordinateSystem = 'GCJ-02'}) async {
+    final json = await _request(
+        'GET',
+        config.endpoint('/locations/reverse').replace(queryParameters: {
+          'longitude': '$longitude',
+          'latitude': '$latitude',
+          'coordinate_system': coordinateSystem
+        })) as Map<String, dynamic>;
+    return (
+      location: ChatLocation.fromJson(
+          Map<String, dynamic>.from(json['location'] as Map)),
+      places: (json['places'] as List)
+          .map((item) =>
+              ChatLocation.fromJson(Map<String, dynamic>.from(item as Map)))
+          .toList()
+    );
+  }
+
+  @override
+  Stream<ChatStreamEvent> sendLocation(
+          {String? conversationId,
+          required ChatLocation location,
+          required String runId,
+          String? supersedesRunId}) =>
+      send(
+          conversationId: conversationId,
+          content: '',
+          runId: runId,
+          supersedesRunId: supersedesRunId,
+          location: location);
+
   String imageUrl(String imageId) => config
       .endpoint('/chat/images/${Uri.encodeComponent(imageId)}')
       .toString();
@@ -431,6 +504,7 @@ class HttpApiGateway
     required String runId,
     String? supersedesRunId,
     List<ChatImageUpload> images = const [],
+    ChatLocation? location,
   }) async* {
     final uri = config.endpoint('/chat/stream');
     final request =
@@ -438,6 +512,7 @@ class HttpApiGateway
     _prepareRequest(request);
     request.write(jsonEncode({
       'conversation_id': conversationId,
+      if (location != null) 'location': location.toJson(),
       'content': content,
       'run_id': runId,
       'supersedes_run_id': supersedesRunId,

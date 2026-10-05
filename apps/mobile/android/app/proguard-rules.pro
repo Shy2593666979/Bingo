@@ -6,3 +6,5 @@
 -dontwarn com.google.errorprone.annotations.RestrictedApi
 -dontwarn javax.annotation.Nullable
 -dontwarn javax.annotation.concurrent.GuardedBy
+-keep class com.amap.api.** { *; }
+-keep class com.autonavi.** { *; }

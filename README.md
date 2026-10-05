@@ -5,11 +5,12 @@
 <h1 align="center">Bingo</h1>
 
 <p align="center">
-  <strong>一个懂你、能陪伴、也能帮你做事的 Android AI 个人助手。</strong>
+  <strong>把陪伴变成一个名字、一种性格、一个熟悉的声音。</strong>
 </p>
 
 <p align="center">
-  支持个性化角色、文字与图片对话、实时语音通话、长期记忆、主动陪伴和经用户确认的设备操作。
+  Bingo 是基于 Flutter + Python / FastAPI 的 Android AI 陪伴应用。<br />
+  在你的陪伴空间里，与不同伙伴独立聊天、实时通话，也可以亲手创建新的伙伴。
 </p>
 
 <p align="center">
@@ -22,7 +23,22 @@
 > [!NOTE]
 > Bingo 目前是一个持续迭代中的原型项目，更适合学习、研究、二次开发和自托管实验。
 
-## 界面预览
+## 陪伴空间
+
+<table>
+  <tr>
+    <td align="center" width="25%"><img src="docs/media/companion-space.png" width="230" alt="新版陪伴空间与伙伴卡片" /><br /><sub>一个空间，独立的陪伴</sub></td>
+    <td align="center" width="25%"><img src="docs/media/chat-starters.png" width="230" alt="甜甜的圆形头像与专属聊天开场问题" /><br /><sub>不同伙伴，不同的开场</sub></td>
+    <td align="center" width="25%"><img src="docs/media/create-companion.png" width="230" alt="创建伙伴的昵称、角色与性格设置" /><br /><sub>定义属于你的伙伴</sub></td>
+    <td align="center" width="25%"><img src="docs/media/my-profile.png" width="230" alt="我的页面与个人资料、应用设置" /><br /><sub>资料与设置，统一管理</sub></td>
+  </tr>
+</table>
+
+<p align="center"><sub>新版界面来自独立演示账号的真实 Android 截图，仅保留 APP 内容。</sub></p>
+
+## 动态预览
+
+保留以下四段 GIF；它们录制于早期版本，当前界面以新版截图为准。
 
 <table>
   <tr>
@@ -52,11 +68,17 @@
 ## 为什么是 Bingo
 
 - **不只是聊天**：文字、图片、语音输入与实时语音通话共用同一套个性化上下文。
-- **真正个性化**：可设置助手名称、陪伴角色、性格与头像，服务端按请求组装专属提示词。
-- **记得你说过的话**：对话和长期记忆按用户隔离，Android 端同时保存本地会话副本。
-- **主动而不冒进**：支持延迟陪伴、推荐与推送；涉及设备的操作必须由用户明确批准。
+- **一个空间，多种陪伴**：甜甜、暖暖、小周、小田老师、文清和星星，分别对应女朋友、男朋友、同事、老师、家长和小朋友；每位伙伴拥有独立对话与未读消息。
+- **亲手创建伙伴**：自定义昵称、可选角色、性格、伙伴设定和图标化陪伴特征；上传头像后可缩放、移动并圆形裁剪。
+- **让声音也熟悉起来**：直接按页面文案朗读 20～30 秒，少于 15 秒提示重录；展示上传、复刻和验证阶段，完成后中文试听。也可直接选择内置音色或已有伙伴的声音。
+- **记得你说过的话**：结合用户资料、长期记忆与当前伙伴的聊天上下文；Android 本地保存会话副本，伙伴之间的聊天不混在一起。
+- **不止等你开口**：一轮回复结束后，闲置一小时触发回访；昨天聊过的每位伙伴，次日 7～9 点分别随机安排早安，参考昨天的对话与长期记忆，有可靠地区天气时再自然融入天气。
+- **管理起来很顺手**：卡片左滑编辑或删除、自定义本地拖动排序；默认六位伙伴仅支持编辑。个人资料和应用设置统一放在「我的」。
+- **主动而不冒进**：支持后台任务、推荐和可配置推送；涉及设备的操作必须由用户明确批准。
 - **密钥不进 APK**：模型、实时语音和第三方服务凭证全部保留在 FastAPI 服务端。
 - **可自托管**：开发时可在局域网运行，部署时也可切换为 HTTPS 公网服务。
+
+> 声音复刻需要配置真实语音服务并获得声音本人的授权。删除自定义伙伴后，其复刻声音不能再被选择使用。应用关闭后的通知送达需要另行配置推送服务；无推送配置时，通过前台轮询同步主动消息。
 
 ## 系统架构
 
@@ -64,20 +86,22 @@
 flowchart LR
     A[Flutter Android] -->|HTTPS / WebSocket| B[FastAPI API]
     A -->|Local cache| C[(Android SQLite)]
-    B --> D[Agent Runtime]
+    B --> S[Services]
+    S --> D[Agent Runtime]
     D --> E[LLM Provider]
     D --> F[Tool Registry]
     F --> F1[Web Search]
     F --> F2[Weather]
     F --> F3[Device Actions]
-    B --> G[(SQLite)]
-    B --> H[(Redis)]
-    B --> I[Realtime Audio Provider]
+    S --> G[(SQLite)]
+    S --> H[(Redis)]
+    S --> I[Realtime Audio Provider]
 ```
 
 - Flutter 负责交互、本地会话恢复、音频采集播放与 Android 设备操作。
-- FastAPI 负责鉴权、模型访问、对话状态、记忆、工具编排与实时音频协议转换。
-- Redis 负责持久化延迟陪伴任务和推荐队列。
+- FastAPI API 层负责鉴权、参数校验和响应；Services 层负责业务流程、数据库访问、模型与第三方服务调用。
+- 普通 HTTP 接口采用统一响应封装；WebSocket 保留事件协议，不套用 HTTP 响应格式。
+- Redis 保存延迟任务、推荐队列和有有效期的地区信息；SQL 保存会话、伙伴与早安调度记录。
 
 ## 仓库结构
 
@@ -165,6 +189,9 @@ flutter test
 - [系统架构](docs/architecture.md)
 - [API 与通信协议](docs/protocol.md)
 - [后台任务](docs/background-jobs.md)
+- [一小时回访与次日早安](docs/proactive-greetings.md)
+- [自定义伙伴与声音复刻](docs/custom-roles.md)
+- [API 分层与地区信息](docs/api-and-location.md)
 - [推送通知](docs/push.md)
 - [工具扩展](docs/tools.md)
 - [Qwen-Audio-Realtime 声音复刻指南](docs/voice-cloning.md)

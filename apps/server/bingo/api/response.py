@@ -19,7 +19,12 @@ class APIResponse[T](BaseModel):
 
 class EnvelopeRoute(APIRoute):
     def __init__(self, path: str, endpoint, **kwargs):
-        binary_paths = {"/chat/stream", "/chat/images/{image_id}", "/role-voice-samples/{token}"}
+        binary_paths = {
+            "/chat/stream",
+            "/chat/images/{image_id}",
+            "/role-voice-samples/{token}",
+            "/locations/map",
+        }
         plain = kwargs.get("status_code") == 204 or any(
             path.endswith(item) for item in binary_paths
         )

@@ -275,6 +275,38 @@ class RecoveringChatGateway implements ChatGateway, ConversationGateway {
 }
 
 void main() {
+  testWidgets('chat header centers name and connects back and call actions',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(360, 780));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final controller = ChatController(gateway: FakeChatGateway());
+    var calls = 0;
+    var backs = 0;
+    await tester.pumpWidget(MaterialApp(
+        home: ChatPage(
+            controller: controller,
+            assistantName: '暖暖',
+            assistantRole: '男朋友',
+            speechGateway: FakeSpeechGateway(),
+            onStartCall: () => calls++,
+            onBack: () => backs++,
+            onIncomingCall: (_) async {},
+            onOpenSettings: () {})));
+    await tester.pumpAndSettle();
+    expect(tester.getCenter(find.text('暖暖')).dx, closeTo(180, 1));
+    expect(tester.getCenter(find.byTooltip('返回角色')).dx,
+        lessThan(tester.getCenter(find.text('暖暖')).dx));
+    expect(tester.getCenter(find.byTooltip('语音通话')).dx,
+        greaterThan(tester.getCenter(find.text('暖暖')).dx));
+    await tester.tap(find.byTooltip('语音通话'));
+    await tester.tap(find.byTooltip('返回角色'));
+    expect(calls, 1);
+    expect(backs, 1);
+    expect(find.byIcon(Icons.settings_rounded), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    controller.dispose();
+  });
   testWidgets('renders one call record with status and duration',
       (tester) async {
     await tester.pumpWidget(
@@ -707,7 +739,7 @@ void main() {
     expect(find.byIcon(Icons.settings_rounded), findsNothing);
     final avatars =
         tester.widgetList<AssistantAvatar>(find.byType(AssistantAvatar));
-    expect(avatars.length, 2);
+    expect(avatars.length, 1);
     expect(avatars.every((avatar) => avatar.role == '男朋友'), isTrue);
     final welcomeAvatar = find.byKey(const ValueKey('empty-chat-avatar'));
     expect(tester.getSize(welcomeAvatar), const Size(104, 104));

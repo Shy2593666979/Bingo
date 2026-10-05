@@ -1,0 +1,30 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<style>html,body,#map{height:100%;width:100%;margin:0;background:#eaf1ec}</style>
+<script>window._AMapSecurityConfig=__SECURITY_CONFIG__;</script>
+<script src="https://webapi.amap.com/maps?v=2.0&key=__JS_KEY__"></script>
+</head><body><div id="map"></div><script>
+let map, moving = false;
+const notify = value => window.BingoMap.event(JSON.stringify(value));
+try {
+  map = new AMap.Map('map', {zoom:15,center:[116.397,39.909],viewMode:'2D',resizeEnable:true,rotateEnable:false,pitchEnable:false});
+  map.on('complete', () => notify({type:'loaded'}));
+  map.on('dragstart', () => {moving=true;notify({type:'moving'});});
+  map.on('zoomstart', () => {moving=true;notify({type:'moving'});});
+  const idle = () => {
+    if (!moving) return;
+    moving=false;
+    const center=map.getCenter();
+    notify({type:'idle',longitude:center.lng,latitude:center.lat});
+  };
+  map.on('moveend',idle);
+  map.on('zoomend',idle);
+  window.bingoCenter = value => {
+    const center=map.getCenter();
+    if(Math.abs(center.lng-value.longitude)<1e-7 && Math.abs(center.lat-value.latitude)<1e-7)return;
+    moving=false;
+    map.setCenter([value.longitude,value.latitude],true);
+  };
+  window.bingoResize = () => window.dispatchEvent(new Event('resize'));
+} catch (error) { notify({type:'unavailable'}); }
+</script></body></html>

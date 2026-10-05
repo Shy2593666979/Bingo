@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/chat/models/chat_message.dart';
+import 'package:bingo/features/chat/models/chat_location.dart';
 import 'package:flutter/services.dart';
 
 class LocalConversationSummary {
@@ -39,6 +40,7 @@ class LocalConversation {
             role:
                 message['role'] == 'user' ? ChatRole.user : ChatRole.assistant,
             content: message['content']! as String,
+            location: _location(message['location_json']),
             type: _messageType(message['message_type']),
             imageId: message['image_id'] as String?,
             createdAt: message['created_at'] == null
@@ -68,6 +70,7 @@ class LocalConversation {
               id: item['id'] as String,
               role: item['role'] == 'user' ? ChatRole.user : ChatRole.assistant,
               content: item['content'] as String,
+              location: _location(item['location_json']),
               type: _messageType(item['message_type']),
               imageId: item['image_id'] as String?,
               createdAt: item['created_at'] == null
@@ -180,6 +183,9 @@ class AndroidLocalChatStore implements LocalChatStore {
                 'id': message.id,
                 'role': message.role.name,
                 'content': message.content,
+                'location_json': message.location == null
+                    ? null
+                    : jsonEncode(message.location!.toJson()),
                 'message_type': message.type.name,
                 'image_id': message.imageId,
                 'created_at': message.createdAt?.millisecondsSinceEpoch,
@@ -207,6 +213,9 @@ class AndroidLocalChatStore implements LocalChatStore {
             'id': message.id,
             'role': message.role.name,
             'content': message.content,
+            'location_json': message.location == null
+                ? null
+                : jsonEncode(message.location!.toJson()),
             'message_type': message.type.name,
             'image_id': message.imageId,
             'created_at': message.createdAt?.millisecondsSinceEpoch,
@@ -239,5 +248,11 @@ ChatMessageStatus _messageStatus(Object? value) {
   );
 }
 
+ChatLocation? _location(Object? value) => value == null
+    ? null
+    : ChatLocation.fromJson(
+        Map<String, dynamic>.from(jsonDecode(value as String) as Map));
+
 ChatMessageType _messageType(Object? value) =>
-    value == 'call' ? ChatMessageType.call : ChatMessageType.chat;
+    ChatMessageType.values.firstWhere((type) => type.name == value,
+        orElse: () => ChatMessageType.chat);

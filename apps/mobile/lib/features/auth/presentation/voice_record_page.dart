@@ -179,37 +179,37 @@ class _VoiceRecordPageState extends State<VoiceRecordPage>
   }
 
   @override
-  Widget build(BuildContext context) => PopScope(
+  Widget build(BuildContext context) => Theme(
+      data: buildMintTheme(context),
+      child: PopScope(
         canPop: !_busy,
         child: Scaffold(
-          appBar: AppBar(title: const Text('录制你的声音')),
-          body: DecoratedBox(
-            decoration:
-                const BoxDecoration(gradient: BingoPalette.softGradient),
+          appBar: AppBar(title: const Text('录制你的声音'), centerTitle: true),
+          body: Material(
+            color: BingoPalette.mintBackground,
             child: SafeArea(
                 child: ListView(padding: const EdgeInsets.all(24), children: [
-              const Text('让角色拥有熟悉的声音',
+              const Text('让声音，也熟悉起来',
                   style: TextStyle(fontSize: 25, fontWeight: FontWeight.w800)),
               const SizedBox(height: 10),
               const Text('找一个安静的地方，用平时说话的语气朗读下面的文字，约需 20～30 秒。',
                   style: TextStyle(color: Color(0xFF707B78), height: 1.6)),
               const SizedBox(height: 24),
               Container(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: BingoPalette.line)),
+                      borderRadius: BorderRadius.circular(24)),
                   child: const Text(voiceReadingText,
                       style: TextStyle(
-                          fontSize: 19, height: 1.9, color: BingoPalette.ink))),
+                          fontSize: 16, height: 1.9, color: BingoPalette.ink))),
               const SizedBox(height: 26),
               Center(
                   child: Text(
                       '${(_byteCount / 32000).floor().toString().padLeft(2, '0')} 秒',
                       style: const TextStyle(
                           fontSize: 32,
-                          color: BingoPalette.blue,
+                          color: BingoPalette.mintPrimary,
                           fontWeight: FontWeight.w700))),
               const SizedBox(height: 6),
               Center(
@@ -255,5 +255,5 @@ class _VoiceRecordPageState extends State<VoiceRecordPage>
             ])),
           ),
         ),
-      );
+      ));
 }

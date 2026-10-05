@@ -188,7 +188,7 @@ class RoleHomePageState extends State<RoleHomePage>
               Padding(
                   padding: const EdgeInsets.fromLTRB(18, 19, 18, 20),
                   child: Row(children: [
-                    const Expanded(
+                    Expanded(
                         child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -304,7 +304,7 @@ class RoleHomePageState extends State<RoleHomePage>
                                       child: Text(role.displayName,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                               fontSize: 18,
                                               fontWeight: FontWeight.w800))),
                                   _enterButton(role),

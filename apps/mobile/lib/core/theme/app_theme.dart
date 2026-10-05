@@ -13,6 +13,9 @@ abstract final class BingoPalette {
   static const userBubble = Color(0xFFD5F0E3);
   static const avatarButton = Color(0xFFDDF2E7);
   static const avatarButtonInk = Color(0xFF4F8067);
+  static const mintBackground = Color(0xFFF6FBF9);
+  static const mintTint = Color(0xFFE3F3EB);
+  static const mintPrimary = Color(0xFF267F67);
 
   static const brandGradient = LinearGradient(
     begin: Alignment.topLeft,
@@ -39,6 +42,24 @@ abstract final class BingoPalette {
   );
 }
 
+ThemeData buildMintTheme(BuildContext context) {
+  final theme = Theme.of(context);
+  return theme.copyWith(
+      scaffoldBackgroundColor: BingoPalette.mintBackground,
+      colorScheme: theme.colorScheme.copyWith(
+          primary: BingoPalette.mintPrimary,
+          onPrimary: Colors.white,
+          primaryContainer: BingoPalette.mintTint,
+          onPrimaryContainer: BingoPalette.mintPrimary),
+      filledButtonTheme: FilledButtonThemeData(
+          style: theme.filledButtonTheme.style?.copyWith(
+              backgroundColor: WidgetStateProperty.resolveWith((states) =>
+                  states.contains(WidgetState.disabled)
+                      ? theme.filledButtonTheme.style?.backgroundColor
+                          ?.resolve(states)
+                      : BingoPalette.mintPrimary))));
+}
+
 ThemeData buildBingoTheme() {
   final colors = ColorScheme.fromSeed(
     seedColor: BingoPalette.blue,
@@ -53,7 +74,10 @@ ThemeData buildBingoTheme() {
     surfaceContainer: const Color(0xFFF0F7F4),
     surfaceContainerHigh: const Color(0xFFE9F3EF),
   );
-  final base = ThemeData(colorScheme: colors, useMaterial3: true);
+  final base = ThemeData(
+    colorScheme: colors,
+    useMaterial3: true,
+  );
   return base.copyWith(
     scaffoldBackgroundColor: BingoPalette.ice,
     textTheme: base.textTheme.apply(

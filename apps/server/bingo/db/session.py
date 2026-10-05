@@ -45,9 +45,7 @@ class Database:
 def _upgrade_morning_greetings(connection) -> None:
     if connection.dialect.name != "sqlite":
         return
-    columns = {
-        row[1] for row in connection.exec_driver_sql("PRAGMA table_info(morning_greetings)")
-    }
+    columns = {row[1] for row in connection.exec_driver_sql("PRAGMA table_info(morning_greetings)")}
     if "partner_key" in columns:
         return
     connection.exec_driver_sql(
@@ -168,6 +166,8 @@ def _upgrade_local_sqlite_schema(connection) -> None:
         connection.exec_driver_sql(
             "CREATE INDEX IF NOT EXISTS ix_messages_status ON messages(status)"
         )
+    if "location_json" not in message_columns:
+        connection.exec_driver_sql("ALTER TABLE messages ADD COLUMN location_json TEXT")
     if "image_id" not in message_columns:
         connection.exec_driver_sql("ALTER TABLE messages ADD COLUMN image_id VARCHAR(36)")
         connection.exec_driver_sql(

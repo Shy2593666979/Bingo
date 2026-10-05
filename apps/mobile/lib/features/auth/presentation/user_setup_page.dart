@@ -7,7 +7,7 @@ import 'package:bingo/features/auth/presentation/avatar_crop_page.dart';
 import 'package:bingo/features/auth/presentation/password_recovery_page.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/shared/widgets/user_avatar.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:bingo/shared/widgets/birthday_picker_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -72,43 +72,7 @@ class _UserSetupPageState extends State<UserSetupPage> {
   }
 
   Future<void> _chooseBirthday() async {
-    FocusScope.of(context).unfocus();
-    final now = DateTime.now();
-    var selected = _birthday ?? DateTime(2000, 1, 1);
-    final result = await showModalBottomSheet<DateTime>(
-        context: context,
-        backgroundColor: Colors.white,
-        showDragHandle: true,
-        builder: (context) => SafeArea(
-            child: SizedBox(
-                height: 310,
-                child: Column(children: [
-                  Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(children: [
-                        TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('取消')),
-                        const Expanded(
-                            child: Text('选择生日',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700))),
-                        TextButton(
-                            onPressed: () => Navigator.pop(context, selected),
-                            child: const Text('确定')),
-                      ])),
-                  Expanded(
-                      child: CupertinoDatePicker(
-                    mode: CupertinoDatePickerMode.date,
-                    dateOrder: DatePickerDateOrder.ymd,
-                    initialDateTime: selected,
-                    minimumDate: DateTime(1900),
-                    maximumDate: DateTime(now.year, now.month, now.day),
-                    onDateTimeChanged: (value) => selected = value,
-                  )),
-                ]))));
+    final result = await showBirthdayPicker(context, initialDate: _birthday);
     if (mounted && result != null) setState(() => _birthday = result);
   }
 

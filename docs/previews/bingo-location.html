@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bingo · 发送位置 / 三套设计</title>
+  <link rel="stylesheet" href="bingo-location.css">
+</head>
+<body>
+  <header class="studio"><a href="bingo-ui-directions.html"><img src="assets/ui-kit/bingo_logo.png" alt="Bingo">Bingo <small>LOCATION EXPLORATION</small></a><span>方案 A 配色 · 三种卡片 · 不调用后台</span></header>
+  <main>
+    <section class="intro"><div><p class="eyebrow">把位置发给伙伴，而不是把 JSON 发到屏幕上。</p><h1>这里的风景，<br>也能成为话题。</h1><p>点「＋」选择位置 → 确认地点 → 发送地图卡片。<br>聊天里是清爽的地址与地图；模型收到的是结构化的位置数据。</p></div><aside><b>已实测通过</b><span>逆地理编码 · 返回地址和附近地点</span><span>地点搜索 · 返回名称和经纬度</span><span>静态地图 · 返回真实 PNG 缩略图</span><small>使用北京公共地标测试，不是你的实际位置。<br>完整 APP 发送、存储与真实模型回复尚未接入。</small></aside></section>
+    <section class="toolbar"><div class="tabs"><button data-view="compare" aria-pressed="true">三套对比</button><button data-view="focus" aria-pressed="false">单套体验</button></div><label>查看步骤<select id="step"><option value="menu">① 加号菜单</option><option value="picker">② 选择位置</option><option value="sent" selected>③ 聊天位置卡片</option><option value="detail">④ 位置详情</option><option value="denied">定位权限未开启</option><option value="error">地图加载失败</option></select></label></section>
+    <nav class="variants" aria-label="选择设计"><button data-variant="classic" aria-pressed="true"><b>A · 经典地图卡</b><span>更接近微信 · 推荐</span></button><button data-variant="mapfirst" aria-pressed="false"><b>B · 地图优先</b><span>更直观 · 地图在上</span></button><button data-variant="compact" aria-pressed="false"><b>C · 轻量地点卡</b><span>更紧凑 · 不打断聊天</span></button></nav>
+    <section id="screens" aria-label="位置设计预览"></section>
+    <section class="model-panel"><div><p class="eyebrow">只给模型，不显示在聊天气泡里</p><h2>同一条消息，两种表达。</h2><p>左侧卡片展示位置；这里展示拟传给模型的 JSON。选择地点、切换「仅发送区县」后，数据会同步变化。</p><span class="badge">JSON 本地演示 · 未发送到模型</span></div><pre id="model-json" aria-label="模型看到的位置 JSON"></pre></section>
+    <section class="notes"><h2>真正接入时，这些也一起做好</h2><div><article><b>先确认，再发送</b><p>进入选择页不自动发消息。位置权限只在需要时申请；拒绝后仍可搜索地点。发送指定地点不等于用户人在那里，也不自动覆盖原来的「用户当前位置」。</p></article><article><b>卡片不靠截图识别</b><p>服务端保存独立的位置字段，本地数据库也保存。模型直接读取 JSON 文本，不需要识别地图截图。历史记录与伙伴详情都能还原位置卡片。</p></article><article><b>坐标与密钥分开处理</b><p>系统 GPS 坐标先转成高德 GCJ-02。Web 服务 Key 留在后端，不放 HTML、APK 或缩略图 URL；地图通过受鉴权接口读取。精确位置不默认写进长期记忆。</p></article></div></section>
+    <footer>地图来自本次高德静态地图接口实测，保留原始版权标识；所有地点均为公共地标样本。HTML 不定位、不联网、不发送消息，搜索只过滤示例地点，AI 文案是设计示例。<br>参考官方文档：<a href="https://developer.amap.com/api/webservice/guide/api/georegeo">逆地理编码</a> · <a href="https://developer.amap.com/api/webservice/guide/api/search">地点搜索</a> · <a href="https://developer.amap.com/api/webservice/guide/api/staticmaps">静态地图</a> · <a href="https://developer.amap.com/api/android-location-sdk/guide/create-project/get-key/">Android SDK Key 要求</a></footer>
+  </main>
+  <script src="bingo-location.js"></script>
+</body>
+</html>

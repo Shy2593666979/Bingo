@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 from uuid import uuid4
 
@@ -199,6 +200,7 @@ class Message(SQLModel, table=True):
     role: str = Field(max_length=20)
     message_type: str = Field(default="chat", max_length=20, index=True)
     content: str = Field(sa_column=Column(Text, nullable=False))
+    location_json: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
     image_id: str | None = Field(default=None, max_length=36, unique=True, index=True)
     image_mime_type: str | None = Field(default=None, max_length=40)
     assistant_role: str | None = Field(default=None, max_length=30)
@@ -214,6 +216,12 @@ class Message(SQLModel, table=True):
         default_factory=beijing_now,
         sa_column=Column(BeijingDateTime(), nullable=False, index=True),
     )
+
+    @property
+    def location(self) -> dict | None:
+        if not self.location_json:
+            return None
+        return json.loads(self.location_json)
 
 
 class MemoryCheckpoint(SQLModel, table=True):

@@ -74,7 +74,11 @@ void main() {
     await tester.ensureVisible(find.text('用户生日'));
     await tester.tap(find.text('用户生日'));
     await tester.pumpAndSettle();
-    expect(find.byType(CupertinoDatePicker), findsOneWidget);
+    expect(find.byType(CupertinoPicker), findsNWidgets(3));
+    expect(
+        tester.getTopLeft(find.text('确定')).dy,
+        greaterThan(
+            tester.getBottomLeft(find.byType(CupertinoPicker).last).dy));
     await tester.tap(find.text('确定'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('完成，开始体验'));

@@ -44,6 +44,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('幽默风趣'));
     await tester.pumpAndSettle();
+    expect(saved, isNull);
+    expect(find.text('你喜欢怎样的回应？'), findsOneWidget);
+    await tester.tap(find.text('保存性格'));
+    await tester.pumpAndSettle();
     expect(saved, '幽默风趣');
     await tester.tap(find.text('应用设置'));
     await tester.pumpAndSettle();

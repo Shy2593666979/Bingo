@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/core/widgets/center_toast.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
+import 'package:bingo/features/chat/presentation/widgets/companion_map.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -15,6 +16,7 @@ class MessageInput extends StatefulWidget {
     required this.onCall,
     this.onGallery,
     this.onCamera,
+    this.onLocation,
     super.key,
   });
 
@@ -24,6 +26,7 @@ class MessageInput extends StatefulWidget {
   final VoidCallback onCall;
   final VoidCallback? onGallery;
   final VoidCallback? onCamera;
+  final VoidCallback? onLocation;
 
   @override
   State<MessageInput> createState() => _MessageInputState();
@@ -564,6 +567,10 @@ class _MessageInputState extends State<MessageInput> {
                                 : () {
                                     _focusNode.unfocus();
                                     setState(() => _showMore = !_showMore);
+                                    if (_showMore &&
+                                        widget.onLocation != null) {
+                                      unawaited(prewarmCompanionMap());
+                                    }
                                   },
                         tooltip: showSend ? '发送消息' : '更多功能',
                         color: BingoPalette.blue,
@@ -605,6 +612,10 @@ class _MessageInputState extends State<MessageInput> {
                           _hideMore();
                           widget.onCamera?.call();
                         },
+                        onLocation: () {
+                          _hideMore();
+                          widget.onLocation?.call();
+                        },
                         onCall: () {
                           _hideMore();
                           widget.onCall();
@@ -623,11 +634,13 @@ class _MessageInputState extends State<MessageInput> {
 class _MoreActionsPanel extends StatelessWidget {
   const _MoreActionsPanel({
     required this.onGallery,
+    required this.onLocation,
     required this.onCamera,
     required this.onCall,
   });
 
   final VoidCallback onGallery;
+  final VoidCallback onLocation;
   final VoidCallback onCamera;
   final VoidCallback onCall;
 
@@ -645,24 +658,25 @@ class _MoreActionsPanel extends StatelessWidget {
         ],
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           _MoreAction(
             icon: Icons.photo_outlined,
             label: '相册',
             onTap: onGallery,
           ),
-          const SizedBox(width: 28),
           _MoreAction(
             icon: Icons.photo_camera_outlined,
             label: '相机',
             onTap: onCamera,
           ),
-          const SizedBox(width: 28),
           _MoreAction(
             icon: Icons.call_rounded,
             label: '电话',
             onTap: onCall,
           ),
+          _MoreAction(
+              icon: Icons.location_on_outlined, label: '位置', onTap: onLocation),
         ],
       ),
     );

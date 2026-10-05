@@ -85,6 +85,10 @@ push:
     app_key: ""
     master_secret: ""
 
+maps:
+  api_key: ""
+  timeout_seconds: 15
+
 logging:
   level: INFO
   console: true

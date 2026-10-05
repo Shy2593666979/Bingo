@@ -33,6 +33,12 @@ android {
         manifestPlaceholders["VIVO_APP_ID"] = pushProperty("BINGO_VIVO_APP_ID")
         manifestPlaceholders["VIVO_APP_KEY"] = pushProperty("BINGO_VIVO_APP_KEY")
         buildConfigField("boolean", "GETUI_CONFIGURED", getuiAppId.isNotBlank().toString())
+        val amapKey = pushProperty("BINGO_AMAP_ANDROID_KEY")
+        manifestPlaceholders["AMAP_ANDROID_KEY"] = amapKey
+        buildConfigField("boolean", "AMAP_CONFIGURED", amapKey.isNotBlank().toString())
+        buildConfigField("String", "AMAP_JS_KEY", "\"${pushProperty("BINGO_AMAP_JS_KEY")}\"")
+        buildConfigField("String", "AMAP_JS_SECURITY_CODE", "\"${pushProperty("BINGO_AMAP_JS_SECURITY_CODE")}\"")
+        buildConfigField("String", "AMAP_JS_PROXY", "\"${pushProperty("BINGO_AMAP_JS_PROXY")}\"")
     }
 
     buildFeatures {
@@ -41,6 +47,7 @@ android {
 
     buildTypes {
         release {
+            buildConfigField("String", "AMAP_JS_SECURITY_CODE", "\"\"")
             signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

@@ -3,6 +3,7 @@ import 'package:bingo/core/widgets/center_toast.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/shared/widgets/user_avatar.dart';
+import 'package:bingo/features/settings/presentation/personality_page.dart';
 import 'package:flutter/material.dart';
 
 class MyPage extends StatefulWidget {
@@ -44,29 +45,13 @@ class _MyPageState extends State<MyPage> {
     try {
       final options = await widget.loadPersonalities();
       if (!mounted) return;
-      final selected = await showModalBottomSheet<String>(
-          context: context,
-          showDragHandle: true,
-          backgroundColor: Colors.white,
-          builder: (context) => SafeArea(
-                  child: ListView(shrinkWrap: true, children: [
-                const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Text('聊天性格',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.w700))),
-                for (final personality in options.personalities)
-                  ListTile(
-                      title: Text(personality),
-                      trailing: personality == _profile.personality
-                          ? const Icon(Icons.check, color: BingoPalette.blue)
-                          : null,
-                      onTap: () => Navigator.pop(context, personality)),
-              ])));
-      if (selected == null) return;
-      final result = await widget.savePersonality(selected);
-      if (mounted) setState(() => _profile = result);
+      final result = await Navigator.of(context).push<UserProfile>(
+          MaterialPageRoute(
+              builder: (_) => PersonalityPage(
+                  options: options.personalities,
+                  selected: _profile.personality,
+                  save: widget.savePersonality)));
+      if (mounted && result != null) setState(() => _profile = result);
     } on ApiException catch (error) {
       if (mounted) showCenterToast(context, error.message);
     } on Exception {

@@ -16,6 +16,7 @@ from bingo.api import (
     device_actions,
     engagement,
     location,
+    maps,
     memories,
     push,
     realtime_calls,
@@ -32,6 +33,7 @@ from bingo.services.chat_runs import ChatRunService
 from bingo.services.context import ServiceContext
 from bingo.services.location import LocationService
 from bingo.services.logging import configure_logging, log_event
+from bingo.services.maps import MapsService
 from bingo.services.voice_cloning import VoiceCloningService
 from bingo.tools import create_tool_registry
 
@@ -98,6 +100,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             voice_cloning,
             engagement_service,
             location=location_service,
+            maps=MapsService(resolved_settings.maps),
         )
         await voice_cloning.start()
         await push_service.start()
@@ -107,6 +110,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         yield
         await chat_runs.close()
         await voice_cloning.close()
+        await application.state.services.maps.close()
         await location_service.close()
         if engagement_service is not None:
             await engagement_service.close()
@@ -146,4 +150,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.include_router(realtime_calls.router, prefix=resolved_settings.server.api_prefix)
     application.include_router(roles.router, prefix=resolved_settings.server.api_prefix)
     application.include_router(location.router, prefix=resolved_settings.server.api_prefix)
+    application.include_router(maps.router, prefix=resolved_settings.server.api_prefix)
     return application

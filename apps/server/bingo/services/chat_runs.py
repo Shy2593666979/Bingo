@@ -10,6 +10,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bingo.agent.runtime import AgentRuntime
 from bingo.db.repositories import UserRepository
+from bingo.schemas.maps import LocationInput
 from bingo.services.logging import log_event
 
 logger = logging.getLogger(__name__)
@@ -78,6 +79,7 @@ class ChatRunService:
         image_data_urls: tuple[str, ...] = (),
         image_id: str | None = None,
         image_mime_type: str | None = None,
+        location: LocationInput | None = None,
     ) -> ChatRunSubscription:
         key = (user_id, run_id)
         async with self._lock:
@@ -99,6 +101,7 @@ class ChatRunService:
                         image_data_urls=image_data_urls,
                         image_id=image_id,
                         image_mime_type=image_mime_type,
+                        location=location,
                     ),
                     name=f"chat-run-{run_id}",
                 )
@@ -129,6 +132,7 @@ class ChatRunService:
         image_data_urls: tuple[str, ...],
         image_id: str | None,
         image_mime_type: str | None,
+        location: LocationInput | None,
     ) -> None:
         try:
             async with self._session_factory() as session:
@@ -144,6 +148,7 @@ class ChatRunService:
                     image_data_urls=image_data_urls,
                     image_id=image_id,
                     image_mime_type=image_mime_type,
+                    location=location,
                 ):
                     await self._publish(state, event)
         except asyncio.CancelledError:

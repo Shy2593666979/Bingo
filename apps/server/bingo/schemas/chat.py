@@ -3,6 +3,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from bingo.schemas.maps import LocationInput
+
 
 class ChatImageInput(BaseModel):
     mime_type: Literal["image/jpeg", "image/png", "image/webp"]
@@ -15,10 +17,13 @@ class ChatRequest(BaseModel):
     supersedes_run_id: str | None = Field(default=None, min_length=1, max_length=80)
     content: str = Field(default="", max_length=20_000)
     images: list[ChatImageInput] = Field(default_factory=list, max_length=1)
+    location: LocationInput | None = None
 
     @model_validator(mode="after")
     def require_content_or_image(self) -> "ChatRequest":
-        if not self.content.strip() and not self.images:
+        if self.location is not None and self.images:
+            raise ValueError("位置和图片请分别发送")
+        if not self.content.strip() and not self.images and self.location is None:
             raise ValueError("消息内容和图片不能同时为空")
         return self
 
@@ -35,6 +40,7 @@ class MessageResponse(BaseModel):
     role: str
     message_type: str = "chat"
     content: str
+    location: LocationInput | None = None
     image_id: str | None = None
     image_mime_type: str | None = None
     assistant_role: str | None = None

@@ -3,6 +3,7 @@ import 'package:bingo/core/device/device_tool_executor.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/chat/data/local_chat_store.dart';
 import 'package:bingo/features/chat/models/chat_message.dart';
+import 'package:bingo/features/chat/models/chat_location.dart';
 import 'package:flutter/foundation.dart';
 
 enum ChatStatus { idle, sending, failed }
@@ -244,6 +245,15 @@ class ChatController extends ChangeNotifier {
     );
   }
 
+  Future<void> sendLocation(ChatLocation location) async {
+    if (_gateway is! LocationGateway) {
+      _errorMessage = '当前连接不支持发送位置';
+      notifyListeners();
+      return;
+    }
+    await _sendMessage('', location: location);
+  }
+
   Future<void> send(String rawContent) async {
     final content = rawContent.trim();
     await _sendMessage(content);
@@ -252,8 +262,9 @@ class ChatController extends ChangeNotifier {
   Future<void> _sendMessage(
     String content, {
     ChatImageUpload? image,
+    ChatLocation? location,
   }) async {
-    if (content.isEmpty && image == null) return;
+    if (content.isEmpty && image == null && location == null) return;
 
     final supersededRunId = _activeRunId;
     if (supersededRunId != null) {
@@ -273,7 +284,11 @@ class ChatController extends ChangeNotifier {
     final createdAt = DateTime.now();
     final timestamp = createdAt.microsecondsSinceEpoch;
     final userMessageIndex = _messages.length;
-    final displayedContent = content.isEmpty ? '[图片]' : content;
+    final displayedContent = location != null
+        ? '[位置] ${location.name}：${location.address}'
+        : content.isEmpty
+            ? '[图片]'
+            : content;
     _title ??= displayedContent.length > 80
         ? displayedContent.substring(0, 80)
         : displayedContent;
@@ -283,6 +298,9 @@ class ChatController extends ChangeNotifier {
         role: ChatRole.user,
         content: displayedContent,
         imageBytes: image?.bytes,
+        type:
+            location == null ? ChatMessageType.chat : ChatMessageType.location,
+        location: location,
         createdAt: createdAt,
         runId: runId,
       ),
@@ -295,13 +313,20 @@ class ChatController extends ChangeNotifier {
 
     try {
       var segmentIndex = 0;
-      await for (final event in _gateway.send(
-        conversationId: _conversationId,
-        content: content,
-        runId: runId,
-        supersedesRunId: supersededRunId,
-        images: image == null ? const [] : [image],
-      )) {
+      final events = location != null
+          ? (_gateway as LocationGateway).sendLocation(
+              conversationId: _conversationId,
+              location: location,
+              runId: runId,
+              supersedesRunId: supersededRunId)
+          : _gateway.send(
+              conversationId: _conversationId,
+              content: content,
+              runId: runId,
+              supersedesRunId: supersededRunId,
+              images: image == null ? const [] : [image],
+            );
+      await for (final event in events) {
         if (generation != _runSequence) continue;
         switch (event) {
           case ChatStarted():

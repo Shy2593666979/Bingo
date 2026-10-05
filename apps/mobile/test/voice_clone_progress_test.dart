@@ -6,10 +6,18 @@ void main() {
   testWidgets('clone progress is visible and shows the real processing stage',
       (tester) async {
     await tester.pumpWidget(const MaterialApp(
-        home: Scaffold(body: VoiceCloneProgress(message: '阿里云正在复刻声音…'))));
+        home: Scaffold(body: VoiceCloneProgress(message: '正在复刻声音，请稍等…'))));
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
-    expect(find.text('阿里云正在复刻声音…'), findsOneWidget);
-    expect(find.text('上传录音 → 复刻声音 → 验证音色'), findsOneWidget);
+    expect(find.text('正在复刻声音，请稍等…'), findsOneWidget);
+    expect(find.text('上传录音'), findsOneWidget);
+    expect(find.text('云端复刻'), findsOneWidget);
+    expect(find.text('验证音色'), findsOneWidget);
+    expect(
+        tester
+            .widget<LinearProgressIndicator>(
+                find.byType(LinearProgressIndicator))
+            .value,
+        isNull);
     expect(tester.takeException(), isNull);
   });
 }

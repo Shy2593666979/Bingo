@@ -45,6 +45,7 @@ class LocalChatDatabase(context: Context) :
                 role TEXT NOT NULL,
                 message_type TEXT NOT NULL DEFAULT 'chat',
                 content TEXT NOT NULL,
+                location_json TEXT,
                 created_at INTEGER,
                 assistant_role TEXT,
                 run_id TEXT,
@@ -61,6 +62,9 @@ class LocalChatDatabase(context: Context) :
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        if (oldVersion < 8) {
+            db.execSQL("ALTER TABLE local_messages ADD COLUMN location_json TEXT")
+        }
         if (oldVersion < 2) {
             db.execSQL("ALTER TABLE local_conversations ADD COLUMN timeline_json TEXT")
         }
@@ -204,6 +208,7 @@ class LocalChatDatabase(context: Context) :
                 "status",
                 "call_status",
                 "call_duration_seconds",
+                "location_json",
             ),
             "conversation_id = ?",
             arrayOf(conversationId),
@@ -223,6 +228,7 @@ class LocalChatDatabase(context: Context) :
                     "status" to cursor.getString(7),
                     "call_status" to if (cursor.isNull(8)) null else cursor.getString(8),
                     "call_duration_seconds" to if (cursor.isNull(9)) null else cursor.getInt(9),
+                    "location_json" to if (cursor.isNull(10)) null else cursor.getString(10),
                 )
             }
         }
@@ -265,6 +271,7 @@ class LocalChatDatabase(context: Context) :
                     put("role", message["role"] as String)
                     put("message_type", message["message_type"] as? String ?: "chat")
                     put("content", message["content"] as String)
+                    (message["location_json"] as? String)?.let { put("location_json", it) }
                     (message["created_at"] as? Number)?.let {
                         put("created_at", it.toLong())
                     }
@@ -314,6 +321,6 @@ class LocalChatDatabase(context: Context) :
     }
 
     private companion object {
-        const val DATABASE_VERSION = 7
+        const val DATABASE_VERSION = 8
     }
 }

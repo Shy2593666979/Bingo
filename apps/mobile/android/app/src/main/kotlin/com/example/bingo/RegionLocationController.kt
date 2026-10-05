@@ -11,6 +11,7 @@ import android.location.LocationManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.util.Locale
@@ -25,6 +26,7 @@ class RegionLocationController(private val activity: Activity) : MethodChannel.M
     private var listener: LocationListener? = null
     private var permissionPending = false
     private var generation = 0
+    private var coordinatesOnly = false
     private val timeout = Runnable { finish(mapOf("status" to "unavailable")) }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
@@ -39,12 +41,23 @@ class RegionLocationController(private val activity: Activity) : MethodChannel.M
                 if (!permissionPending) finish(mapOf("status" to "cancelled"))
                 result.success(null)
             }
-            "currentRegion" -> {
+            "cancelCoordinates" -> {
+                if (coordinatesOnly) finish(mapOf("status" to "cancelled"))
+                result.success(null)
+            }
+            "currentRegion", "currentCoordinates" -> {
+                if (call.method == "currentCoordinates" && hasPermission()) {
+                    recentCoordinates()?.let { cached ->
+                        result.success(cached)
+                        return
+                    }
+                }
                 if (pending != null) {
                     result.success(mapOf("status" to "busy"))
                     return
                 }
                 pending = result
+                coordinatesOnly = call.method == "currentCoordinates"
                 if (hasPermission()) {
                     locate()
                 } else if (!preferences.getBoolean("permission_asked", false) || call.argument<Boolean>("retry") == true) {
@@ -67,9 +80,25 @@ class RegionLocationController(private val activity: Activity) : MethodChannel.M
 
     private fun hasPermission(): Boolean = activity.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
+    @Suppress("MissingPermission")
+    private fun recentCoordinates(): Map<String, String>? {
+        val fine = activity.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val recent = listOf(LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER)
+            .filter { (fine || it != LocationManager.GPS_PROVIDER) && runCatching { manager.isProviderEnabled(it) }.getOrDefault(false) }
+            .mapNotNull { runCatching { manager.getLastKnownLocation(it) }.getOrNull() }
+            .filter { location ->
+                val age = SystemClock.elapsedRealtimeNanos() - location.elapsedRealtimeNanos
+                age in 0..30_000_000_000L && location.hasAccuracy() &&
+                    location.accuracy <= (if (fine) 200f else 5000f)
+            }.maxByOrNull { it.elapsedRealtimeNanos } ?: return null
+        return mapOf("status" to "success", "longitude" to recent.longitude.toString(),
+            "latitude" to recent.latitude.toString(), "accuracy_m" to recent.accuracy.toString(),
+            "precise" to fine.toString())
+    }
+
     @Suppress("DEPRECATION", "MissingPermission")
     private fun locate() {
-        if (!Geocoder.isPresent()) {
+        if (!coordinatesOnly && !Geocoder.isPresent()) {
             finish(mapOf("status" to "unavailable"))
             return
         }
@@ -87,6 +116,14 @@ class RegionLocationController(private val activity: Activity) : MethodChannel.M
                 if (currentGeneration != generation || pending == null) return
                 listener?.let { manager.removeUpdates(it) }
                 listener = null
+                if (coordinatesOnly) {
+                    finish(mapOf("status" to "success",
+                        "longitude" to location.longitude.toString(),
+                        "latitude" to location.latitude.toString(),
+                        "accuracy_m" to location.accuracy.toString(),
+                        "precise" to fine.toString()))
+                    return
+                }
                 executor.execute {
                     val region = runCatching {
                         val address = Geocoder(activity, Locale.SIMPLIFIED_CHINESE).getFromLocation(location.latitude, location.longitude, 1)?.firstOrNull()

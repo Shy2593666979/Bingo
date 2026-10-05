@@ -1,5 +1,6 @@
 import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
+import 'package:bingo/shared/widgets/birthday_picker_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -131,11 +132,9 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
                             onPressed: _busy
                                 ? null
                                 : () async {
-                                    final date = await showDatePicker(
-                                        context: context,
-                                        initialDate: DateTime(2000),
-                                        firstDate: DateTime(1900),
-                                        lastDate: DateTime.now());
+                                    final date = await showBirthdayPicker(
+                                        context,
+                                        initialDate: _birthday);
                                     if (date != null && mounted) {
                                       setState(() => _birthday = date);
                                     }

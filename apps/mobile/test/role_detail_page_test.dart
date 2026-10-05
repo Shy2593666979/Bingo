@@ -57,6 +57,17 @@ void main() {
             'assets/images/bingo_logo.png');
       }
       expect(find.byType(AssistantAvatar), findsNWidgets(2));
+      final userRow = tester.widget<Row>(
+          find.ancestor(of: find.text('你好'), matching: find.byType(Row)).first);
+      expect(userRow.mainAxisAlignment, MainAxisAlignment.end);
+      final assistantRow = tester.widget<Row>(find
+          .ancestor(
+              of: find.text('你好呀，今天过得怎么样？无论有什么开心的事情或者烦恼，都可以慢慢和我说。'),
+              matching: find.byType(Row))
+          .first);
+      expect(assistantRow.mainAxisAlignment, MainAxisAlignment.start);
+      expect(tester.getTopLeft(find.byType(UserAvatar)).dx,
+          greaterThan(tester.getTopRight(find.text('你好')).dx));
       final shortBubble = tester.getSize(find
           .ancestor(of: find.text('你好'), matching: find.byType(Container))
           .first);

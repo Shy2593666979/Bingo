@@ -72,6 +72,7 @@ class MainActivity : FlutterActivity() {
     private var previousCallAudioMode: Int? = null
     private var previousCallSpeakerphoneOn: Boolean? = null
     private var statusBarOverlay: View? = null
+    private var locationMapOpen = false
     private var incomingCallPlayer: MediaPlayer? = null
     private var previewAudioPlayer: MediaPlayer? = null
     private var previewAudioResult: MethodChannel.Result? = null
@@ -171,15 +172,15 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun applySystemBarAppearance() {
-        WindowCompat.setDecorFitsSystemWindows(window, true)
+        WindowCompat.setDecorFitsSystemWindows(window, !locationMapOpen)
         window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-        window.statusBarColor = Color.rgb(249, 252, 251)
+        window.statusBarColor = if (locationMapOpen) Color.TRANSPARENT else Color.rgb(249, 252, 251)
         window.navigationBarColor = Color.TRANSPARENT
         WindowCompat.getInsetsController(window, window.decorView).apply {
             show(WindowInsetsCompat.Type.statusBars())
             show(WindowInsetsCompat.Type.navigationBars())
-            isAppearanceLightStatusBars = true
+            isAppearanceLightStatusBars = !locationMapOpen
             isAppearanceLightNavigationBars = true
         }
         val statusBarBackgroundId = resources.getIdentifier(
@@ -189,7 +190,7 @@ class MainActivity : FlutterActivity() {
         )
         if (statusBarBackgroundId != 0) {
             window.decorView.findViewById<View>(statusBarBackgroundId)
-                ?.setBackgroundColor(Color.rgb(249, 252, 251))
+                ?.setBackgroundColor(if (locationMapOpen) Color.TRANSPARENT else Color.rgb(249, 252, 251))
         }
         ensureStatusBarOverlay()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -221,11 +222,22 @@ class MainActivity : FlutterActivity() {
             )
         }
         overlay.setBackgroundColor(Color.rgb(249, 252, 251))
+        overlay.visibility = if (locationMapOpen) View.GONE else View.VISIBLE
         overlay.bringToFront()
+    }
+
+    fun setLocationMapChrome(enabled: Boolean) {
+        locationMapOpen = enabled
+        applySystemBarAppearance()
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        CompanionMapFactory.register(this, flutterEngine.dartExecutor.binaryMessenger)
+        flutterEngine.platformViewsController.registry.registerViewFactory(
+            "bingo/companion_map",
+            CompanionMapFactory(this, flutterEngine.dartExecutor.binaryMessenger),
+        )
         regionLocation = RegionLocationController(this)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "bingo/region_location")
             .setMethodCallHandler(regionLocation)
@@ -279,6 +291,28 @@ class MainActivity : FlutterActivity() {
             .setMethodCallHandler { call, result ->
                 when (call.method) {
                     "createAlarm" -> createAlarm(call.arguments, result)
+                    "openLocationMap" -> {
+                        val longitude = call.argument<Number>("longitude")?.toDouble()
+                        val latitude = call.argument<Number>("latitude")?.toDouble()
+                        val name = android.net.Uri.encode(call.argument<String>("name") ?: "位置")
+                        if (longitude == null || latitude == null || !longitude.isFinite() ||
+                            !latitude.isFinite() || longitude !in -180.0..180.0 || latitude !in -85.0..85.0) {
+                            result.error("invalid_location", "位置无效", null)
+                        } else {
+                            try {
+                                val uri = android.net.Uri.parse("androidamap://viewMap?sourceApplication=Bingo&poiname=$name&lat=$latitude&lon=$longitude&dev=0")
+                                startActivity(Intent(Intent.ACTION_VIEW, uri).setPackage("com.autonavi.minimap"))
+                                result.success(null)
+                            } catch (_: ActivityNotFoundException) {
+                                try {
+                                    startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("geo:$latitude,$longitude?q=$latitude,$longitude($name)")))
+                                    result.success(null)
+                                } catch (_: ActivityNotFoundException) {
+                                    result.error("map_unavailable", "没有可打开的地图应用", null)
+                                }
+                            }
+                        }
+                    }
                     "pickImage" -> pickImage(result)
                     "takePhoto" -> takePhoto(result)
                     "playPreviewAudio" -> playPreviewAudio(call.arguments as? ByteArray, result)

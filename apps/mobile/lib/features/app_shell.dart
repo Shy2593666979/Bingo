@@ -10,6 +10,8 @@ import 'package:bingo/features/settings/presentation/my_page.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/chat/presentation/chat_controller.dart';
 import 'package:bingo/features/chat/presentation/chat_page.dart';
+import 'package:bingo/features/chat/presentation/location_picker_page.dart';
+import 'package:bingo/features/chat/models/chat_location.dart';
 import 'package:bingo/features/chat/presentation/incoming_call_page.dart';
 import 'package:bingo/features/chat/presentation/realtime_call_page.dart';
 import 'package:bingo/features/settings/presentation/settings_page.dart';
@@ -168,11 +170,26 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       onIncomingCall: (invitation) => _openIncomingCall(context, invitation),
       onPickGallery: () => _pickImage(context, 'pickImage'),
       onTakePhoto: () => _pickImage(context, 'takePhoto'),
+      onLocation: () => _pickLocation(context),
+      userAvatarData: profile.userAvatarData,
+      locationMapUrlBuilder: (location) => gateway.locationMapUrl(location),
       imageUrlBuilder: (imageId) => gateway.imageUrl(imageId),
       imageAccessToken: gateway.accessToken,
       onOpenSettings: () => _openSettings(context),
       onBack: () => Navigator.of(context).pop(),
     );
+  }
+
+  Future<void> _pickLocation(BuildContext context) async {
+    final location = await Navigator.of(context).push<ChatLocation>(
+        MaterialPageRoute(
+            builder: (_) => LocationPickerPage(
+                gateway: gateway,
+                accessToken: gateway.accessToken,
+                userId: profile.id)));
+    if (location != null && context.mounted) {
+      await chatController.sendLocation(location);
+    }
   }
 
   Future<void> _pickImage(BuildContext context, String method) async {

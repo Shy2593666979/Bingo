@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 CONFIG_DIRECTORY = Path(__file__).resolve().parents[1] / "config"
 DEFAULT_CONFIG_PATH = CONFIG_DIRECTORY / "config.yaml"
@@ -133,7 +133,18 @@ class LoggingSettings(BaseModel):
     retention_days: int = Field(default=14, ge=1)
 
 
+class MapsSettings(BaseModel):
+    api_key: str = Field(default_factory=lambda: os.getenv("BINGO_AMAP_API_KEY", ""))
+    timeout_seconds: float = Field(default=15, ge=1, le=60)
+
+    @field_validator("api_key", mode="before")
+    @classmethod
+    def environment_key(cls, value):
+        return os.getenv("BINGO_AMAP_API_KEY") or value
+
+
 class Settings(BaseModel):
+    maps: MapsSettings = Field(default_factory=MapsSettings)
     app: AppSettings = Field(default_factory=AppSettings)
     server: ServerSettings = Field(default_factory=ServerSettings)
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)

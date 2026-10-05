@@ -30,6 +30,7 @@ async def create_chat(
         image_data_urls=image_data_urls,
         image_id=image_id,
         image_mime_type=image_mime_type,
+        location=payload.location,
     )
     return ChatResponse(
         conversation_id=result.conversation_id, message_id=result.message_id, content=result.content
@@ -66,6 +67,7 @@ async def subscribe_chat(payload: ChatRequest, context: ServiceContext, user: Us
         image_data_urls=image_data_urls,
         image_id=image_id,
         image_mime_type=image_mime_type,
+        location=payload.location,
     )
     return subscription
 

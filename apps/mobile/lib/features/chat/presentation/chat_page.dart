@@ -10,6 +10,9 @@ import 'package:bingo/features/chat/presentation/widgets/message_bubble.dart';
 import 'package:bingo/features/chat/presentation/widgets/message_input.dart';
 import 'package:flutter/material.dart';
 import 'package:bingo/shared/widgets/assistant_avatar.dart';
+import 'package:bingo/shared/widgets/user_avatar.dart';
+import 'package:bingo/features/chat/models/chat_location.dart';
+import 'package:bingo/features/chat/presentation/widgets/location_card.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({
@@ -21,6 +24,9 @@ class ChatPage extends StatefulWidget {
     required this.onIncomingCall,
     this.onPickGallery,
     this.onTakePhoto,
+    this.onLocation,
+    this.locationMapUrlBuilder,
+    this.userAvatarData,
     this.imageUrlBuilder,
     this.imageAccessToken,
     required this.onOpenSettings,
@@ -36,6 +42,9 @@ class ChatPage extends StatefulWidget {
   final Future<void> Function(IncomingCallInvitation invitation) onIncomingCall;
   final VoidCallback? onPickGallery;
   final VoidCallback? onTakePhoto;
+  final VoidCallback? onLocation;
+  final String Function(ChatLocation)? locationMapUrlBuilder;
+  final String? userAvatarData;
   final String Function(String imageId)? imageUrlBuilder;
   final String? imageAccessToken;
   final VoidCallback onOpenSettings;
@@ -114,111 +123,155 @@ class _ChatPageState extends State<ChatPage> {
     final showWaiting = controller.isBusy;
     final showRecommendations =
         !showWaiting && controller.recommendations.isNotEmpty;
-    return Scaffold(
-      body: CustomPaint(
-        painter: const _MintBackgroundPainter(),
-        child: SafeArea(
-          bottom: false,
-          child: Column(
-            children: [
-              _ChatHeader(
-                assistantName: widget.assistantName,
-                assistantRole: widget.assistantRole,
-                onOpenSettings: widget.onOpenSettings,
-                onBack: widget.onBack,
-              ),
-              if (controller.errorMessage case final message?)
-                Container(
-                  margin: const EdgeInsets.fromLTRB(18, 4, 18, 8),
-                  padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.errorContainer,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Row(children: [
-                    const Icon(Icons.error_outline_rounded),
-                    const SizedBox(width: 10),
-                    Expanded(child: Text(message)),
-                    IconButton(
-                      onPressed: controller.dismissError,
-                      icon: const Icon(Icons.close_rounded),
-                    ),
-                  ]),
+    return Theme(
+      data: buildMintTheme(context),
+      child: Scaffold(
+        body: ColoredBox(
+          color: BingoPalette.mintBackground,
+          child: SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                _ChatHeader(
+                  assistantName: widget.assistantName,
+                  onCall: widget.onStartCall,
+                  onBack: widget.onBack,
                 ),
-              Expanded(
-                child: controller.timelineItems.isEmpty &&
-                        !showWaiting &&
-                        !showRecommendations
-                    ? _EmptyChat(
-                        onSuggestion: controller.send,
-                        assistantRole: widget.assistantRole)
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.fromLTRB(18, 8, 18, 18),
-                        itemCount: controller.timelineItems.length +
-                            (showWaiting || showRecommendations ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index == controller.timelineItems.length) {
-                            if (showWaiting) {
-                              return AssistantTypingBubble(
-                                assistantRole: widget.assistantRole,
+                if (controller.errorMessage case final message?)
+                  Container(
+                    margin: const EdgeInsets.fromLTRB(18, 4, 18, 8),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.errorContainer,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Row(children: [
+                      const Icon(Icons.error_outline_rounded),
+                      const SizedBox(width: 10),
+                      Expanded(child: Text(message)),
+                      IconButton(
+                        onPressed: controller.dismissError,
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    ]),
+                  ),
+                Expanded(
+                  child: controller.timelineItems.isEmpty &&
+                          !showWaiting &&
+                          !showRecommendations
+                      ? _EmptyChat(
+                          onSuggestion: controller.send,
+                          assistantRole: widget.assistantRole)
+                      : ListView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.fromLTRB(18, 8, 18, 18),
+                          itemCount: controller.timelineItems.length +
+                              (showWaiting || showRecommendations ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (index == controller.timelineItems.length) {
+                              if (showWaiting) {
+                                return AssistantTypingBubble(
+                                  assistantRole: widget.assistantRole,
+                                );
+                              }
+                              return _RecommendationRows(
+                                items: controller.recommendations,
+                                onSelected: controller.sendRecommendation,
                               );
                             }
-                            return _RecommendationRows(
-                              items: controller.recommendations,
-                              onSelected: controller.sendRecommendation,
-                            );
-                          }
-                          final item = controller.timelineItems[index];
-                          if (item case final ChatMessage message) {
-                            final showTime = _shouldShowTime(
-                              controller.timelineItems,
-                              index,
-                            );
-                            return Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (showTime)
-                                  _MessageTimeDivider(
-                                    value: message.createdAt!,
-                                  ),
-                                if (message.type == ChatMessageType.call)
-                                  CallRecordTile(
-                                    message: message,
-                                    assistantRole: widget.assistantRole,
-                                  )
-                                else
-                                  MessageBubble(
-                                    message: message,
-                                    assistantRole: widget.assistantRole,
-                                    imageUrlBuilder: widget.imageUrlBuilder,
-                                    imageAccessToken: widget.imageAccessToken,
-                                  ),
-                              ],
-                            );
-                          }
-                          if (item case final DeviceAction action) {
-                            return DeviceActionCard(
-                              action: action,
-                              onApprove: () =>
-                                  controller.approveDeviceAction(action),
-                              onReject: () =>
-                                  controller.rejectDeviceAction(action),
-                            );
-                          }
-                          return const SizedBox.shrink();
-                        },
-                      ),
-              ),
-              MessageInput(
-                enabled: true,
-                onSend: controller.send,
-                speechGateway: widget.speechGateway,
-                onCall: widget.onStartCall,
-                onGallery: widget.onPickGallery,
-                onCamera: widget.onTakePhoto,
-              ),
-            ],
+                            final item = controller.timelineItems[index];
+                            if (item case final ChatMessage message) {
+                              final showTime = _shouldShowTime(
+                                controller.timelineItems,
+                                index,
+                              );
+                              return Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (showTime)
+                                    _MessageTimeDivider(
+                                      value: message.createdAt!,
+                                    ),
+                                  if (message.type == ChatMessageType.call)
+                                    CallRecordTile(
+                                      message: message,
+                                      assistantRole: widget.assistantRole,
+                                    )
+                                  else if (message.location != null)
+                                    Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 8),
+                                        child: Row(
+                                            mainAxisAlignment:
+                                                message.role == ChatRole.user
+                                                    ? MainAxisAlignment.end
+                                                    : MainAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              if (message.role !=
+                                                  ChatRole.user) ...[
+                                                AssistantAvatar(
+                                                    role: widget.assistantRole,
+                                                    size: 34),
+                                                const SizedBox(width: 9),
+                                              ],
+                                              Flexible(
+                                                  child: LocationCard(
+                                                      location:
+                                                          message.location!,
+                                                      mapUrl: message.location!
+                                                              .hasCoordinates
+                                                          ? widget
+                                                              .locationMapUrlBuilder
+                                                              ?.call(message
+                                                                  .location!)
+                                                          : null,
+                                                      accessToken: widget
+                                                          .imageAccessToken)),
+                                              if (message.role ==
+                                                  ChatRole.user) ...[
+                                                const SizedBox(width: 9),
+                                                UserAvatar(
+                                                    avatarData:
+                                                        widget.userAvatarData,
+                                                    size: 34),
+                                              ],
+                                            ]))
+                                  else
+                                    MessageBubble(
+                                      message: message,
+                                      assistantRole: widget.assistantRole,
+                                      imageUrlBuilder: widget.imageUrlBuilder,
+                                      imageAccessToken: widget.imageAccessToken,
+                                    ),
+                                ],
+                              );
+                            }
+                            if (item case final DeviceAction action) {
+                              return DeviceActionCard(
+                                action: action,
+                                onApprove: () =>
+                                    controller.approveDeviceAction(action),
+                                onReject: () =>
+                                    controller.rejectDeviceAction(action),
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          },
+                        ),
+                ),
+                MessageInput(
+                  enabled: true,
+                  onSend: controller.send,
+                  speechGateway: widget.speechGateway,
+                  onCall: widget.onStartCall,
+                  onGallery: widget.onPickGallery,
+                  onCamera: widget.onTakePhoto,
+                  onLocation: widget.onLocation,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -283,85 +336,42 @@ class _MessageTimeDivider extends StatelessWidget {
 class _ChatHeader extends StatelessWidget {
   const _ChatHeader({
     required this.assistantName,
-    required this.assistantRole,
-    required this.onOpenSettings,
+    required this.onCall,
     this.onBack,
   });
 
   final String assistantName;
-  final String? assistantRole;
-  final VoidCallback onOpenSettings;
+  final VoidCallback onCall;
   final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 18, 14),
+      padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
       child: Row(
         children: [
-          if (onBack != null) ...[
-            IconButton(
-                onPressed: onBack,
-                tooltip: '返回角色',
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 21)),
-            const SizedBox(width: 4),
-          ],
-          AssistantAvatar(
-            role: assistantRole,
-            size: 62,
-            showOnline: true,
-          ),
-          const SizedBox(width: 14),
+          IconButton(
+              onPressed: onBack ?? () => Navigator.maybePop(context),
+              tooltip: '返回角色',
+              icon: const Icon(Icons.arrow_back_rounded, size: 23)),
           Expanded(
             child: Text(
               assistantName,
+              textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
             ),
           ),
+          IconButton(
+              onPressed: onCall,
+              tooltip: '语音通话',
+              icon: const Icon(Icons.phone_outlined, size: 23)),
         ],
       ),
     );
   }
-}
-
-class _MintBackgroundPainter extends CustomPainter {
-  const _MintBackgroundPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final topPath = Path()
-      ..moveTo(size.width * 0.68, 0)
-      ..quadraticBezierTo(
-          size.width * 0.88, size.height * 0.13, size.width, 180)
-      ..lineTo(size.width, 0)
-      ..close();
-    canvas.drawPath(
-      topPath,
-      Paint()..color = const Color(0xFFE1F7EF).withValues(alpha: 0.58),
-    );
-
-    final bottomPath = Path()
-      ..moveTo(0, size.height * 0.77)
-      ..quadraticBezierTo(
-        size.width * 0.38,
-        size.height * 0.91,
-        size.width,
-        size.height * 0.74,
-      )
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
-      ..close();
-    canvas.drawPath(
-      bottomPath,
-      Paint()..color = const Color(0xFFE7F9F3).withValues(alpha: 0.64),
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _RecommendationRows extends StatelessWidget {

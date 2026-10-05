@@ -1,8 +1,9 @@
 import 'dart:typed_data';
+import 'package:bingo/features/chat/models/chat_location.dart';
 
 enum ChatRole { user, assistant }
 
-enum ChatMessageType { chat, call }
+enum ChatMessageType { chat, call, location }
 
 enum ChatMessageStatus { streaming, interrupted, completed }
 
@@ -20,6 +21,7 @@ class ChatMessage {
     this.status = ChatMessageStatus.completed,
     this.callStatus,
     this.callDurationSeconds,
+    this.location,
   });
 
   final String id;
@@ -34,14 +36,19 @@ class ChatMessage {
   final ChatMessageStatus status;
   final String? callStatus;
   final int? callDurationSeconds;
+  final ChatLocation? location;
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
         id: json['id'] as String,
         role: json['role'] == 'user' ? ChatRole.user : ChatRole.assistant,
         content: json['content'] as String,
-        type: json['message_type'] == 'call'
-            ? ChatMessageType.call
-            : ChatMessageType.chat,
+        type: ChatMessageType.values.firstWhere(
+            (type) => type.name == json['message_type'],
+            orElse: () => ChatMessageType.chat),
+        location: json['location'] == null
+            ? null
+            : ChatLocation.fromJson(
+                Map<String, dynamic>.from(json['location'] as Map)),
         imageId: json['image_id'] as String?,
         createdAt: json['created_at'] == null
             ? null
@@ -68,6 +75,7 @@ class ChatMessage {
     ChatMessageType? type,
     String? callStatus,
     int? callDurationSeconds,
+    ChatLocation? location,
   }) {
     return ChatMessage(
       id: id ?? this.id,
@@ -82,6 +90,7 @@ class ChatMessage {
       status: status ?? this.status,
       callStatus: callStatus ?? this.callStatus,
       callDurationSeconds: callDurationSeconds ?? this.callDurationSeconds,
+      location: location ?? this.location,
     );
   }
 }

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bingo · 年轻人的陪伴空间 / 五套 UI 提案</title>
+  <link rel="stylesheet" href="bingo-ui-directions.css">
+</head>
+<body>
+  <header class="studio-header">
+    <a class="studio-brand" href="#"><img src="assets/ui-kit/bingo_logo.png" alt="Bingo"><span>Bingo <small>DESIGN EXPLORATION</small></span></a>
+    <span class="prototype-label">设计预览 · 不修改 APP · 不连接后台</span>
+  </header>
+  <main>
+    <section class="intro">
+      <div><p class="eyebrow">不是推倒重来，是让陪伴更轻一点。</p><h1>熟悉的伙伴，<br>五种新的相处方式。</h1><p>保留头像、伙伴卡片和现有功能，重新协调颜色、按钮、留白与信息层级。<br>可以整套选，也可以单独选一种配色、一种样式。</p></div>
+      <aside class="intro-note"><b>这次重点看什么？</b><span>登录页不再被大块深绿压住</span><span>主次按钮分明，长页面不过度堆卡片</span><span>「我的」独立，聊天仍然没有设置入口</span><span>真实截图与设计原型明确分开</span></aside>
+    </section>
+    <section class="controls" aria-label="设计浏览工具">
+      <div class="mode-tabs"><button data-mode="compare" aria-pressed="true">五套同屏对比</button><button data-mode="focus" aria-pressed="false">单套完整体验</button><button data-mode="audit" aria-pressed="false">当前 APP 截图</button></div>
+      <label>查看页面<select id="page-select" aria-label="查看页面"></select></label>
+      <button id="previous-page" aria-label="上一页">←</button><button id="next-page" aria-label="下一页">→</button>
+    </section>
+    <nav id="theme-picker" class="theme-picker" aria-label="选择方案"></nav>
+    <div id="mix-controls" class="mix-controls" hidden><label>颜色<select id="color-select"></select></label><label>样式<select id="layout-select"><option value="auto">跟随当前方案</option><option value="soft">轻柔圆角</option><option value="warm">温暖手帐</option><option value="social">轻社交</option><option value="clean">简洁紧凑</option></select></label><button id="save-choice">记录我的选择</button><output id="choice-output" aria-live="polite"></output></div>
+    <section id="design-stage" class="design-stage" aria-label="手机界面设计"></section>
+    <section id="audit-stage" class="audit-stage" hidden></section>
+    <section class="design-notes">
+      <h2>可以只改这些，不用全部重做</h2>
+      <div class="notes-grid"><article><b>先统一颜色</b><p>深绿保留给重点动作，普通进入、上传图片、次要选项用轻色。正文和辅助文字不再混用多种灰绿色。</p></article><article><b>再统一节奏</b><p>标题、字段、分组和底部动作有固定间距。个人资料去掉重复标题；登录协议不再挤到屏幕外。</p></article><article><b>最后优化状态</b><p>录音、复刻、错误、来电和接通状态统一设计。阶段进度不展示假百分比，未读数字不依赖颜色辨认。</p></article></div>
+      <h2>参考，但不照搬</h2>
+      <p>借鉴这些高 Star 开源项目的设计方法，不引入 React 依赖，也不把网页组件直接套进 Flutter。</p>
+      <div class="sources"><a href="https://github.com/shadcn-ui/ui" target="_blank" rel="noopener">shadcn/ui <b>约 125k ★</b><span>克制的层级、字段与边界</span></a><a href="https://github.com/heroui-inc/heroui" target="_blank" rel="noopener">HeroUI <b>约 30.9k ★</b><span>柔和交互、清晰选中状态</span></a><a href="https://github.com/tamagui/tamagui" target="_blank" rel="noopener">Tamagui <b>约 14.2k ★</b><span>跨页面一致的间距与主题</span></a><a href="https://github.com/ant-design/ant-design-mobile" target="_blank" rel="noopener">Ant Design Mobile <b>约 12.1k ★</b><span>手机表单、列表与底部选择</span></a></div>
+      <p class="footnote">Star 数为 2026-10-03 浏览仓库时的约数，会变化。聊天文本、通知数量、录音与复刻状态均为设计示例；不会发送消息、采集麦克风、上传图片或真的修改密码。当前 APP 的验证码登录入口仍提示「敬请期待」，这里仅给出视觉草案。头像缩放可试用，生日滚轮仅展示布局，不是真实日期选择器。</p>
+    </section>
+  </main>
+  <script src="bingo-ui-directions.js"></script>
+</body>
+</html>

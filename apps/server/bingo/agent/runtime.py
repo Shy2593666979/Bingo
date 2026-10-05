@@ -20,6 +20,7 @@ from bingo.agent.runs import AgentRunCoordinator, AgentRunHandle
 from bingo.background import EngagementService
 from bingo.db.models import Conversation, Memory, Message, User
 from bingo.db.repositories import ConversationRepository, MemoryRepository, RoleRepository
+from bingo.schemas.maps import LocationInput
 from bingo.services.logging import log_event
 from bingo.tools import ToolRegistry
 from bingo.tools.base import ToolContext
@@ -78,13 +79,16 @@ class AgentRuntime:
         image_data_urls: tuple[str, ...] = (),
         image_id: str | None = None,
         image_mime_type: str | None = None,
+        location: LocationInput | None = None,
     ) -> AgentResult:
         started_at = time.perf_counter()
         log_event(logger, logging.INFO, "agent.started", user_id=user.id)
         try:
             repository = ConversationRepository(session, user.id)
             user = await repository.context_user(user, conversation_id)
-            stored_content = content or "[图片]"
+            stored_content = content or (
+                f"[位置] {location.name}：{location.address}" if location else "[图片]"
+            )
             conversation, activity_version, user_message = await self._prepare_run(
                 repository,
                 session,
@@ -95,6 +99,8 @@ class AgentRuntime:
             )
             user_message.image_id = image_id
             user_message.image_mime_type = image_mime_type
+            user_message.location_json = location.model_dump_json() if location else None
+            user_message.message_type = "location" if location else "chat"
             await repository.commit()
             history = await repository.list_messages(conversation.id)
             memories = await MemoryRepository(session, user.id).list(role_id=user.role_id)
@@ -159,6 +165,7 @@ class AgentRuntime:
         image_data_urls: tuple[str, ...] = (),
         image_id: str | None = None,
         image_mime_type: str | None = None,
+        location: LocationInput | None = None,
     ) -> AsyncIterator[dict[str, Any]]:
         started_at = time.perf_counter()
         log_event(
@@ -179,6 +186,7 @@ class AgentRuntime:
                 image_data_urls=image_data_urls,
                 image_id=image_id,
                 image_mime_type=image_mime_type,
+                location=location,
             ):
                 yield event
         except AgentRunInterrupted:
@@ -214,11 +222,14 @@ class AgentRuntime:
         image_data_urls: tuple[str, ...] = (),
         image_id: str | None = None,
         image_mime_type: str | None = None,
+        location: LocationInput | None = None,
     ) -> AsyncIterator[dict[str, Any]]:
         started_at = time.perf_counter()
         repository = ConversationRepository(session, user.id)
         user = await repository.context_user(user, conversation_id)
-        stored_content = content or "[图片]"
+        stored_content = content or (
+            f"[位置] {location.name}：{location.address}" if location else "[图片]"
+        )
         conversation, activity_version, user_message = await self._prepare_run(
             repository,
             session,
@@ -230,6 +241,8 @@ class AgentRuntime:
         )
         user_message.image_id = image_id
         user_message.image_mime_type = image_mime_type
+        user_message.location_json = location.model_dump_json() if location else None
+        user_message.message_type = "location" if location else "chat"
         await repository.commit()
         yield {
             "type": "start",
