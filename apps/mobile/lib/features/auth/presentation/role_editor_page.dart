@@ -726,6 +726,7 @@ class _RoleEditorPageState extends State<RoleEditorPage>
                                                     maxLength: 2000,
                                                     decoration:
                                                         const InputDecoration(
+                                                            counterText: '',
                                                             hintText:
                                                                 'TA 是谁？怎样说话？你希望 TA 怎样陪伴你？'),
                                                     validator: (value) => (value

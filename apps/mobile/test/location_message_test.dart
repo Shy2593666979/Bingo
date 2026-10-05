@@ -25,6 +25,7 @@ const point = ChatLocation(
 class PlacesGateway implements LocationGateway, ChatGateway {
   String? searched;
   ChatLocation? sent;
+  ApiException? reverseError;
   @override
   Stream<ChatStreamEvent> send(
           {String? conversationId,
@@ -45,9 +46,12 @@ class PlacesGateway implements LocationGateway, ChatGateway {
       'http://localhost/map';
   @override
   Future<({ChatLocation location, List<ChatLocation> places})> reverseLocation(
-          double longitude, double latitude,
-          {String coordinateSystem = 'GCJ-02'}) async =>
-      (location: point, places: [point]);
+      double longitude, double latitude,
+      {String coordinateSystem = 'GCJ-02'}) async {
+    if (reverseError != null) throw reverseError!;
+    return (location: point, places: [point]);
+  }
+
   @override
   Stream<ChatStreamEvent> sendLocation(
       {String? conversationId,
@@ -197,6 +201,50 @@ void main() {
     pending.complete({'status': 'denied'});
     await tester.pumpAndSettle();
   });
+
+  for (final failure in [
+    (
+      error: const ApiException('Not Found', statusCode: 404),
+      message: '服务器尚未开通位置功能，请联系管理员更新服务'
+    ),
+    (
+      error: const ApiException('位置服务暂未配置，请联系管理员', statusCode: 503),
+      message: '位置服务暂未配置，请联系管理员'
+    ),
+  ]) {
+    testWidgets(
+        'address service failure ${failure.error.statusCode} is not a GPS failure',
+        (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      const channel = MethodChannel('bingo/region_location');
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(
+          channel,
+          (call) async => {
+                'status': 'success',
+                'longitude': '116.397',
+                'latitude': '39.909',
+                'precise': 'true',
+                'accuracy_m': '10'
+              });
+      addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+      final gateway = PlacesGateway()..reverseError = failure.error;
+      await tester
+          .pumpWidget(MaterialApp(home: LocationPickerPage(gateway: gateway)));
+      await tester.pumpAndSettle();
+      expect(find.text(failure.message), findsOneWidget);
+      expect(find.text('定位或地址解析失败，请重试或搜索地点'), findsNothing);
+      expect(
+          tester
+              .widget<FilledButton>(find.widgetWithText(FilledButton, '发送'))
+              .onPressed,
+          isNull);
+    });
+  }
 
   testWidgets('district card shows address, not JSON, and opens details',
       (tester) async {

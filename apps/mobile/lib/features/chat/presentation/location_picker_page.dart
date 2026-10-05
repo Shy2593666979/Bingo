@@ -197,6 +197,10 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
         _places = [current, ...result.places];
         _fromCache = false;
       });
+    } on ApiException catch (error) {
+      if (mounted && sequence == _sequence) {
+        setState(() => _error = _serviceError(error));
+      }
     } on Exception {
       if (mounted && sequence == _sequence) {
         setState(() => _error = '定位或地址解析失败，请重试或搜索地点');
@@ -206,6 +210,9 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
       if (mounted && sequence == _sequence) setState(() => _busy = false);
     }
   }
+
+  String _serviceError(ApiException error) =>
+      error.statusCode == 404 ? '服务器尚未开通位置功能，请联系管理员更新服务' : error.message;
 
   void _searchChanged(String value) {
     _debounce?.cancel();
@@ -233,6 +240,10 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
       final places = await widget.gateway
           .searchLocations(query, city: _current?.city ?? '');
       if (mounted && sequence == _sequence) setState(() => _places = places);
+    } on ApiException catch (error) {
+      if (mounted && sequence == _sequence) {
+        setState(() => _error = _serviceError(error));
+      }
     } on Exception {
       if (mounted && sequence == _sequence) {
         setState(() => _error = '地点搜索失败，请稍后重试');
@@ -278,6 +289,10 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
           _selected = result.location;
           _places = [result.location, ...result.places];
         });
+      }
+    } on ApiException catch (error) {
+      if (mounted && sequence == _sequence) {
+        setState(() => _error = _serviceError(error));
       }
     } on Exception {
       if (mounted && sequence == _sequence) {

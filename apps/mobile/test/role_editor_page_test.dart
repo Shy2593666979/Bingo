@@ -59,6 +59,22 @@ void main() {
   setUp(() => messenger.setMockMethodCallHandler(device, (_) async => null));
   tearDown(() => messenger.setMockMethodCallHandler(device, null));
 
+  testWidgets('partner description keeps its limit without showing a counter',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+        home: RoleEditorPage(gateway: _RoleGateway(), roles: const [])));
+    final description = find.byWidgetPredicate((widget) =>
+        widget is TextField &&
+        widget.decoration?.hintText == 'TA 是谁？怎样说话？你希望 TA 怎样陪伴你？');
+    await tester.scrollUntilVisible(description, 300,
+        scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
+    final field = tester.widget<TextField>(description);
+    expect(field.maxLength, 2000);
+    expect(field.decoration?.counterText, '');
+    expect(find.text('0/2000'), findsNothing);
+  });
+
   testWidgets('voice options expand below the field without a popup route',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 1000));
