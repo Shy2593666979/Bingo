@@ -70,6 +70,12 @@ class AgentRuntime:
     ) -> AgentRunHandle:
         return await self._runs.begin(user_id, run_id, supersedes_run_id)
 
+    def stream_ephemeral(self, messages: list[ModelMessage]):
+        return self._llm.stream(messages)
+
+    async def complete_ephemeral(self, messages: list[ModelMessage]) -> str:
+        return await self._llm.complete(messages)
+
     async def run(
         self,
         session: AsyncSession,
@@ -167,6 +173,7 @@ class AgentRuntime:
         image_id: str | None = None,
         image_mime_type: str | None = None,
         location: LocationInput | None = None,
+        include_text_deltas: bool = False,
     ) -> AsyncIterator[dict[str, Any]]:
         started_at = time.perf_counter()
         log_event(
@@ -188,6 +195,7 @@ class AgentRuntime:
                 image_id=image_id,
                 image_mime_type=image_mime_type,
                 location=location,
+                include_text_deltas=include_text_deltas,
             ):
                 yield event
         except AgentRunInterrupted:
@@ -224,6 +232,7 @@ class AgentRuntime:
         image_id: str | None = None,
         image_mime_type: str | None = None,
         location: LocationInput | None = None,
+        include_text_deltas: bool = False,
     ) -> AsyncIterator[dict[str, Any]]:
         started_at = time.perf_counter()
         repository = ConversationRepository(session, user.id)
@@ -290,6 +299,8 @@ class AgentRuntime:
                     run_handle.cancelled,
                 ):
                     if isinstance(event, ModelTextDelta):
+                        if include_text_deltas:
+                            yield {"type": "text_delta", "content": event.content}
                         turn_text.append(event.content)
                         visible_reply.append(event.content)
                         pending += event.content

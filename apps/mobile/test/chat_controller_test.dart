@@ -275,7 +275,7 @@ class RecoveringChatGateway implements ChatGateway, ConversationGateway {
 }
 
 void main() {
-  testWidgets('chat header centers name and connects back and call actions',
+  testWidgets('chat header centers name with speaker and keeps call in menu',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(360, 780));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -296,9 +296,20 @@ void main() {
     expect(tester.getCenter(find.text('暖暖')).dx, closeTo(180, 1));
     expect(tester.getCenter(find.byTooltip('返回角色')).dx,
         lessThan(tester.getCenter(find.text('暖暖')).dx));
-    expect(tester.getCenter(find.byTooltip('语音通话')).dx,
+    expect(find.byTooltip('语音通话'), findsNothing);
+    expect(tester.getCenter(find.byTooltip('开启自动朗读')).dx,
         greaterThan(tester.getCenter(find.text('暖暖')).dx));
-    await tester.tap(find.byTooltip('语音通话'));
+    await tester.tap(find.byTooltip('开启自动朗读'));
+    await tester.pumpAndSettle();
+    expect(controller.readAloudEnabled, isTrue);
+    expect(find.byTooltip('关闭自动朗读'), findsOneWidget);
+    await tester.tap(find.byTooltip('关闭自动朗读'));
+    await tester.pumpAndSettle();
+    expect(controller.readAloudEnabled, isFalse);
+    await tester.tap(find.byTooltip('更多功能'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('电话'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('返回角色'));
     expect(calls, 1);
     expect(backs, 1);
@@ -668,6 +679,8 @@ void main() {
 
   testWidgets('shows recommendation label without leading arrows',
       (tester) async {
+    await tester.binding.setSurfaceSize(const Size(360, 780));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     final store = MemoryChatStore();
     store.conversations['conversation-1'] = const LocalConversation(
       id: 'conversation-1',
@@ -681,7 +694,7 @@ void main() {
       gateway: FakeChatGateway(),
       localStore: store,
       engagement: FakeEngagementGateway(
-        recommendations: ['有趣话题一', '有趣话题二', '有趣话题三'],
+        recommendations: ['聊聊', '有趣话题二', '今天有什么适合周末出门放松的活动？'],
       ),
     );
     await controller.bindUser('user-1');
@@ -701,7 +714,23 @@ void main() {
     expect(find.text('为您推荐'), findsOneWidget);
     expect(find.text('个人助理'), findsNothing);
     expect(find.byIcon(Icons.settings_rounded), findsNothing);
-    expect(find.text('有趣话题一'), findsOneWidget);
+    expect(find.text('聊聊'), findsOneWidget);
+    final shortBubble = find
+        .ancestor(of: find.text('聊聊'), matching: find.byType(InkWell))
+        .first;
+    final mediumBubble = find
+        .ancestor(of: find.text('有趣话题二'), matching: find.byType(InkWell))
+        .first;
+    final longBubble = find
+        .ancestor(
+            of: find.text('今天有什么适合周末出门放松的活动？'), matching: find.byType(InkWell))
+        .first;
+    expect(tester.getSize(shortBubble).width,
+        lessThan(tester.getSize(mediumBubble).width));
+    expect(tester.getSize(mediumBubble).width,
+        lessThan(tester.getSize(longBubble).width));
+    expect(tester.getTopLeft(shortBubble).dx, tester.getTopLeft(longBubble).dx);
+    expect(tester.takeException(), isNull);
     expect(find.byIcon(Icons.north_west_rounded), findsNothing);
     expect(
       find.ancestor(

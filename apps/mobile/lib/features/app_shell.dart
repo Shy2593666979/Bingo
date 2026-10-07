@@ -307,12 +307,6 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     await Navigator.of(context).push<void>(MaterialPageRoute(
         builder: (myContext) => MyPage(
             profile: profile,
-            loadPersonalities: gateway.getProfileOptions,
-            savePersonality: (personality) async {
-              final updated = await gateway.updatePersonality(personality);
-              if (mounted) onProfileSaved(updated);
-              return updated;
-            },
             onEditUser: (current) => _openProfileSetup(myContext, current),
             onOpenSettings: () => _openSettings(myContext))));
   }

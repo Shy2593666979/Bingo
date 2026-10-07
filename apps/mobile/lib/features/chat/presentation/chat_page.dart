@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/chat/models/chat_message.dart';
+import 'package:bingo/features/chat/models/moment_completion.dart';
 import 'package:bingo/features/chat/presentation/chat_controller.dart';
 import 'package:bingo/features/chat/presentation/chat_starters.dart';
+import 'package:bingo/features/chat/presentation/companion_moment_page.dart';
 import 'package:bingo/features/chat/presentation/widgets/device_action_card.dart';
 import 'package:bingo/features/chat/presentation/widgets/message_bubble.dart';
 import 'package:bingo/features/chat/presentation/widgets/message_input.dart';
@@ -53,12 +55,14 @@ class ChatPage extends StatefulWidget {
   State<ChatPage> createState() => _ChatPageState();
 }
 
-class _ChatPageState extends State<ChatPage> {
+class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   final _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    unawaited(widget.controller.activateSpeech());
     widget.controller.setAssistantRole(widget.assistantRole);
     widget.controller.addListener(_onChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -82,9 +86,47 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    widget.controller.deactivateSpeech();
     widget.controller.removeListener(_onChanged);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(widget.controller.activateSpeech());
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      widget.controller.deactivateSpeech();
+    }
+  }
+
+  Future<void> _openMoment(CompanionMoment kind) async {
+    await widget.controller.stopSpeech();
+    if (!mounted) return;
+    final route = MaterialPageRoute<MomentCompletion>(
+        builder: (_) => CompanionMomentPage(
+            kind: kind,
+            controller: widget.controller,
+            partnerName: widget.assistantName,
+            partnerRole: widget.assistantRole));
+    final completion = await Navigator.of(context).push(route);
+    await route.completed;
+    if (!mounted ||
+        completion == null ||
+        widget.controller.userId != completion.userId ||
+        widget.controller.conversationId != completion.conversationId) {
+      return;
+    }
+    await widget.controller.sendMomentSummary(
+        completion.feature, completion.summary, completion.sessionId);
+  }
+
+  void _startCall() {
+    unawaited(widget.controller.stopSpeech());
+    widget.onStartCall();
   }
 
   void _onChanged() {
@@ -133,9 +175,17 @@ class _ChatPageState extends State<ChatPage> {
               children: [
                 _ChatHeader(
                   assistantName: widget.assistantName,
-                  onCall: widget.onStartCall,
                   onBack: widget.onBack,
+                  speechEnabled: controller.readAloudEnabled,
+                  onSpeechToggle: () => unawaited(
+                      controller.setReadAloud(!controller.readAloudEnabled)),
                 ),
+                if (controller.speechError case final message?)
+                  Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Text(message,
+                          style: const TextStyle(
+                              fontSize: 12, color: Color(0xFF71817D)))),
                 if (controller.errorMessage case final message?)
                   Container(
                     margin: const EdgeInsets.fromLTRB(18, 4, 18, 8),
@@ -258,7 +308,8 @@ class _ChatPageState extends State<ChatPage> {
                   enabled: true,
                   onSend: controller.send,
                   speechGateway: widget.speechGateway,
-                  onCall: widget.onStartCall,
+                  onCall: _startCall,
+                  onMoment: _openMoment,
                   onGallery: widget.onPickGallery,
                   onCamera: widget.onTakePhoto,
                   onLocation: widget.onLocation,
@@ -329,13 +380,15 @@ class _MessageTimeDivider extends StatelessWidget {
 class _ChatHeader extends StatelessWidget {
   const _ChatHeader({
     required this.assistantName,
-    required this.onCall,
     this.onBack,
+    required this.speechEnabled,
+    required this.onSpeechToggle,
   });
 
   final String assistantName;
-  final VoidCallback onCall;
   final VoidCallback? onBack;
+  final bool speechEnabled;
+  final VoidCallback onSpeechToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -358,9 +411,16 @@ class _ChatHeader extends StatelessWidget {
             ),
           ),
           IconButton(
-              onPressed: onCall,
-              tooltip: '语音通话',
-              icon: const Icon(Icons.phone_outlined, size: 23)),
+              onPressed: onSpeechToggle,
+              tooltip: speechEnabled ? '关闭自动朗读' : '开启自动朗读',
+              icon: Icon(
+                  speechEnabled
+                      ? Icons.volume_up_outlined
+                      : Icons.volume_off_outlined,
+                  size: 20,
+                  color: speechEnabled
+                      ? BingoPalette.blue
+                      : const Color(0xFF8B9994))),
         ],
       ),
     );
@@ -381,7 +441,7 @@ class _RecommendationRows extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, 14, 0, 4),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Align(
             alignment: Alignment.centerLeft,

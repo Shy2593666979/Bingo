@@ -14,6 +14,7 @@ class ServiceContext:
     engagement: Any
     location: Any = None
     maps: Any = None
+    chat_speech: Any = None
     public_base_url: str = ""
     client_address: str = "unknown"
     password_reset_attempts: dict = field(default_factory=dict)

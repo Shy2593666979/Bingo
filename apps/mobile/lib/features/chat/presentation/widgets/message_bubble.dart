@@ -5,6 +5,7 @@ import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/features/chat/models/chat_message.dart';
 import 'package:flutter/material.dart';
 import 'package:bingo/shared/widgets/assistant_avatar.dart';
+import 'package:bingo/features/chat/presentation/widgets/companion_moment_card.dart';
 
 class MessageBubble extends StatelessWidget {
   const MessageBubble({
@@ -58,7 +59,9 @@ class MessageBubble extends StatelessWidget {
                     url: imageUrlBuilder!(message.imageId!),
                     accessToken: imageAccessToken,
                   ),
-                if (message.imageId == null || message.content != '[图片]')
+                if (isUser && CompanionMomentCard.matches(message.content))
+                  CompanionMomentCard(content: message.content)
+                else if (message.imageId == null || message.content != '[图片]')
                   SelectableText(
                     message.content,
                     style: TextStyle(

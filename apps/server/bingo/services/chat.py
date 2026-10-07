@@ -8,6 +8,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bingo.agent.runtime import AgentRuntime
 from bingo.db.models import Conversation, Message, User
+from bingo.db.repositories import ConversationRepository, RoleRepository
 from bingo.schemas.chat import ChatImageInput, ChatRequest, ChatResponse
 from bingo.services.chat_runs import ChatRunService
 from bingo.services.context import ServiceContext
@@ -57,6 +58,15 @@ async def subscribe_chat(payload: ChatRequest, context: ServiceContext, user: Us
     _require_completed_profile(user.onboarding_complete)
     image_data_urls, image_id, image_mime_type = _save_images(payload.images)
     run_id = payload.run_id or uuid4().hex
+    voice = context.settings.realtime_call.voice
+    if payload.read_aloud:
+        async with context.database.session_factory() as session:
+            context_user = await ConversationRepository(session, user.id).context_user(
+                user, payload.conversation_id
+            )
+            role = await RoleRepository(session).get(context_user.role_id)
+            if role:
+                voice = role.voice or voice
     chat_runs: ChatRunService = context.chat_runs
     subscription = await chat_runs.subscribe(
         user_id=user.id,
@@ -68,8 +78,27 @@ async def subscribe_chat(payload: ChatRequest, context: ServiceContext, user: Us
         image_id=image_id,
         image_mime_type=image_mime_type,
         location=payload.location,
+        include_text_deltas=payload.read_aloud,
     )
+    if payload.read_aloud:
+        return SpokenSubscription(subscription, context.chat_speech, user.id, run_id, voice)
     return subscription
+
+
+class SpokenSubscription:
+    def __init__(self, subscription, speech, user_id, run_id, voice):
+        self.subscription = subscription
+        self.speech = speech
+        self.user_id = user_id
+        self.run_id = run_id
+        self.voice = voice
+
+    def events(self):
+        return self.speech.events(self.subscription, self.user_id, self.run_id, self.voice)
+
+    async def close(self):
+        await self.speech.stop(self.user_id, self.run_id)
+        await self.subscription.close()
 
 
 def _require_completed_profile(completed: bool) -> None:

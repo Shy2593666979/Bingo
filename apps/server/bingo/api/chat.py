@@ -11,6 +11,12 @@ from bingo.services import chat as chat_service
 router = APIRouter(tags=["chat"], route_class=EnvelopeRoute)
 
 
+@router.post("/chat/speech/{run_id}/stop")
+async def stop_speech(run_id: str, request: Request, user: CurrentUserDependency):
+    await get_service_context(request).chat_speech.stop(user.id, run_id)
+    return {"stopped": True}
+
+
 @router.post("/chat", response_model=ChatResponse)
 async def create_chat(
     payload: ChatRequest, request: Request, session: SessionDependency, user: CurrentUserDependency

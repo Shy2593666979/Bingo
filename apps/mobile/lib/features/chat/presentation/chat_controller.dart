@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:bingo/core/device/device_tool_executor.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/chat/data/local_chat_store.dart';
+import 'package:bingo/features/chat/data/companion_store.dart';
+import 'package:bingo/features/chat/data/reply_audio_player.dart';
 import 'package:bingo/features/chat/models/chat_message.dart';
 import 'package:bingo/features/chat/models/assistant_segments.dart';
 import 'package:bingo/features/chat/models/chat_location.dart';
@@ -25,6 +27,71 @@ class ChatController extends ChangeNotifier {
         _engagement = engagement;
 
   final ChatGateway _gateway;
+  final _replyAudio = ReplyAudioPlayer();
+  final _companionStore = CompanionStore();
+  bool _readAloudEnabled = false;
+  bool _speechActive = false;
+  bool _acceptAudio = false;
+  String? _speechError;
+  bool get readAloudEnabled => _readAloudEnabled;
+  double lastAudioSeconds = 0;
+  DateTime? lastAudioStartedAt;
+  String? get speechError => _speechError;
+  String? get userId => _userId;
+
+  Future<void> activateSpeech() async {
+    _speechActive = true;
+    final userId = _userId;
+    if (userId == null) return;
+    dynamic enabled;
+    try {
+      enabled = await _companionStore.read(userId, 'read_aloud');
+    } catch (_) {
+      enabled = false;
+    }
+    if (_userId != userId || !_speechActive) return;
+    _readAloudEnabled = enabled == true;
+    _updateSpeechGateway();
+    notifyListeners();
+  }
+
+  void _updateSpeechGateway() {
+    if (_gateway case final ReplySpeechGateway gateway) {
+      gateway.readAloud = _readAloudEnabled && _speechActive;
+    }
+  }
+
+  Future<void> setReadAloud(bool enabled) async {
+    _readAloudEnabled = enabled;
+    _speechError = null;
+    _updateSpeechGateway();
+    if (!enabled) await stopSpeech();
+    notifyListeners();
+    final userId = _userId;
+    if (userId != null) {
+      try {
+        await _companionStore.write(userId, 'read_aloud', enabled);
+      } catch (_) {
+        _speechError = '朗读偏好未能保存，本次仍可使用';
+        notifyListeners();
+      }
+    }
+  }
+
+  void deactivateSpeech() {
+    _speechActive = false;
+    _updateSpeechGateway();
+    unawaited(stopSpeech());
+  }
+
+  Future<void> stopSpeech() async {
+    _acceptAudio = false;
+    await _replyAudio.stop();
+    if (_gateway case final ReplySpeechGateway gateway) {
+      unawaited(gateway.stopReplySpeech());
+    }
+  }
+
   final DeviceActionGateway? _deviceActions;
   final DeviceToolExecutor? _deviceToolExecutor;
   final LocalChatStore? _localStore;
@@ -207,6 +274,8 @@ class ChatController extends ChangeNotifier {
   }
 
   void unbindUser() {
+    deactivateSpeech();
+    _readAloudEnabled = false;
     _bindingSequence++;
     _stopRecoveryPolling();
     _runSequence++;
@@ -260,19 +329,55 @@ class ChatController extends ChangeNotifier {
     await _sendMessage(content);
   }
 
+  Future<void> sendSpoken(String content) =>
+      _sendMessage(content.trim(), spoken: true);
+
+  MomentGateway? get momentGateway =>
+      _gateway is MomentGateway ? _gateway as MomentGateway : null;
+
+  Future<void> sendMomentSummary(
+      String feature, String summary, String sessionId) async {
+    if (_messages.any((message) =>
+        message.runId == sessionId &&
+        message.role == ChatRole.assistant &&
+        message.status == ChatMessageStatus.completed)) {
+      return;
+    }
+    if (momentGateway == null || _conversationId == null) {
+      throw StateError('陪伴功能暂不可用');
+    }
+    await _sendMessage('[$feature] $summary',
+        momentFeature: feature,
+        momentSummary: summary,
+        momentSessionId: sessionId);
+  }
+
   Future<void> _sendMessage(
     String content, {
     ChatImageUpload? image,
     ChatLocation? location,
+    bool spoken = false,
+    String? momentFeature,
+    String? momentSummary,
+    String? momentSessionId,
   }) async {
     if (content.isEmpty && image == null && location == null) return;
+    await stopSpeech();
+    _acceptAudio = (spoken || _readAloudEnabled) && _speechActive;
+    lastAudioSeconds = 0;
+    lastAudioStartedAt = null;
+    if (_gateway case final ReplySpeechGateway gateway) {
+      gateway.readAloud = _acceptAudio;
+    }
+    _speechError = null;
 
     final supersededRunId = _activeRunId;
     if (supersededRunId != null) {
       _markRunInterrupted(supersededRunId);
     }
     final generation = ++_runSequence;
-    final runId = 'mobile-${DateTime.now().microsecondsSinceEpoch}-$generation';
+    final runId = momentSessionId ??
+        'mobile-${DateTime.now().microsecondsSinceEpoch}-$generation';
     _activeRunId = runId;
     _attachedRunId = runId;
 
@@ -284,7 +389,12 @@ class ChatController extends ChangeNotifier {
 
     final createdAt = DateTime.now();
     final timestamp = createdAt.microsecondsSinceEpoch;
-    final userMessageIndex = _messages.length;
+    final existingMomentIndex = momentSessionId == null
+        ? -1
+        : _messages.indexWhere((message) =>
+            message.runId == momentSessionId && message.role == ChatRole.user);
+    final userMessageIndex =
+        existingMomentIndex < 0 ? _messages.length : existingMomentIndex;
     final displayedContent = location != null
         ? '[位置] ${location.name}：${location.address}'
         : content.isEmpty
@@ -293,19 +403,22 @@ class ChatController extends ChangeNotifier {
     _title ??= displayedContent.length > 80
         ? displayedContent.substring(0, 80)
         : displayedContent;
-    _addMessage(
-      ChatMessage(
-        id: 'local-user-$timestamp',
-        role: ChatRole.user,
-        content: displayedContent,
-        imageBytes: image?.bytes,
-        type:
-            location == null ? ChatMessageType.chat : ChatMessageType.location,
-        location: location,
-        createdAt: createdAt,
-        runId: runId,
-      ),
-    );
+    if (existingMomentIndex < 0) {
+      _addMessage(
+        ChatMessage(
+          id: 'local-user-$timestamp',
+          role: ChatRole.user,
+          content: displayedContent,
+          imageBytes: image?.bytes,
+          type: location == null
+              ? ChatMessageType.chat
+              : ChatMessageType.location,
+          location: location,
+          createdAt: createdAt,
+          runId: runId,
+        ),
+      );
+    }
     final assistantMessageStartIndex = _messages.length;
     _status = ChatStatus.sending;
     _errorMessage = null;
@@ -314,22 +427,50 @@ class ChatController extends ChangeNotifier {
 
     try {
       var segmentIndex = 0;
-      final events = location != null
-          ? (_gateway as LocationGateway).sendLocation(
-              conversationId: _conversationId,
-              location: location,
-              runId: runId,
-              supersedesRunId: supersededRunId)
-          : _gateway.send(
-              conversationId: _conversationId,
-              content: content,
-              runId: runId,
-              supersedesRunId: supersededRunId,
-              images: image == null ? const [] : [image],
-            );
+      final events = momentFeature != null
+          ? momentGateway!.finishMoment(
+              conversationId: _conversationId!,
+              sessionId: momentSessionId!,
+              feature: momentFeature,
+              summary: momentSummary!)
+          : location != null
+              ? (_gateway as LocationGateway).sendLocation(
+                  conversationId: _conversationId,
+                  location: location,
+                  runId: runId,
+                  supersedesRunId: supersededRunId)
+              : _gateway.send(
+                  conversationId: _conversationId,
+                  content: content,
+                  runId: runId,
+                  supersedesRunId: supersededRunId,
+                  images: image == null ? const [] : [image],
+                );
       await for (final event in events) {
         if (generation != _runSequence) continue;
         switch (event) {
+          case ChatAudio():
+            lastAudioSeconds += event.bytes.length / 48000;
+            if (_acceptAudio && _speechActive) {
+              try {
+                await _replyAudio.add(event.bytes);
+                lastAudioStartedAt ??= DateTime.now();
+              } catch (_) {
+                _speechError = '朗读播放失败，文字回复不受影响';
+                await stopSpeech();
+              }
+            }
+          case ChatAudioDone():
+            if (_acceptAudio) {
+              try {
+                await _replyAudio.finish();
+              } catch (_) {
+                await stopSpeech();
+              }
+            }
+          case ChatAudioError():
+            _speechError = event.message;
+            await stopSpeech();
           case ChatStarted():
             _conversationId = event.conversationId;
             if (event.userMessageId != null && event.createdAt != null) {
@@ -381,8 +522,10 @@ class ChatController extends ChangeNotifier {
             _deviceActionItems.add(event.action);
             _pendingTimelineActions.add(event.action);
           case ChatIncomingCall():
+            await stopSpeech();
             _incomingCall = event.invitation;
           case ChatInterrupted():
+            await stopSpeech();
             _markRunInterrupted(event.runId);
             _status = ChatStatus.idle;
             _activeRunId = null;
@@ -799,6 +942,7 @@ class ChatController extends ChangeNotifier {
 
   @override
   void dispose() {
+    deactivateSpeech();
     _stopRecoveryPolling();
     super.dispose();
   }

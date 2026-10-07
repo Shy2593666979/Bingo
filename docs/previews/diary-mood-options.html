@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bingo · 今日小记心情表情预览</title>
+  <style>
+    :root{--ink:#203b33;--muted:#81958b;--green:#447f65;--bg:#f6fbf8;--line:#dfebe3;--soft:#eaf5ef}
+    *{box-sizing:border-box}body{margin:0;background:#edf4f0;color:var(--ink);font-family:system-ui,-apple-system,"Microsoft YaHei",sans-serif}button,textarea{font:inherit}button{cursor:pointer}button:focus-visible,textarea:focus-visible{outline:3px solid #8ec4ae;outline-offset:3px}svg{display:block}.sprite{position:absolute;width:0;height:0;overflow:hidden}.studio{max-width:1320px;margin:auto;padding:40px 28px 50px}.brand{display:flex;align-items:center;gap:12px;font-weight:700;font-size:18px}.brand img{width:40px;height:40px;object-fit:contain}.brand span{margin-left:auto;font-size:12px;font-weight:400;color:var(--muted)}h1{font-size:30px;letter-spacing:-1px;margin:30px 0 12px}.intro{color:#6a8275;font-size:14px;line-height:1.9;max-width:780px}.options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px;margin-top:30px}.heading{padding:0 6px 14px;display:flex;align-items:center;gap:10px}.heading b{font-size:14px}.badge{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:#dcece2;color:var(--green);font-weight:700}.heading small{color:var(--muted);margin-left:auto;font-size:11px}.phone{min-height:724px;background:var(--bg);border:1px solid #d7e5dc;border-radius:34px;padding:20px 16px 24px;box-shadow:0 18px 42px #244d3b0a}.status{display:flex;justify-content:space-between;align-items:center;padding:0 8px 20px;font-size:12px;font-weight:600}.status span:last-child{font-size:11px;letter-spacing:3px}.topbar{display:flex;align-items:center;justify-content:space-between;height:46px;margin-bottom:20px}.topbar h2{font-size:19px;margin:0}.back{width:30px;padding:4px;border:0;background:transparent;color:var(--ink)}.icon{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.history{color:var(--green);font-size:12px}.partner{display:flex;align-items:center;gap:12px;margin:0 4px 20px}.avatar{width:42px;height:42px;border-radius:50%;object-fit:cover;background:#ffe9e8}.partner strong{font-size:14px}.partner p{margin:5px 0 0;font-size:11px;color:var(--muted);line-height:1.7}.paper{border:1px solid var(--line);border-radius:24px;background:white;padding:20px 16px}.paper h3{font-size:18px;line-height:1.5;margin:0 0 20px;letter-spacing:-.3px}.label{display:block;font-size:12px;color:#768d7f;margin-bottom:12px}.moods{display:flex;flex-wrap:wrap;gap:8px}.mood{display:flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--line);border-radius:999px;background:var(--bg);color:#73887d;padding:8px 11px;font-size:12px;transition:background .18s,border-color .18s,transform .18s}.mood:hover{transform:translateY(-1px);background:#eff8f2}.mood[aria-pressed="true"]{border-color:#95b8a5;background:#edf6ef;color:#3e7058;font-weight:600}.face{width:28px;height:28px;flex:none;fill:none;stroke:#56856a;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}.cheerful{--face-fill:#fff1c9;--face-edge:#b69954}.okay{--face-fill:#e1f2e8;--face-edge:#56856a}.tired{--face-fill:#eee9f5;--face-edge:#9482a9}.sad{--face-fill:#e5eff8;--face-edge:#7c9fb4}.face{stroke:var(--face-edge,#56856a)}.face .base{fill:var(--face-fill,#e1f2e8);stroke:none}.face .cheek{fill:#eaa3a0;stroke:none;opacity:.5}.mood[aria-pressed="false"] .face{opacity:.82}.entry-label{display:block;margin:22px 0 10px;font-size:12px;color:#768d7f}textarea{display:block;resize:vertical;width:100%;min-height:172px;padding:14px;border:1px solid #e3ece6;background:#fafcfb;border-radius:16px;font-size:13px;line-height:1.9;color:var(--ink)}textarea::placeholder{color:#a0afa5}.save{width:100%;height:46px;margin-top:18px;border:1px solid var(--line);border-radius:15px;color:var(--green);background:var(--bg);display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:600}.save .icon{width:18px;height:18px}.hint{text-align:center;margin:16px 0 0;font-size:10px;color:#97a99d;line-height:1.7}.feedback{min-height:40px;font-size:12px;text-align:center;padding-top:14px;color:var(--green);line-height:1.8}.note{font-size:12px;color:#748b7d;line-height:1.9;margin:15px 8px 0}.b .moods{display:grid;grid-template-columns:1fr 1fr;gap:9px}.b .mood{border-radius:16px;padding:14px 10px;gap:9px}.b .face{width:32px;height:32px}.b textarea{min-height:130px}.c .moods{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.c .mood{flex-direction:column;border-color:transparent;background:transparent;border-radius:17px;padding:12px 2px 9px;font-size:11px;gap:9px}.c .mood[aria-pressed="true"]{background:#edf6ef;border-color:#b4cebe}.c .face{width:38px;height:38px}.c textarea{min-height:158px}footer{margin-top:30px;font-size:12px;color:var(--muted);line-height:1.9}@media(max-width:1060px){.options{grid-template-columns:repeat(2,minmax(0,1fr))}.option{max-width:440px}}@media(max-width:680px){.studio{padding:24px 16px}.options{grid-template-columns:1fr;gap:30px}.option{width:100%;max-width:420px;margin:auto}h1{font-size:26px}.brand span{font-size:10px}.phone{min-height:700px}}@media(prefers-reduced-motion:reduce){.mood{transition:none}.mood:hover{transform:none}}
+  </style>
+</head>
+<body>
+  <svg class="sprite" aria-hidden="true"><defs>
+    <symbol id="back" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></symbol>
+    <symbol id="diary" viewBox="0 0 24 24"><path d="M6 3h11a2 2 0 0 1 2 2v16H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3ZM6 3v18M10 8h5M10 12h5M10 16h3"/></symbol>
+    <symbol id="cheerful" viewBox="0 0 40 40"><circle class="base" cx="20" cy="20" r="18"/><path d="M12 17q2.5-3.5 5 0m6 0q2.5-3.5 5 0" stroke-width="1.8"/><path d="M15 23q5 1.5 10 0c-.5 3.5-2.3 5.5-5 5.5s-4.5-2-5-5.5Z" fill="#a48a57" stroke="none"/><ellipse class="cheek" cx="10" cy="22" rx="2.5" ry="1.5" style="opacity:.32"/><ellipse class="cheek" cx="30" cy="22" rx="2.5" ry="1.5" style="opacity:.32"/></symbol>
+    <symbol id="okay" viewBox="0 0 40 40"><circle class="base" cx="20" cy="20" r="18"/><g fill="#56856a" stroke="none"><circle cx="14.5" cy="17" r="1.3"/><circle cx="25.5" cy="17" r="1.3"/></g><path d="M16 24q4 4 8 0" stroke-width="1.8"/><ellipse class="cheek" cx="10" cy="22" rx="2.5" ry="1.5" style="opacity:.32"/><ellipse class="cheek" cx="30" cy="22" rx="2.5" ry="1.5" style="opacity:.32"/></symbol>
+    <symbol id="tired" viewBox="0 0 40 40"><circle class="base" cx="20" cy="20" r="18"/><path d="M10 17q3 3 6 0m8 0q3 3 6 0"/><ellipse cx="20" cy="27" rx="2.5" ry="3"/><path d="M27 7h5l-5 5h5"/></symbol>
+    <symbol id="sad" viewBox="0 0 40 40"><circle class="base" cx="20" cy="20" r="18"/><path d="m10 13 6 2m8 0 6-2M13 18v2m14-2v2M14 28q6-6 12 0"/><path d="M31 20q-4 5 0 5t0-5Z" fill="#a6c9df" stroke="none"/></symbol>
+  </defs></svg>
+  <main class="studio">
+    <header class="brand"><img src="assets/ui-kit/bingo_logo.png" alt="Bingo">Bingo<span>今日小记 · 心情表情设计预览</span></header>
+    <h1>一排小心情，笑得自然一点。</h1>
+    <div class="intro">已选 C 的一排布局。这次只调整「很开心」和「还不错」：弯弯笑眼搭配小幅张嘴笑，小圆眼搭配轻轻微笑。缩小嘴巴、减淡腮红，保留四种心情和浅薄荷配色。全部是绘制的 SVG 图标，不用 Unicode 表情。A、B 留作对照，App 暂未修改。</div>
+    <section class="options" aria-label="三种心情设计方案">
+      <article class="option a" data-style="a"><div class="heading"><span class="badge">A</span><b>表情胶囊</b><small>保留作对照</small></div><div class="phone"></div><p class="note">在现在的心情标签里加一枚小表情。轻量、熟悉，不改变原来的使用方式。</p></article>
+      <article class="option b" data-style="b"><div class="heading"><span class="badge">B</span><b>柔软心情卡</b><small>两列排布 · 更好点选</small></div><div class="phone"></div><p class="note">四种心情各有一张小卡片，触控区域更宽。表情更明显，整体稍有仪式感。</p></article>
+      <article class="option c" id="scheme-c" data-style="c"><div class="heading"><span class="badge">C</span><b>一排小心情</b><small>已选布局 · 表情优化</small></div><div class="phone"></div><p class="note">四种心情保持一行。「很开心」是小幅张嘴笑，「还不错」是安静的微笑，眼睛和嘴巴比例更柔和。</p></article>
+    </section>
+    <footer>仅为 HTML 视觉预览，App 的心情选择尚未修改。保存按钮仅演示反馈，不联网、不写聊天记录、不持久保存小记。选定方案后再实现到 App。</footer>
+  </main>
+  <script>
+    const moods = [{name:'很开心',icon:'cheerful'}, {name:'还不错',icon:'okay'}, {name:'有点累',icon:'tired'}, {name:'不太好',icon:'sad'}];
+    for (const option of document.querySelectorAll('.option')) {
+      const phone = option.querySelector('.phone');
+      phone.innerHTML = `<div class="status"><span>09:41</span><span>▂▄▆ ▰</span></div><div class="topbar"><button class="back" aria-label="预览返回"><svg class="icon" aria-hidden="true"><use href="#back"/></svg></button><h2>今日小记</h2><span class="history">记录</span></div><div class="partner"><img class="avatar" src="../../apps/mobile/assets/images/girlfriend.png" alt="甜甜"><div><strong>和甜甜</strong><p>今天的心情和小事，都可以留在这里</p></div></div><section class="paper"><h3>今天，有什么想记住的？</h3><span class="label">此刻的心情</span><div class="moods" role="group" aria-label="选择心情">${moods.map(mood=>`<button class="mood ${mood.icon}" aria-pressed="${mood.icon==='okay'}" data-mood="${mood.name}"><svg class="face" aria-hidden="true"><use href="#${mood.icon}"/></svg><span>${mood.name}</span></button>`).join('')}</div><label class="entry-label" for="entry-${option.dataset.style}">写下一点今天</label><textarea id="entry-${option.dataset.style}" maxlength="2000" placeholder="一件小事，一点心情，都值得被记住">今天散步回来，发现路边的树已经有一点秋天的颜色了。</textarea><button class="save"><svg class="icon" aria-hidden="true"><use href="#diary"/></svg>保存今日小记</button></section><div class="feedback" role="status" aria-live="polite"></div>`;
+      for (const button of phone.querySelectorAll('.mood')) {
+        button.addEventListener('click', () => {
+          for (const other of phone.querySelectorAll('.mood')) other.setAttribute('aria-pressed', String(other === button));
+          phone.querySelector('.feedback').textContent = '';
+        });
+      }
+      phone.querySelector('.save').addEventListener('click', () => {
+        const mood = phone.querySelector('.mood[aria-pressed="true"]').dataset.mood;
+        const content = phone.querySelector('textarea').value.trim();
+        phone.querySelector('.feedback').textContent = content ? `预览：心情「${mood}」，保存后返回聊天。` : '先写下一点今天的小事吧。';
+      });
+      phone.querySelector('.back').addEventListener('click', () => {
+        phone.querySelector('.feedback').textContent = '这里只预览今日小记，不会退出页面。';
+      });
+    }
+  </script>
+</body>
+</html>

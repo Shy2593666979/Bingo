@@ -12,6 +12,7 @@ import 'package:bingo/features/auth/presentation/auth_page.dart';
 import 'package:bingo/features/auth/presentation/user_setup_page.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/chat/data/local_chat_store.dart';
+import 'package:bingo/features/chat/data/companion_reminders.dart';
 import 'package:bingo/features/chat/presentation/chat_controller.dart';
 import 'package:bingo/features/splash/presentation/splash_page.dart';
 import 'package:flutter/material.dart';
@@ -125,6 +126,12 @@ class _BingoAppState extends State<BingoApp> with WidgetsBindingObserver {
   }
 
   Future<void> _logout() async {
+    await _controller.stopSpeech();
+    try {
+      await CompanionReminders().cancelAll();
+    } catch (_) {
+      _controller.deactivateSpeech();
+    }
     await _pushRegistration.deactivate();
     try {
       await _gateway.logout();

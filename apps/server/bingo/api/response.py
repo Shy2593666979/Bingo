@@ -21,6 +21,7 @@ class EnvelopeRoute(APIRoute):
     def __init__(self, path: str, endpoint, **kwargs):
         binary_paths = {
             "/chat/stream",
+            "/moments/stream",
             "/chat/images/{image_id}",
             "/role-voice-samples/{token}",
             "/locations/map",

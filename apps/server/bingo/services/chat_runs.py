@@ -80,6 +80,7 @@ class ChatRunService:
         image_id: str | None = None,
         image_mime_type: str | None = None,
         location: LocationInput | None = None,
+        include_text_deltas: bool = False,
     ) -> ChatRunSubscription:
         key = (user_id, run_id)
         async with self._lock:
@@ -102,6 +103,7 @@ class ChatRunService:
                         image_id=image_id,
                         image_mime_type=image_mime_type,
                         location=location,
+                        include_text_deltas=include_text_deltas,
                     ),
                     name=f"chat-run-{run_id}",
                 )
@@ -133,6 +135,7 @@ class ChatRunService:
         image_id: str | None,
         image_mime_type: str | None,
         location: LocationInput | None,
+        include_text_deltas: bool = False,
     ) -> None:
         try:
             async with self._session_factory() as session:
@@ -149,6 +152,7 @@ class ChatRunService:
                     image_id=image_id,
                     image_mime_type=image_mime_type,
                     location=location,
+                    **({"include_text_deltas": True} if include_text_deltas else {}),
                 ):
                     await self._publish(state, event)
         except asyncio.CancelledError:

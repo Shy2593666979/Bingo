@@ -16,6 +16,9 @@ abstract final class BingoPalette {
   static const mintBackground = Color(0xFFF6FBF9);
   static const mintTint = Color(0xFFE3F3EB);
   static const mintPrimary = Color(0xFF267F67);
+  static const chatMenuSurface = Color(0xFFF6FBF8);
+  static const chatMenuInk = Color(0xFF447F65);
+  static const chatMenuBorder = Color(0xFFDFEBE3);
 
   static const brandGradient = LinearGradient(
     begin: Alignment.topLeft,

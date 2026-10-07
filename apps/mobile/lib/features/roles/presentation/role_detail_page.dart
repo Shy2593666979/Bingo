@@ -5,6 +5,7 @@ import 'package:bingo/features/chat/models/chat_message.dart';
 import 'package:bingo/features/roles/role_traits.dart';
 import 'package:bingo/shared/widgets/assistant_avatar.dart';
 import 'package:bingo/shared/widgets/user_avatar.dart';
+import 'package:bingo/shared/widgets/partner_action_icon.dart';
 import 'package:bingo/features/chat/presentation/widgets/location_card.dart';
 import 'package:flutter/material.dart';
 
@@ -202,13 +203,13 @@ class _RoleDetailPageState extends State<RoleDetailPage> {
                 Expanded(
                     child: FilledButton.icon(
                         onPressed: _busy ? null : _chat,
-                        icon: const Icon(Icons.chat_bubble_rounded),
+                        icon: const PartnerActionIcon(symbol: PartnerActionSymbol.chat),
                         label: Text(_busy ? '正在进入…' : '进入聊天'))),
                 if (widget.onEdit != null) ...[
                   const SizedBox(width: 12),
                   OutlinedButton.icon(
                       onPressed: _edit,
-                      icon: const Icon(Icons.edit_outlined),
+                      icon: const PartnerActionIcon(symbol: PartnerActionSymbol.edit),
                       label: const Text('编辑伙伴'))
                 ],
               ]))),

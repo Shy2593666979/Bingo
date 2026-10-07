@@ -41,6 +41,43 @@ class ChatSegment extends ChatStreamEvent {
   final String content;
 }
 
+class ChatAudio extends ChatStreamEvent {
+  const ChatAudio(this.bytes);
+  final Uint8List bytes;
+}
+
+class ChatAudioDone extends ChatStreamEvent {
+  const ChatAudioDone();
+}
+
+class ChatAudioError extends ChatStreamEvent {
+  const ChatAudioError(this.message);
+  final String message;
+}
+
+abstract interface class ReplySpeechGateway {
+  bool get readAloud;
+  set readAloud(bool enabled);
+  Future<void> stopReplySpeech();
+}
+
+abstract interface class MomentGateway {
+  Stream<ChatStreamEvent> generateMoment(
+      {required String conversationId,
+      required String runId,
+      required String mode,
+      required String previous,
+      required int seconds,
+      required double charactersPerSecond,
+      required bool closing});
+  Future<void> cancelMoment(String runId);
+  Stream<ChatStreamEvent> finishMoment(
+      {required String conversationId,
+      required String sessionId,
+      required String feature,
+      required String summary});
+}
+
 class ChatFinished extends ChatStreamEvent {
   const ChatFinished(
     this.messageId, {
@@ -394,12 +431,116 @@ class HttpApiGateway
         MemoryGateway,
         EngagementGateway,
         PushGateway,
-        LocationGateway {
+        LocationGateway,
+        ReplySpeechGateway,
+        MomentGateway {
   HttpApiGateway({required this.config});
 
   final AppConfig config;
   final HttpClient _client = HttpClient();
   String? accessToken;
+  @override
+  bool readAloud = false;
+  final Set<String> _speechRuns = {};
+  final Map<String, HttpClient> _momentClients = {};
+
+  @override
+  Future<void> cancelMoment(String runId) async {
+    _momentClients.remove(runId)?.close(force: true);
+    try {
+      await _request('POST', config.endpoint('/chat/speech/$runId/stop'));
+    } on Exception {
+      return;
+    }
+  }
+
+  @override
+  Stream<ChatStreamEvent> generateMoment(
+      {required String conversationId,
+      required String runId,
+      required String mode,
+      required String previous,
+      required int seconds,
+      required double charactersPerSecond,
+      required bool closing}) async* {
+    final client = HttpClient();
+    _momentClients[runId] = client;
+    try {
+      final request = await client
+          .postUrl(config.endpoint('/moments/stream'))
+          .timeout(const Duration(seconds: 15));
+      _prepareRequest(request);
+      request.write(jsonEncode({
+        'conversation_id': conversationId,
+        'run_id': runId,
+        'mode': mode,
+        'previous': previous,
+        'seconds': seconds,
+        'characters_per_second': charactersPerSecond,
+        'closing': closing
+      }));
+      final response =
+          await request.close().timeout(const Duration(seconds: 30));
+      if (response.statusCode != 200) {
+        throw const ApiException('陪伴连接失败，请重试');
+      }
+      await for (final line in response
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .timeout(const Duration(seconds: 60))) {
+        if (line.trim().isEmpty) continue;
+        final event = jsonDecode(line) as Map<String, dynamic>;
+        switch (event['type']) {
+          case 'narrative':
+            yield ChatSegment(event['content'] as String);
+          case 'audio':
+            yield ChatAudio(base64Decode(event['data'] as String));
+          case 'audio_done':
+            yield const ChatAudioDone();
+          case 'error':
+          case 'audio_error':
+            throw const ApiException('陪伴声音暂时不可用，请重试');
+        }
+      }
+    } finally {
+      _momentClients.remove(runId);
+      client.close(force: true);
+    }
+  }
+
+  @override
+  Stream<ChatStreamEvent> finishMoment(
+      {required String conversationId,
+      required String sessionId,
+      required String feature,
+      required String summary}) async* {
+    final result =
+        await _request('POST', config.endpoint('/moments/finish'), body: {
+      'conversation_id': conversationId,
+      'session_id': sessionId,
+      'feature': feature,
+      'summary': summary
+    }) as Map<String, dynamic>;
+    final createdAt = DateTime.parse(result['created_at'] as String);
+    yield ChatStarted(conversationId,
+        userMessageId: result['user_message_id'] as String,
+        createdAt: createdAt);
+    yield ChatSegment(result['content'] as String);
+    yield ChatFinished(result['message_id'] as String,
+        createdAt: createdAt,
+        assistantRole: result['assistant_role'] as String?);
+  }
+
+  @override
+  Future<void> stopReplySpeech() async {
+    for (final runId in _speechRuns.toList()) {
+      try {
+        await _request('POST', config.endpoint('/chat/speech/$runId/stop'));
+      } catch (_) {
+        continue;
+      }
+    }
+  }
 
   @override
   Future<ConversationSummary> openRoleConversation(String roleId) async {
@@ -507,11 +648,13 @@ class HttpApiGateway
     ChatLocation? location,
   }) async* {
     final uri = config.endpoint('/chat/stream');
+    final spoken = readAloud;
     final request =
         await _client.postUrl(uri).timeout(const Duration(seconds: 15));
     _prepareRequest(request);
     request.write(jsonEncode({
       'conversation_id': conversationId,
+      if (spoken) 'read_aloud': true,
       if (location != null) 'location': location.toJson(),
       'content': content,
       'run_id': runId,
@@ -530,40 +673,52 @@ class HttpApiGateway
       throw HttpException('HTTP ${response.statusCode}: $payload', uri: uri);
     }
 
-    await for (final line
-        in response.transform(utf8.decoder).transform(const LineSplitter())) {
-      if (line.trim().isEmpty) continue;
-      final json = jsonDecode(line) as Map<String, dynamic>;
-      switch (json['type']) {
-        case 'start':
-          yield ChatStarted(
-            json['conversation_id'] as String,
-            userMessageId: json['user_message_id'] as String?,
-            imageId: json['image_id'] as String?,
-            createdAt: json['created_at'] == null
-                ? null
-                : DateTime.parse(json['created_at'] as String),
-          );
-        case 'segment':
-          yield ChatSegment(json['content'] as String);
-        case 'done':
-          yield ChatFinished(
-            json['message_id'] as String,
-            createdAt: json['created_at'] == null
-                ? null
-                : DateTime.parse(json['created_at'] as String),
-            assistantRole: json['assistant_role'] as String?,
-          );
-        case 'interrupted':
-          yield ChatInterrupted(json['run_id'] as String? ?? runId);
-        case 'approval_required':
-          yield ChatApprovalRequired(DeviceAction.fromJson(json));
-        case 'incoming_call':
-          yield ChatIncomingCall(IncomingCallInvitation.fromJson(json));
-        case 'error':
-          throw HttpException(json['message'] as String? ?? '服务端处理失败',
-              uri: uri);
+    if (spoken) _speechRuns.add(runId);
+    if (spoken && !readAloud) unawaited(stopReplySpeech());
+    try {
+      await for (final line
+          in response.transform(utf8.decoder).transform(const LineSplitter())) {
+        if (line.trim().isEmpty) continue;
+        final json = jsonDecode(line) as Map<String, dynamic>;
+        switch (json['type']) {
+          case 'start':
+            yield ChatStarted(
+              json['conversation_id'] as String,
+              userMessageId: json['user_message_id'] as String?,
+              imageId: json['image_id'] as String?,
+              createdAt: json['created_at'] == null
+                  ? null
+                  : DateTime.parse(json['created_at'] as String),
+            );
+          case 'segment':
+            yield ChatSegment(json['content'] as String);
+          case 'audio':
+            yield ChatAudio(base64Decode(json['data'] as String));
+          case 'audio_done':
+            yield const ChatAudioDone();
+          case 'audio_error':
+            yield ChatAudioError(json['message'] as String);
+          case 'done':
+            yield ChatFinished(
+              json['message_id'] as String,
+              createdAt: json['created_at'] == null
+                  ? null
+                  : DateTime.parse(json['created_at'] as String),
+              assistantRole: json['assistant_role'] as String?,
+            );
+          case 'interrupted':
+            yield ChatInterrupted(json['run_id'] as String? ?? runId);
+          case 'approval_required':
+            yield ChatApprovalRequired(DeviceAction.fromJson(json));
+          case 'incoming_call':
+            yield ChatIncomingCall(IncomingCallInvitation.fromJson(json));
+          case 'error':
+            throw HttpException(json['message'] as String? ?? '服务端处理失败',
+                uri: uri);
+        }
       }
+    } finally {
+      _speechRuns.remove(runId);
     }
   }
 

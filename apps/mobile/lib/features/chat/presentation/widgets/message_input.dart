@@ -4,7 +4,9 @@ import 'dart:typed_data';
 import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/core/widgets/center_toast.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
+import 'package:bingo/features/chat/presentation/companion_moment_page.dart';
 import 'package:bingo/features/chat/presentation/widgets/companion_map.dart';
+import 'package:bingo/features/chat/presentation/widgets/chat_menu_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -17,6 +19,7 @@ class MessageInput extends StatefulWidget {
     this.onGallery,
     this.onCamera,
     this.onLocation,
+    this.onMoment,
     super.key,
   });
 
@@ -27,6 +30,7 @@ class MessageInput extends StatefulWidget {
   final VoidCallback? onGallery;
   final VoidCallback? onCamera;
   final VoidCallback? onLocation;
+  final ValueChanged<CompanionMoment>? onMoment;
 
   @override
   State<MessageInput> createState() => _MessageInputState();
@@ -604,6 +608,10 @@ class _MessageInputState extends State<MessageInput> {
                       groupId: _moreMenuTapRegionGroup,
                       onTapOutside: (_) => _hideMore(),
                       child: _MoreActionsPanel(
+                        onMoment: (kind) {
+                          _hideMore();
+                          widget.onMoment?.call(kind);
+                        },
                         onGallery: () {
                           _hideMore();
                           widget.onGallery?.call();
@@ -637,12 +645,14 @@ class _MoreActionsPanel extends StatelessWidget {
     required this.onLocation,
     required this.onCamera,
     required this.onCall,
+    required this.onMoment,
   });
 
   final VoidCallback onGallery;
   final VoidCallback onLocation;
   final VoidCallback onCamera;
   final VoidCallback onCall;
+  final ValueChanged<CompanionMoment> onMoment;
 
   @override
   Widget build(BuildContext context) {
@@ -657,28 +667,38 @@ class _MoreActionsPanel extends StatelessWidget {
           BoxShadow(color: Color(0x14205F4F), blurRadius: 20),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _MoreAction(
-            icon: Icons.photo_outlined,
-            label: '相册',
-            onTap: onGallery,
-          ),
-          _MoreAction(
-            icon: Icons.photo_camera_outlined,
-            label: '相机',
-            onTap: onCamera,
-          ),
-          _MoreAction(
-            icon: Icons.call_rounded,
-            label: '电话',
-            onTap: onCall,
-          ),
-          _MoreAction(
-              icon: Icons.location_on_outlined, label: '位置', onTap: onLocation),
-        ],
-      ),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _MoreAction(
+              icon: ChatMenuSymbol.photo,
+              label: '相册',
+              onTap: onGallery,
+            ),
+            _MoreAction(
+              icon: ChatMenuSymbol.camera,
+              label: '相机',
+              onTap: onCamera,
+            ),
+            _MoreAction(
+              icon: ChatMenuSymbol.call,
+              label: '电话',
+              onTap: onCall,
+            ),
+            _MoreAction(
+                icon: ChatMenuSymbol.point, label: '位置', onTap: onLocation),
+          ],
+        ),
+        const SizedBox(height: 18),
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          for (final kind in CompanionMoment.values)
+            _MoreAction(
+                icon: kind.icon,
+                label: kind.title,
+                onTap: () => onMoment(kind)),
+        ]),
+      ]),
     );
   }
 }
@@ -690,7 +710,7 @@ class _MoreAction extends StatelessWidget {
     required this.onTap,
   });
 
-  final IconData icon;
+  final ChatMenuSymbol icon;
   final String label;
   final VoidCallback onTap;
 
@@ -708,10 +728,11 @@ class _MoreAction extends StatelessWidget {
               width: 58,
               height: 58,
               decoration: BoxDecoration(
-                color: const Color(0xFFEEF6F3),
+                color: BingoPalette.chatMenuSurface,
+                border: Border.all(color: BingoPalette.chatMenuBorder),
                 borderRadius: BorderRadius.circular(18),
               ),
-              child: Icon(icon, color: BingoPalette.blue, size: 28),
+              child: Center(child: ChatMenuIcon(symbol: icon)),
             ),
             const SizedBox(height: 7),
             Text(label, style: const TextStyle(fontSize: 13)),

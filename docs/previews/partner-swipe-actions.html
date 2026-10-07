@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bingo · 伙伴卡片左滑操作</title>
+  <style>
+    :root{--bg:#f6fbf9;--ink:#203b33;--green:#447f65;--muted:#81958b;--line:#dfebe3;--pink:#c3676d}*{box-sizing:border-box}body{margin:0;background:#edf4f0;color:var(--ink);font-family:system-ui,-apple-system,"Microsoft YaHei",sans-serif}button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible{outline:3px solid #91c5af;outline-offset:3px}.sprite{width:0;height:0;position:absolute;overflow:hidden}.studio{max-width:1320px;margin:auto;padding:36px 24px}.brand{display:flex;align-items:center;gap:12px;font-weight:700}.brand img{width:36px;height:36px}.brand small{margin-left:auto;font-weight:400;font-size:12px;color:var(--muted)}h1{font-size:28px;letter-spacing:-.5px;margin:26px 0 12px}.intro{max-width:820px;font-size:14px;color:#708779;line-height:1.9}.variants{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin-top:26px}.heading{display:flex;align-items:center;gap:9px;margin:0 5px 14px}.heading b{font-size:14px}.heading small{margin-left:auto;color:var(--muted);font-size:11px}.badge{width:28px;height:28px;background:#dcece2;border-radius:9px;display:grid;place-items:center;color:var(--green);font-weight:700}.phone{border:1px solid #d7e5dc;border-radius:32px;background:var(--bg);box-shadow:0 18px 40px #244d3b0a;min-height:664px;padding:22px 14px;overflow:hidden}.status{display:flex;justify-content:space-between;font-size:11px;padding:0 10px 26px;font-weight:600}.space-title{display:flex;align-items:center;justify-content:space-between;padding:0 5px 20px}.space-title h2{margin:0 0 7px;font-size:23px}.space-title p{margin:0;font-size:11px;color:var(--muted)}.user-logo{width:43px;height:43px;object-fit:contain}.group-label{font-size:10px;color:#8ca295;margin:14px 4px 9px}.shell{--reveal:136px;--offset:0px;position:relative;isolation:isolate;overflow:hidden;border-radius:25px;min-height:142px;margin-bottom:18px}.shell.builtin{--reveal:72px}.tools{position:absolute;inset:0 0 0 auto;width:var(--reveal);display:flex;align-items:stretch;justify-content:flex-end;gap:8px;padding:8px 4px 8px 8px}.tool{min-width:0;flex:1;display:flex;flex-direction:column;gap:9px;align-items:center;justify-content:center;background:#e8f3ed;border:1px solid #d6e8de;border-radius:20px;color:var(--green);font-size:11px;transition:background .15s}.tool.delete{background:#fbefef;border-color:#f0dada;color:var(--pink)}.tool:hover{background:#dceee3}.tool.delete:hover{background:#f6e3e4}.icon{display:block;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;width:22px;height:22px}.card{position:relative;background:white;border-radius:25px;padding:16px 14px;min-height:142px;transform:translateX(var(--offset));transition:transform .22s ease-out;touch-action:pan-y;user-select:none;cursor:grab;box-shadow:0 4px 16px #244d3b03}.card.dragging{transition:none;cursor:grabbing}.card-main{display:flex;gap:12px;align-items:center}.avatar{width:58px;height:58px;border-radius:50%;object-fit:cover;flex:none}.identity{min-width:0;flex:1}.name-row{display:flex;align-items:center;gap:6px}.name-row h3{font-size:18px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}.enter{border:0;border-radius:999px;background:#eaf6f0;color:var(--green);padding:8px 10px;display:flex;align-items:center;gap:5px;font-size:11px}.enter .icon{width:14px;height:14px}.description{margin:8px 0 0;font-size:11px;color:#85928f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.traits{display:flex;gap:6px;margin-top:14px;justify-content:center}.trait{display:flex;align-items:center;gap:4px;font-size:9px;border-radius:999px;background:#edf7f2;color:#517566;padding:5px 7px;white-space:nowrap}.trait .icon{width:12px;height:12px}.b .shell{--reveal:92px}.b .shell.builtin{--reveal:92px}.b .tools{flex-direction:column;padding:5px 3px 5px 8px;gap:8px}.b .tool{flex-direction:row;border-radius:15px;font-size:11px;gap:7px}.b .tool .icon{width:18px;height:18px}.b .shell.builtin .tools{justify-content:center}.b .shell.builtin .tool{flex:0 0 58px}.c .tools{align-items:center;background:transparent;padding:0 4px 0 8px;gap:8px}.c .tool{border:0;background:transparent;border-radius:16px;gap:8px;padding:10px 0}.c .tool .disc{width:48px;height:48px;display:grid;place-items:center;background:#e8f3ed;border:1px solid #d6e8de;border-radius:50%}.c .tool.delete .disc{background:#fbefef;border-color:#f0dada}.reset{display:block;margin:18px auto 0;padding:8px 16px;border:1px solid var(--line);background:white;border-radius:999px;color:#6f8879;font-size:11px}.help{font-size:11px;line-height:1.9;text-align:center;color:#97a99d;margin:20px 6px 0}.feedback{min-height:50px;font-size:12px;line-height:1.8;text-align:center;color:var(--green);margin:18px 5px 0}.note{font-size:12px;color:#748b7d;line-height:1.9;margin:14px 6px 0}.create{display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:#edf7f2;border-radius:22px;width:100%;height:48px;margin-top:28px;color:var(--green);font-size:14px;font-weight:600}.create .icon{width:20px;height:20px}footer{margin:28px 0 12px;font-size:12px;line-height:1.9;color:var(--muted)}dialog{border:1px solid #dce9e1;border-radius:24px;width:min(380px,calc(100% - 36px));padding:24px;color:var(--ink);box-shadow:0 24px 80px #203b3322}dialog::backdrop{background:#203b3340}dialog h2{font-size:19px;margin:0 0 15px}dialog p{font-size:13px;color:#7b9183;line-height:1.9}dialog label{display:block;font-size:12px;color:#7b9183;margin:16px 0 8px}dialog input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#f8fcfa;color:var(--ink)}.dialog-actions{display:flex;gap:10px;margin-top:22px}.dialog-actions button{flex:1;border:1px solid var(--line);background:#f2f8f4;border-radius:12px;height:42px;color:var(--green);font-size:13px}.dialog-actions .danger{background:#fbefef;border-color:#f0dada;color:var(--pink)}@media(max-width:1100px){.variants{grid-template-columns:repeat(2,minmax(0,1fr))}.variant{max-width:410px}}@media(max-width:720px){.studio{padding:24px 16px}.variants{grid-template-columns:1fr;gap:28px}.variant{width:100%;margin:auto}.brand small{font-size:10px}h1{font-size:25px}}@media(prefers-reduced-motion:reduce){.card{transition:none}}
+  </style>
+</head>
+<body>
+  <svg class="sprite" aria-hidden="true"><defs>
+    <symbol id="edit" viewBox="0 0 24 24"><path d="m15 5 4 4M4 20l5-1L20 8a2.8 2.8 0 0 0-4-4L5 15Z"/></symbol>
+    <symbol id="delete" viewBox="0 0 24 24"><path d="M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7"/></symbol>
+    <symbol id="chat" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 1-8 8H7l-4 3 1-6a8 8 0 1 1 16-5Z"/><path d="M8 11h.1M12 11h.1M16 11h.1"/></symbol>
+    <symbol id="heart" viewBox="0 0 24 24"><path d="M12 20 4 12C-1 5 7 0 12 7c5-7 13-2 8 5Z"/></symbol>
+    <symbol id="leaf" viewBox="0 0 24 24"><path d="M4 20 17 7M6 16C-2 6 14 2 21 3c-1 9-4 18-15 13Z"/></symbol>
+    <symbol id="plus" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></symbol>
+  </defs></svg>
+  <main class="studio">
+    <header class="brand"><img src="assets/ui-kit/bingo_logo.png" alt="Bingo">Bingo<small>伙伴卡片 · 左滑编辑与删除</small></header>
+    <h1>卡片不变，左滑操作再轻一点。</h1>
+    <p class="intro">保留原来的伙伴卡片，只比较左滑后出现的操作区域。系统默认伙伴仅有编辑，自定义伙伴有编辑和删除。初始已展开，可以用手指或鼠标左右拖动；点按钮还能查看编辑、删除确认的示意。</p>
+    <section class="variants">
+      <article class="variant a"><div class="heading"><span class="badge">A</span><b>柔和独立胶囊</b><small>轻薄荷 + 浅玫瑰</small></div><div class="phone"></div><p class="note">不再铺满两块大色块。编辑与删除各有独立圆角，周围留一点空隙，延续卡片的柔软感。</p></article>
+      <article class="variant b"><div class="heading"><span class="badge">B</span><b>窄侧栏双按钮</b><small>展开宽度更小</small></div><div class="phone"></div><p class="note">编辑在上、删除在下。露出的区域更窄，卡片保留更多内容；默认伙伴只显示一个居中的编辑按钮。</p></article>
+      <article class="variant c"><div class="heading"><span class="badge">C</span><b>圆形轻操作</b><small>最轻巧 · 推荐</small></div><div class="phone"></div><p class="note">两个浅色圆形图标，下方放操作文字。没有整片背景，视觉更轻；删除仍用浅玫瑰色明确区分。</p></article>
+    </section>
+    <footer>仅为 HTML 设计预览。不会修改或删除真实伙伴，也不会连接后台。App 的左滑样式暂未修改，等你选定后再实现。</footer>
+  </main>
+  <dialog id="action-dialog"><h2></h2><div class="dialog-body"></div><div class="dialog-actions"><button class="cancel">取消</button><button class="confirm">确认</button></div></dialog>
+  <script>
+    const icon = (name) => `<svg class="icon" aria-hidden="true"><use href="#${name}"/></svg>`;
+    const dialog = document.querySelector('#action-dialog');
+    let activeShell;
+    let activeAction;
+    function setOffset(shell, offset) {
+      const width = parseFloat(getComputedStyle(shell).getPropertyValue('--reveal'));
+      shell.dataset.offset = String(Math.max(-width, Math.min(0, offset)));
+      shell.style.setProperty('--offset', `${shell.dataset.offset}px`);
+    }
+    function reveal(shell) { setOffset(shell, -parseFloat(getComputedStyle(shell).getPropertyValue('--reveal'))); }
+    function openDialog(shell, action) {
+      activeShell = shell; activeAction = action;
+      const name = shell.dataset.name;
+      dialog.querySelector('h2').textContent = action === 'delete' ? `删除${name}？` : `编辑${name}`;
+      dialog.querySelector('.dialog-body').innerHTML = action === 'delete'
+        ? '<p>这是删除确认的样式预览。正式 App 删除伙伴后，该伙伴专属音色也会失效。</p><p>这里不会删除任何真实数据。</p>'
+        : '<label for="preview-name">伙伴昵称</label><input id="preview-name" maxlength="20"><p>这里只展示入口后的编辑示意，不改动完整编辑伙伴页面。</p>';
+      if (action !== 'delete') dialog.querySelector('input').value = name;
+      const confirm = dialog.querySelector('.confirm');
+      confirm.textContent = action === 'delete' ? '预览删除' : '预览保存';
+      confirm.classList.toggle('danger', action === 'delete');
+      dialog.showModal();
+    }
+    for (const variant of document.querySelectorAll('.variant')) {
+      const phone = variant.querySelector('.phone');
+      phone.innerHTML = `<div class="status"><span>09:41</span><span>5G</span></div><div class="space-title"><div><h2>陪伴空间</h2><p>在这里，慢慢聊~</p></div><img class="user-logo" src="assets/ui-kit/bingo_logo.png" alt="我的"></div><div class="group-label">系统伙伴 · 仅编辑</div><div class="shell builtin" data-name="甜甜"></div><div class="group-label">自定义伙伴 · 编辑与删除</div><div class="shell custom" data-name="小晴"></div><button class="reset">收起 / 展开操作</button><p class="help">左右拖动卡片试试<br>点编辑或删除，查看下一步示意</p><div class="feedback" role="status" aria-live="polite"></div><button class="create">${icon('plus')}创建伙伴</button>`;
+      for (const shell of phone.querySelectorAll('.shell')) {
+        const custom = shell.classList.contains('custom');
+        shell.innerHTML = `<div class="tools"><button class="tool edit" aria-label="编辑${shell.dataset.name}"><span class="disc">${icon('edit')}</span><span>编辑</span></button>${custom ? `<button class="tool delete" aria-label="删除${shell.dataset.name}"><span class="disc">${icon('delete')}</span><span>删除</span></button>` : ''}</div><div class="card"><div class="card-main"><img class="avatar" src="../../apps/mobile/assets/images/girlfriend.png" alt="${shell.dataset.name}"><div class="identity"><div class="name-row"><h3>${shell.dataset.name}</h3><button class="enter">${icon('chat')}进入</button></div><p class="description">${custom ? '朋友 · 温柔陪伴，认真听你说' : '女朋友 · 亲密、体贴的女性伴侣'}</p></div></div><div class="traits"><span class="trait">${icon('heart')}主动关心</span><span class="trait">${icon('leaf')}温柔体贴</span><span class="trait">${icon('chat')}陪伴聊天</span></div></div>`;
+        reveal(shell);
+        shell.querySelector('.edit').addEventListener('click', () => openDialog(shell, 'edit'));
+        shell.querySelector('.delete')?.addEventListener('click', () => openDialog(shell, 'delete'));
+        shell.querySelector('.enter').addEventListener('click', () => {
+          phone.querySelector('.feedback').textContent = '这里只预览左滑操作，不进入真实聊天。';
+        });
+        const card = shell.querySelector('.card');
+        let drag;
+        card.addEventListener('pointerdown', (event) => {
+          if (event.target.closest('button') || event.button !== 0) return;
+          drag = {start: event.clientX, offset: Number(shell.dataset.offset), id: event.pointerId};
+          card.setPointerCapture(event.pointerId); card.classList.add('dragging');
+        });
+        card.addEventListener('pointermove', (event) => {
+          if (drag && drag.id === event.pointerId) setOffset(shell, drag.offset + event.clientX - drag.start);
+        });
+        function settle(event) {
+          if (!drag || drag.id !== event.pointerId) return;
+          drag = null; card.classList.remove('dragging');
+          const width = parseFloat(getComputedStyle(shell).getPropertyValue('--reveal'));
+          if (-Number(shell.dataset.offset) > width * .35) reveal(shell); else setOffset(shell, 0);
+        }
+        card.addEventListener('pointerup', settle);
+        card.addEventListener('pointercancel', settle);
+      }
+      phone.querySelector('.reset').addEventListener('click', () => {
+        const shells = [...phone.querySelectorAll('.shell')];
+        const close = shells.some(shell => Number(shell.dataset.offset) < 0);
+        for (const shell of shells) { if (close) setOffset(shell, 0); else reveal(shell); }
+      });
+      phone.querySelector('.create').addEventListener('click', () => {
+        phone.querySelector('.feedback').textContent = '此预览不修改创建伙伴流程。';
+      });
+    }
+    dialog.querySelector('.cancel').addEventListener('click', () => dialog.close());
+    dialog.querySelector('.confirm').addEventListener('click', () => {
+      const phone = activeShell.closest('.phone');
+      if (activeAction === 'delete') {
+        phone.querySelector('.feedback').textContent = '已预览删除确认，没有删除任何伙伴。';
+      } else {
+        const name = dialog.querySelector('input').value.trim();
+        if (!name) { dialog.querySelector('input').focus(); return; }
+        phone.querySelector('.feedback').textContent = `已预览保存「${name}」，不会修改 App 数据。`;
+      }
+      setOffset(activeShell, 0); dialog.close();
+    });
+  </script>
+</body>
+</html>

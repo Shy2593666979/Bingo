@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bingo · 聊天声音开关位置</title>
+  <style>
+    :root{--ink:#203b33;--muted:#87988e;--green:#447f65;--bg:#f6fbf9;--line:#dfebe3}*{box-sizing:border-box}body{margin:0;background:#edf4f0;color:var(--ink);font-family:system-ui,-apple-system,"Microsoft YaHei",sans-serif}button,select{font:inherit}button{cursor:pointer}button:focus-visible,select:focus-visible{outline:3px solid #91c5af;outline-offset:3px}.sprite{position:absolute;width:0;height:0;overflow:hidden}.studio{max-width:1030px;padding:36px 24px 44px;margin:auto}.brand{display:flex;align-items:center;gap:12px;font-weight:700}.brand img{width:36px;height:36px}.brand small{margin-left:auto;font-weight:400;color:var(--muted);font-size:12px}h1{font-size:28px;letter-spacing:-.6px;margin:28px 0 12px}.intro{font-size:14px;line-height:1.9;color:#708779;max-width:760px}.controls{margin:22px 0;display:flex;gap:12px;align-items:center;font-size:12px;color:#708779}select{padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:#f9fcfa;color:var(--ink)}.variants{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:40px;max-width:900px;margin:28px auto 0}.heading{display:flex;align-items:center;gap:10px;margin:0 4px 14px}.badge{width:28px;height:28px;display:grid;place-items:center;border-radius:9px;background:#dcece2;color:var(--green);font-weight:700}.heading b{font-size:14px}.heading span:last-child{margin-left:auto;font-size:11px;color:var(--muted)}.phone{max-width:400px;min-height:740px;margin:auto;background:var(--bg);border:1px solid #d7e5dc;border-radius:32px;box-shadow:0 18px 40px #244d3b0a;overflow:hidden;display:flex;flex-direction:column}.status{padding:22px 24px 8px;display:flex;justify-content:space-between;font-size:12px;font-weight:600}.topbar{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;padding:8px 14px 16px;gap:2px;border-bottom:1px solid #e8f1ec}.action{display:grid;place-items:center;width:44px;height:44px;flex:none;padding:0;border:0;background:transparent;color:var(--ink);border-radius:50%}.icon{width:23px;height:23px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.name{font-size:20px;font-weight:800;letter-spacing:.2px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}.speaker{color:#8b9994}.speaker .icon{width:21px;height:21px}.speaker[aria-pressed="true"]{color:var(--green)}.b .identity{display:grid;grid-template-columns:minmax(0,1fr) 44px minmax(0,1fr);align-items:center;min-width:0}.b .name{grid-column:1/-1;grid-row:1;padding:0 38px}.b .speaker{grid-column:1/-1;grid-row:1;justify-self:center;transform:translateX(var(--speaker-offset,44px))}.b .speaker .icon{width:19px;height:19px}.messages{padding:20px 18px;flex:1}.time{font-size:10px;color:#93a398;text-align:center;margin:0 0 20px}.message{display:flex;gap:9px;align-items:flex-end;margin-bottom:16px}.avatar{width:35px;height:35px;border-radius:50%;object-fit:cover;flex:none}.bubble{max-width:calc(100% - 48px);width:fit-content;font-size:14px;line-height:1.8;padding:11px 15px;background:#edf5f2;border:1px solid white;border-radius:20px 20px 20px 7px;box-shadow:0 3px 12px #205f4f06}.message.user{justify-content:flex-end}.user .bubble{background:#d5f0e3;border:0;border-radius:20px 20px 7px 20px}.read-status{display:flex;align-items:center;gap:7px;justify-content:center;font-size:10px;color:#93a398;margin:24px 0 0;min-height:18px}.read-status.active{color:var(--green)}.read-status .icon{width:13px;height:13px}.composer{display:flex;align-items:center;gap:12px;border-radius:23px;background:white;padding:8px;margin:10px 14px 14px}.composer .action{width:38px;height:38px;background:#eef6f1;color:var(--green)}.composer .icon{width:19px;height:19px}.placeholder{flex:1;font-size:14px;color:#809087}.homebar{width:108px;height:4px;background:#254334;border-radius:9px;opacity:.4;margin:0 auto 12px}.note{font-size:12px;line-height:1.9;color:#748b7d;margin:16px 6px 0}.feedback{height:40px;color:var(--green);font-size:12px;text-align:center;margin-top:12px;line-height:1.7}footer{font-size:12px;line-height:1.9;color:var(--muted);margin-top:26px} @media(max-width:720px){.variants{grid-template-columns:1fr;gap:28px}.variant{width:100%;max-width:400px;margin:auto}.studio{padding:24px 16px}.brand small{font-size:10px}h1{font-size:25px}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+  </style>
+</head>
+<body>
+  <svg class="sprite" aria-hidden="true"><defs>
+    <symbol id="back" viewBox="0 0 24 24"><path d="m14 5-7 7 7 7"/></symbol>
+    <symbol id="speaker-on" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4Z"/><path d="M16 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></symbol>
+    <symbol id="speaker-off" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4Z"/><path d="m17 9 5 6m0-6-5 6"/></symbol>
+    <symbol id="call" viewBox="0 0 24 24"><path d="m6 3 4 5-2 3c1 3 3 5 6 6l3-2 4 3c0 3-2 4-4 3C9 19 4 14 3 7c0-2 1-4 3-4Z"/></symbol>
+    <symbol id="mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 11v1a6 6 0 0 0 12 0v-1M12 18v3M9 21h6"/></symbol>
+    <symbol id="plus" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></symbol>
+  </defs></svg>
+  <main class="studio">
+    <header class="brand"><img src="assets/ui-kit/bingo_logo.png" alt="Bingo">Bingo<small>声音开关 · 两种位置预览</small></header>
+    <h1>喇叭放在哪里，更顺手？</h1>
+    <p class="intro">A 去掉顶部电话按钮，把喇叭放到原电话的位置；B 保留右侧电话按钮，把小喇叭放在 AI 名称右边一点。名称都保持居中。点击喇叭可查看开启、关闭状态，不实际播放声音。</p>
+    <div class="controls"><label for="partner-name">试试不同长度的名称</label><select id="partner-name"><option>甜甜</option><option>小田老师</option><option>我的温柔陪伴伙伴</option></select></div>
+    <section class="variants">
+      <article class="variant a"><div class="heading"><span class="badge">A</span><b>喇叭替换电话</b><span>右侧更简洁</span></div><div class="phone"></div><p class="note">顶部只有返回、名称、声音开关。电话入口仍可保留在「＋」菜单，不是取消通话功能。</p><div class="feedback" role="status" aria-live="polite"></div></article>
+      <article class="variant b"><div class="heading"><span class="badge">B</span><b>喇叭紧挨名称</b><span>保留电话 · 推荐</span></div><div class="phone"></div><p class="note">小喇叭与伙伴名称关联，右侧继续保留电话入口。图标轻一点，但触控区域仍为 44 × 44，方便点击。</p><div class="feedback" role="status" aria-live="polite"></div></article>
+    </section>
+    <footer>仅为 HTML 位置预览，未修改 App。预览中的「自动朗读已开启/关闭」只用于说明点击状态，不表示要在正式聊天页面新增一行提示。</footer>
+  </main>
+  <script>
+    const icon = (name) => `<svg class="icon" aria-hidden="true"><use href="#${name}"/></svg>`;
+    for (const variant of document.querySelectorAll('.variant')) {
+      const isNameSide = variant.classList.contains('b');
+      const speaker = `<button class="action speaker" aria-label="开启自动朗读" title="开启自动朗读" aria-pressed="false">${icon('speaker-off')}</button>`;
+      const identity = isNameSide ? `<div class="identity"><span class="name">甜甜</span>${speaker}</div>` : `<span class="name">甜甜</span>`;
+      variant.querySelector('.phone').innerHTML = `<div class="status"><span>09:41</span><span>5G</span></div><div class="topbar"><button class="action back" aria-label="返回陪伴空间">${icon('back')}</button>${identity}${isNameSide ? `<button class="action call" aria-label="语音通话">${icon('call')}</button>` : speaker}</div><div class="messages"><p class="time">今天 09:41</p><div class="message"><img class="avatar" src="../../apps/mobile/assets/images/girlfriend.png" alt="甜甜"><div class="bubble">早呀，昨晚睡得怎么样？</div></div><div class="message user"><div class="bubble">还不错，今天想出去走走。</div></div><div class="message"><img class="avatar" src="../../apps/mobile/assets/images/girlfriend.png" alt="甜甜"><div class="bubble">好呀，给自己放个小假。</div></div><div class="message"><img class="avatar" src="../../apps/mobile/assets/images/girlfriend.png" alt="甜甜"><div class="bubble">想去公园散步，还是找一家舒服的小店坐坐？</div></div><p class="read-status">${icon('speaker-off')}<span>自动朗读已关闭 · 点击顶部喇叭试试</span></p></div><div class="composer"><button class="action mic" aria-label="语音输入">${icon('mic')}</button><span class="placeholder">输入消息</span><button class="action plus" aria-label="更多功能">${icon('plus')}</button></div><div class="homebar"></div>`;
+      const toggle = variant.querySelector('.speaker');
+      toggle.addEventListener('click', () => {
+        const enabled = toggle.getAttribute('aria-pressed') !== 'true';
+        toggle.setAttribute('aria-pressed', String(enabled));
+        toggle.setAttribute('aria-label', enabled ? '关闭自动朗读' : '开启自动朗读');
+        toggle.title = toggle.getAttribute('aria-label');
+        toggle.innerHTML = icon(enabled ? 'speaker-on' : 'speaker-off');
+        const status = variant.querySelector('.read-status');
+        status.classList.toggle('active', enabled);
+        status.innerHTML = `${icon(enabled ? 'speaker-on' : 'speaker-off')}<span>${enabled ? '自动朗读已开启 · 新回复使用伙伴音色' : '自动朗读已关闭 · 继续文字聊天'}</span>`;
+        variant.querySelector('.feedback').textContent = enabled ? '开启：新回复自动朗读，不重放历史消息。' : '关闭：停止朗读，文字聊天不受影响。';
+      });
+      for (const button of variant.querySelectorAll('.action:not(.speaker)')) {
+        button.addEventListener('click', () => {
+          variant.querySelector('.feedback').textContent = button.classList.contains('call') ? '电话入口保留；此预览不发起真实通话。' : button.classList.contains('plus') ? '正式菜单仍有电话入口；这里只比较顶部布局。' : '这里只预览声音开关的位置。';
+        });
+      }
+    }
+    function positionSpeaker() {
+      for (const variant of document.querySelectorAll('.variant.b')) {
+        const identity = variant.querySelector('.identity');
+        const name = variant.querySelector('.name');
+        const available = Math.max(0, identity.clientWidth / 2 - 22);
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        context.font = getComputedStyle(name).font;
+        const nameWidth = Math.min(context.measureText(name.textContent).width, Math.max(0, identity.clientWidth - 76));
+        identity.style.setProperty('--speaker-offset', `${Math.min(nameWidth / 2 + 22, available)}px`);
+      }
+    }
+    document.querySelector('#partner-name').addEventListener('change', (event) => {
+      for (const name of document.querySelectorAll('.name')) name.textContent = event.target.value;
+      positionSpeaker();
+    });
+    window.addEventListener('resize', positionSpeaker);
+    if (document.fonts) document.fonts.ready.then(positionSpeaker); else positionSpeaker();
+  </script>
+</body>
+</html>

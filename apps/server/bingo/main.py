@@ -18,6 +18,7 @@ from bingo.api import (
     location,
     maps,
     memories,
+    moments,
     push,
     realtime_calls,
     roles,
@@ -30,6 +31,7 @@ from bingo.config import Settings, get_settings
 from bingo.db.session import Database
 from bingo.push import PushService, create_push_provider
 from bingo.services.chat_runs import ChatRunService
+from bingo.services.chat_speech import ChatSpeechService
 from bingo.services.context import ServiceContext
 from bingo.services.location import LocationService
 from bingo.services.logging import configure_logging, log_event
@@ -79,6 +81,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     chat_runs = ChatRunService(database.session_factory, runtime)
     voice_cloning = VoiceCloningService(database, resolved_settings)
+    chat_speech = ChatSpeechService(voice_cloning)
 
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
@@ -101,6 +104,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             engagement_service,
             location=location_service,
             maps=MapsService(resolved_settings.maps),
+            chat_speech=chat_speech,
         )
         await voice_cloning.start()
         await push_service.start()
@@ -109,6 +113,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         log_event(logger, logging.INFO, "application.started")
         yield
         await chat_runs.close()
+        await chat_speech.close()
         await voice_cloning.close()
         await application.state.services.maps.close()
         await location_service.close()
@@ -140,6 +145,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     application.include_router(auth.router, prefix=resolved_settings.server.api_prefix)
     application.include_router(chat.router, prefix=resolved_settings.server.api_prefix)
+    application.include_router(moments.router, prefix=resolved_settings.server.api_prefix)
     application.include_router(conversations.router, prefix=resolved_settings.server.api_prefix)
     application.include_router(memories.router, prefix=resolved_settings.server.api_prefix)
     application.include_router(device_actions.router, prefix=resolved_settings.server.api_prefix)

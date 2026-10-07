@@ -6,7 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('my page separates user details, personality and app settings',
+  testWidgets(
+      'my page keeps user details, records and settings without personality',
       (tester) async {
     const profile = UserProfile(
         id: 'user',
@@ -18,21 +19,19 @@ void main() {
         onboardingComplete: true,
         birthday: '2000-01-01',
         gender: '女');
-    String? saved;
+    var userEdited = false;
     var settingsOpened = false;
     await tester.pumpWidget(MaterialApp(
         theme: buildBingoTheme(),
         home: MyPage(
             profile: profile,
-            loadPersonalities: () async => const ProfileOptions(
-                personalities: ['温柔体贴', '幽默风趣'], roles: []),
-            savePersonality: (value) async {
-              saved = value;
-              return profile;
+            onEditUser: (_) async {
+              userEdited = true;
+              return null;
             },
-            onEditUser: (_) async => null,
             onOpenSettings: () async => settingsOpened = true)));
     expect(find.text('我的'), findsOneWidget);
+    expect(find.text('陪伴记录'), findsOneWidget);
     expect(find.text('使用当前地区'), findsNothing);
     expect(find.byType(SwitchListTile), findsNothing);
     expect(find.byIcon(Icons.settings_rounded), findsOneWidget);
@@ -40,15 +39,11 @@ void main() {
     expect(find.text('小雨'), findsOneWidget);
     expect(find.byType(UserAvatar), findsOneWidget);
     expect(find.text('甜甜'), findsNothing);
-    await tester.tap(find.text('聊天性格'));
+    expect(find.text('聊天性格'), findsNothing);
+    expect(find.textContaining('这里设置默认聊天性格'), findsNothing);
+    await tester.tap(find.text('个人资料'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('幽默风趣'));
-    await tester.pumpAndSettle();
-    expect(saved, isNull);
-    expect(find.text('你喜欢怎样的回应？'), findsOneWidget);
-    await tester.tap(find.text('保存性格'));
-    await tester.pumpAndSettle();
-    expect(saved, '幽默风趣');
+    expect(userEdited, isTrue);
     await tester.tap(find.text('应用设置'));
     await tester.pumpAndSettle();
     expect(settingsOpened, isTrue);

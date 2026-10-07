@@ -7,10 +7,19 @@ import 'package:bingo/features/chat/models/chat_message.dart';
 import 'package:bingo/features/roles/presentation/role_detail_page.dart';
 import 'package:bingo/shared/widgets/assistant_avatar.dart';
 import 'package:bingo/shared/widgets/user_avatar.dart';
+import 'package:bingo/shared/widgets/partner_action_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class DetailGateway implements RoleGateway, ConversationGateway {
+  @override
+  Future<List<RoleOption>> listRoles() async => const [
+        RoleOption(
+            id: 'role',
+            name: '女朋友',
+            builtin: true,
+            conversationId: 'conversation')
+      ];
   @override
   Future<List<ChatMessage>> listMessages(String conversationId) async => const [
         ChatMessage(id: 'user', role: ChatRole.user, content: '你好'),
@@ -25,6 +34,41 @@ class DetailGateway implements RoleGateway, ConversationGateway {
 }
 
 void main() {
+  testWidgets('detail uses HTML action icons without changing button actions',
+      (tester) async {
+    var edits = 0;
+    var chats = 0;
+    await tester.pumpWidget(MaterialApp(
+        theme: buildBingoTheme(),
+        home: RoleDetailPage(
+            role: const RoleOption(
+                id: 'role',
+                name: '女朋友',
+                builtin: true,
+                conversationId: 'conversation'),
+            gateway: DetailGateway(),
+            onChat: (_) async => chats++,
+            onEdit: () async => edits++)));
+    await tester.pumpAndSettle();
+    final chatButton = find.widgetWithText(FilledButton, '进入聊天');
+    final editButton = find.widgetWithText(OutlinedButton, '编辑伙伴');
+    final chatIcon = find.descendant(
+        of: chatButton, matching: find.byType(PartnerActionIcon));
+    final editIcon = find.descendant(
+        of: editButton, matching: find.byType(PartnerActionIcon));
+    expect(tester.widget<PartnerActionIcon>(chatIcon).symbol,
+        PartnerActionSymbol.chat);
+    expect(tester.widget<PartnerActionIcon>(editIcon).symbol,
+        PartnerActionSymbol.edit);
+    expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
+    await tester.tap(chatButton);
+    await tester.pumpAndSettle();
+    await tester.tap(editButton);
+    await tester.pumpAndSettle();
+    expect(chats, 1);
+    expect(edits, 1);
+    expect(tester.takeException(), isNull);
+  });
   for (final custom in [false, true]) {
     testWidgets('recent conversation uses the user avatar: custom=$custom',
         (tester) async {

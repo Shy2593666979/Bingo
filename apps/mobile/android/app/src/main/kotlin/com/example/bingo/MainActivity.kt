@@ -56,6 +56,7 @@ import java.util.UUID
 import java.util.concurrent.LinkedBlockingQueue
 
 class MainActivity : FlutterActivity() {
+    private val replyAudio by lazy { ReplyAudioPlayer(this) }
     private var regionLocation: RegionLocationController? = null
     private lateinit var localChatDatabase: LocalChatDatabase
     private var audioEventSink: EventChannel.EventSink? = null
@@ -291,6 +292,26 @@ class MainActivity : FlutterActivity() {
             .setMethodCallHandler { call, result ->
                 when (call.method) {
                     "createAlarm" -> createAlarm(call.arguments, result)
+                    "scheduleCompanionReminder" -> runCatching {
+                        CompanionReminderScheduler.schedule(this, requireNotNull(call.argument<String>("id")),
+                            requireNotNull(call.argument<String>("title")), requireNotNull(call.argument<String>("body")),
+                            requireNotNull(call.argument<Number>("time")).toLong())
+                    }.fold({ result.success(null) }, { result.error("reminder_unavailable", it.message, null) })
+                    "cancelCompanionReminder" -> {
+                        CompanionReminderScheduler.cancel(this, requireNotNull(call.argument<String>("id")))
+                        result.success(null)
+                    }
+                    "cancelAllCompanionReminders" -> { CompanionReminderScheduler.cancelAll(this); result.success(null) }
+                    "startReplyAudio" -> runCatching {
+                        check(!callPlaybackRunning && !recording) { "正在通话或录音" }
+                        replyAudio.start()
+                    }.fold({ result.success(null) }, { result.error("reply_audio", it.message, null) })
+                    "playReplyAudio" -> runCatching {
+                        replyAudio.play(requireNotNull(call.arguments as? ByteArray))
+                    }.fold({ result.success(null) }, { result.error("reply_audio", it.message, null) })
+                    "finishReplyAudio" -> runCatching { replyAudio.finish() }
+                        .fold({ result.success(null) }, { result.error("reply_audio", it.message, null) })
+                    "stopReplyAudio" -> { replyAudio.stop(); result.success(null) }
                     "openLocationMap" -> {
                         val longitude = call.argument<Number>("longitude")?.toDouble()
                         val latitude = call.argument<Number>("latitude")?.toDouble()
@@ -441,6 +462,14 @@ class MainActivity : FlutterActivity() {
                         "loadRoleOrder" -> result.success(
                             localChatDatabase.loadRoleOrder(requireNotNull(userId)),
                         )
+                        "readCompanionData" -> result.success(localChatDatabase.readCompanionData(
+                            requireNotNull(userId), requireNotNull(values["key"] as? String)))
+                        "listCompanionData" -> result.success(localChatDatabase.listCompanionData(requireNotNull(userId)))
+                        "writeCompanionData" -> {
+                            localChatDatabase.writeCompanionData(requireNotNull(userId),
+                                requireNotNull(values["key"] as? String), requireNotNull(values["data"] as? String))
+                            result.success(null)
+                        }
                         "saveRoleOrder" -> {
                             val roleIds = requireNotNull(values["role_ids"] as? List<*>)
                                 .map { requireNotNull(it as? String) }
@@ -726,6 +755,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun requestAudioCapture(result: MethodChannel.Result) {
+        replyAudio.stop()
         if (recording || pendingAudioStartResult != null) {
             result.error("audio_busy", "Audio capture is already running", null)
             return
@@ -817,6 +847,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun startCallAudio(arguments: Any?, result: MethodChannel.Result) {
+        replyAudio.stop()
         if (recording || callPlaybackRunning) {
             result.error("audio_busy", "Audio is already in use", null)
             return
@@ -934,6 +965,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun startIncomingCallRinging() {
+        replyAudio.stop()
         stopIncomingCallRinging()
         incomingCallRingingRequested = true
         val audioAttributes = AudioAttributes.Builder()
@@ -1047,6 +1079,7 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
+        replyAudio.stop()
         regionLocation?.close()
         stopPreviewAudio()
         stopIncomingCallRinging()
@@ -1054,6 +1087,7 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onStop() {
+        replyAudio.stop()
         regionLocation?.cancelForBackground()
         super.onStop()
     }

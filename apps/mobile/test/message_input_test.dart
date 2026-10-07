@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'package:bingo/core/theme/app_theme.dart';
 
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/chat/presentation/widgets/message_input.dart';
+import 'package:bingo/features/chat/presentation/widgets/chat_menu_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -160,6 +162,20 @@ void main() {
     expect(find.text('相册'), findsOneWidget);
     expect(find.text('相机'), findsOneWidget);
     expect(find.text('电话'), findsOneWidget);
+    expect(
+      tester
+          .widgetList<ChatMenuIcon>(find.byType(ChatMenuIcon))
+          .map((icon) => icon.symbol),
+      ChatMenuSymbol.values,
+    );
+    for (final icon in find.byType(ChatMenuIcon).evaluate()) {
+      final container = tester.widget<Container>(find
+          .ancestor(
+              of: find.byWidget(icon.widget), matching: find.byType(Container))
+          .first);
+      expect((container.decoration as BoxDecoration).color,
+          BingoPalette.chatMenuSurface);
+    }
 
     await tester.tap(find.text('电话'));
     expect(called, isTrue);

@@ -18,6 +18,7 @@ class ChatRequest(BaseModel):
     content: str = Field(default="", max_length=20_000)
     images: list[ChatImageInput] = Field(default_factory=list, max_length=1)
     location: LocationInput | None = None
+    read_aloud: bool = False
 
     @model_validator(mode="after")
     def require_content_or_image(self) -> "ChatRequest":

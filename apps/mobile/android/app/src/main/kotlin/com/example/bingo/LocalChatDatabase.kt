@@ -59,9 +59,11 @@ class LocalChatDatabase(context: Context) :
             """.trimIndent(),
         )
         createRoleOrderTable(db)
+        createCompanionDataTable(db)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        if (oldVersion < 9) createCompanionDataTable(db)
         if (oldVersion < 8) {
             db.execSQL("ALTER TABLE local_messages ADD COLUMN location_json TEXT")
         }
@@ -321,6 +323,30 @@ class LocalChatDatabase(context: Context) :
     }
 
     private companion object {
-        const val DATABASE_VERSION = 8
+        const val DATABASE_VERSION = 9
+    }
+
+    private fun createCompanionDataTable(db: SQLiteDatabase) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS companion_data (user_id TEXT NOT NULL, data_key TEXT NOT NULL, data TEXT NOT NULL, PRIMARY KEY(user_id, data_key))")
+    }
+
+    fun readCompanionData(userId: String, key: String): String? {
+        readableDatabase.rawQuery("SELECT data FROM companion_data WHERE user_id=? AND data_key=?", arrayOf(userId, key)).use {
+            return if (it.moveToFirst()) it.getString(0) else null
+        }
+    }
+
+    fun listCompanionData(userId: String): Map<String, String> {
+        val records = mutableMapOf<String, String>()
+        readableDatabase.rawQuery("SELECT data_key, data FROM companion_data WHERE user_id=? AND data_key LIKE 'moments:%'", arrayOf(userId)).use { cursor ->
+            while (cursor.moveToNext()) records[cursor.getString(0)] = cursor.getString(1)
+        }
+        return records
+    }
+
+    fun writeCompanionData(userId: String, key: String, data: String) {
+        writableDatabase.insertWithOnConflict("companion_data", null, ContentValues().apply {
+            put("user_id", userId); put("data_key", key); put("data", data)
+        }, SQLiteDatabase.CONFLICT_REPLACE)
     }
 }
