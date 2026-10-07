@@ -26,7 +26,7 @@ class DisconnectableModel:
         messages: list[ModelMessage],
         tools: list[dict] | None = None,
     ) -> AsyncIterator[ModelStreamEvent]:
-        yield ModelTextDelta("第一句。")
+        yield ModelTextDelta("第一句。\n")
         self.first_part_sent.set()
         await self.finish.wait()
         yield ModelTextDelta("第二句。")
@@ -91,7 +91,7 @@ async def test_chat_run_continues_after_stream_subscriber_disconnects(tmp_path: 
         messages = await completed_messages()
         assert [(message.role, message.content) for message in messages] == [
             ("user", "请回复两句话"),
-            ("assistant", "第一句。第二句。"),
+            ("assistant", "第一句。\n第二句。"),
         ]
     finally:
         await service.close()

@@ -1,5 +1,4 @@
 import hashlib
-import json
 import time
 from dataclasses import dataclass
 from typing import Protocol
@@ -79,8 +78,7 @@ class GetuiPushProvider:
                     "notification": {
                         "title": delivery.title,
                         "body": delivery.body,
-                        "click_type": "payload",
-                        "payload": json.dumps(delivery.payload, ensure_ascii=False),
+                        "click_type": "startapp",
                     }
                 },
                 "push_channel": {

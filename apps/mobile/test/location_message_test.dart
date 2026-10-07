@@ -7,7 +7,9 @@ import 'package:bingo/features/chat/models/chat_location.dart';
 import 'package:bingo/features/chat/models/chat_message.dart';
 import 'package:bingo/features/chat/presentation/location_picker_page.dart';
 import 'package:bingo/features/chat/presentation/chat_controller.dart';
+import 'package:bingo/features/chat/presentation/chat_page.dart';
 import 'package:bingo/features/chat/presentation/widgets/location_card.dart';
+import 'package:bingo/shared/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,6 +23,11 @@ const point = ChatLocation(
   longitude: 116.397463,
   latitude: 39.909187,
 );
+
+class LocationTestSpeechGateway implements SpeechGateway {
+  @override
+  Future<String> transcribe(Uint8List wavAudio) async => '';
+}
 
 class PlacesGateway implements LocationGateway, ChatGateway {
   String? searched;
@@ -125,6 +132,90 @@ void main() {
     expect(user.location?.longitude, point.longitude);
     expect(user.type, ChatMessageType.location);
     expect(controller.status, ChatStatus.idle);
+  });
+
+  testWidgets('user location card stays right-aligned without a user avatar',
+      (tester) async {
+    final controller = ChatController(gateway: PlacesGateway());
+    addTearDown(controller.dispose);
+    await controller.sendLocation(point);
+    await tester.pumpWidget(MaterialApp(
+        home: ChatPage(
+      controller: controller,
+      assistantName: '甜甜',
+      assistantRole: '女朋友',
+      speechGateway: LocationTestSpeechGateway(),
+      onStartCall: () {},
+      onIncomingCall: (_) async {},
+      onOpenSettings: () {},
+    )));
+    await tester.pumpAndSettle();
+    expect(find.byType(LocationCard), findsOneWidget);
+    expect(tester.widget<LocationCard>(find.byType(LocationCard)).isUser, true);
+    expect(find.text('我分享的位置'), findsOneWidget);
+    expect(find.textContaining('已发送'), findsNothing);
+    expect(tester.getSize(find.byType(LocationMap)), const Size(72, 72));
+    expect(find.byType(UserAvatar), findsNothing);
+    final row = tester.widget<Row>(find
+        .ancestor(of: find.byType(LocationCard), matching: find.byType(Row))
+        .first);
+    expect(row.mainAxisAlignment, MainAxisAlignment.end);
+  });
+
+  testWidgets('compact location card handles long addresses in narrow layouts',
+      (tester) async {
+    const location = ChatLocation(
+      name: '一个名称比较长的公共地点入口和游客服务中心',
+      address: '北京市海淀区一条比较长的道路名称与公共地点详细地址入口附近',
+      longitude: 116.3,
+      latitude: 39.9,
+    );
+    for (final width in [240.0, 390.0]) {
+      await tester.binding.setSurfaceSize(Size(width, 600));
+      await tester.pumpWidget(const MaterialApp(
+          home: Scaffold(
+              body: Align(
+                  alignment: Alignment.topRight,
+                  child: LocationCard(location: location, isUser: true)))));
+      expect(tester.takeException(), isNull);
+      expect(tester.getSize(find.byType(LocationCard)).height, lessThan(185));
+      expect(find.text('我分享的位置'), findsOneWidget);
+    }
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('compact thumbnail requests a square map without cropping it',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(
+        home: Scaffold(
+      body: SizedBox.square(
+          dimension: 76,
+          child: LocationMap(
+            location: point,
+            url:
+                'https://example.com/locations/map?longitude=116.397&latitude=39.909&zoom=15',
+            accessToken: 'test-token',
+            compact: true,
+          )),
+    )));
+    final image = tester.widget<Image>(find.byType(Image));
+    final network = image.image as NetworkImage;
+    final uri = Uri.parse(network.url);
+    expect(uri.queryParameters['height'], '480');
+    expect(uri.queryParameters['longitude'], '116.397');
+    expect(uri.queryParameters['zoom'], '15');
+    expect(network.headers?['Authorization'], 'Bearer test-token');
+    expect(image.fit, BoxFit.contain);
+    expect(tester.widget<AspectRatio>(find.byType(AspectRatio)).aspectRatio, 1);
+    await tester.pumpWidget(const MaterialApp(
+        home: Scaffold(
+      body: LocationMap(
+          location: point, url: 'https://example.com/locations/map'),
+    )));
+    final original =
+        tester.widget<Image>(find.byType(Image)).image as NetworkImage;
+    expect(
+        Uri.parse(original.url).queryParameters.containsKey('height'), false);
   });
 
   test('map panning preserves center and moves selected coordinates', () {
@@ -259,7 +350,7 @@ void main() {
   });
 
   testWidgets(
-      'denied permission still allows search and private region sending',
+      'denied permission allows search and sends the complete selected location',
       (tester) async {
     const channel = MethodChannel('bingo/region_location');
     tester.view.physicalSize = const Size(390, 844);
@@ -287,6 +378,9 @@ void main() {
     await tester.tap(find.text('打开'));
     await tester.pumpAndSettle();
     expect(find.text('定位权限未开启，仍可搜索地点发送'), findsOneWidget);
+    expect(find.byType(CheckboxListTile), findsNothing);
+    expect(find.textContaining('仅发送区县'), findsNothing);
+    expect(find.textContaining('确认后发送给当前伙伴'), findsNothing);
     expect(
         tester
             .widget<FilledButton>(find.widgetWithText(FilledButton, '发送'))
@@ -298,11 +392,11 @@ void main() {
     expect(gateway.searched, '天安门');
     await tester.tap(find.widgetWithText(ListTile, '天安门'));
     await tester.pump();
-    await tester.tap(find.byType(CheckboxListTile));
-    await tester.pump();
     await tester.tap(find.text('发送'));
     await tester.pumpAndSettle();
-    expect(sent?.precision, 'district');
-    expect(sent?.hasCoordinates, false);
+    expect(sent?.hasCoordinates, true);
+    expect(sent?.longitude, point.longitude);
+    expect(sent?.latitude, point.latitude);
+    expect(sent?.address, point.address);
   });
 }

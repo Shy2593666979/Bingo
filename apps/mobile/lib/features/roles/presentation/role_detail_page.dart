@@ -162,6 +162,7 @@ class _RoleDetailPageState extends State<RoleDetailPage> {
                         Flexible(
                             child: message.location != null
                                 ? LocationCard(
+                                    isUser: message.role == ChatRole.user,
                                     location: message.location!,
                                     mapUrl: message.location!.hasCoordinates &&
                                             widget.gateway is LocationGateway

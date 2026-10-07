@@ -10,7 +10,6 @@ import 'package:bingo/features/chat/presentation/widgets/message_bubble.dart';
 import 'package:bingo/features/chat/presentation/widgets/message_input.dart';
 import 'package:flutter/material.dart';
 import 'package:bingo/shared/widgets/assistant_avatar.dart';
-import 'package:bingo/shared/widgets/user_avatar.dart';
 import 'package:bingo/features/chat/models/chat_location.dart';
 import 'package:bingo/features/chat/presentation/widgets/location_card.dart';
 
@@ -218,6 +217,8 @@ class _ChatPageState extends State<ChatPage> {
                                               ],
                                               Flexible(
                                                   child: LocationCard(
+                                                      isUser: message.role ==
+                                                          ChatRole.user,
                                                       location:
                                                           message.location!,
                                                       mapUrl: message.location!
@@ -229,14 +230,6 @@ class _ChatPageState extends State<ChatPage> {
                                                           : null,
                                                       accessToken: widget
                                                           .imageAccessToken)),
-                                              if (message.role ==
-                                                  ChatRole.user) ...[
-                                                const SizedBox(width: 9),
-                                                UserAvatar(
-                                                    avatarData:
-                                                        widget.userAvatarData,
-                                                    size: 34),
-                                              ],
                                             ]))
                                   else
                                     MessageBubble(

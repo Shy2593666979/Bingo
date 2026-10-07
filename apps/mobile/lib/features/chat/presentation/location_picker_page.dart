@@ -65,7 +65,6 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
   ChatLocation? _selected;
   ChatLocation? _current;
   ChatLocation? _center;
-  bool _coarse = false;
   bool _busy = true;
   bool _locating = false;
   bool _nativeMap = false;
@@ -417,10 +416,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
   @override
   Widget build(BuildContext context) {
     final selected = _selected;
-    final canSend = !_busy &&
-        selected != null &&
-        (!_coarse ||
-            (selected.province.isNotEmpty && selected.district.isNotEmpty));
+    final canSend = !_busy && selected != null;
     return Theme(
         data: buildMintTheme(context),
         child: Scaffold(
@@ -509,11 +505,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                                               child: FilledButton(
                                                   onPressed: canSend
                                                       ? () => Navigator.pop(
-                                                          context,
-                                                          _coarse
-                                                              ? selected
-                                                                  .asRegion()
-                                                              : selected)
+                                                          context, selected)
                                                       : null,
                                                   style: FilledButton.styleFrom(
                                                       padding: const EdgeInsets
@@ -667,26 +659,6 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                                           color: Color(0xFFEDF2EF)),
                                     ]),
                                 ])),
-                            SizedBox(
-                                height: 40,
-                                child: CheckboxListTile(
-                                    dense: true,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 10),
-                                    visualDensity: VisualDensity.compact,
-                                    controlAffinity:
-                                        ListTileControlAffinity.leading,
-                                    title: const Text('仅发送区县，不分享具体地点与坐标',
-                                        style: TextStyle(fontSize: 11)),
-                                    value: _coarse,
-                                    onChanged: (value) => setState(
-                                        () => _coarse = value ?? false))),
-                            const Padding(
-                                padding: EdgeInsets.fromLTRB(16, 2, 16, 8),
-                                child: Text('确认后发送给当前伙伴与模型，不实时追踪位置。',
-                                    style: TextStyle(
-                                        fontSize: 9,
-                                        color: Color(0xFF9AA8A2)))),
                           ]))),
                 ]);
               })),

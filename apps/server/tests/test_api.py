@@ -258,7 +258,7 @@ def test_conversations_are_isolated_between_users(client: TestClient) -> None:
     assert api_payload(client.get("/api/v1/memories")) == []
 
 
-def test_http_stream_splits_assistant_reply_at_sentence_boundaries(
+def test_http_stream_splits_chat_sentences_and_keeps_paragraphs(
     client: TestClient,
 ) -> None:
     response = client.post(
@@ -278,7 +278,7 @@ def test_http_stream_splits_assistant_reply_at_sentence_boundaries(
         "segment",
         "done",
     ]
-    assert [event["content"] for event in events[1:6]] == [
+    assert [event["content"] for event in events[1:-1]] == [
         "You said: 版本 1.2.3。",
         "Second?",
         "Third!",

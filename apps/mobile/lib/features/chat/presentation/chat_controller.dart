@@ -3,6 +3,7 @@ import 'package:bingo/core/device/device_tool_executor.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/chat/data/local_chat_store.dart';
 import 'package:bingo/features/chat/models/chat_message.dart';
+import 'package:bingo/features/chat/models/assistant_segments.dart';
 import 'package:bingo/features/chat/models/chat_location.dart';
 import 'package:flutter/foundation.dart';
 
@@ -742,7 +743,7 @@ class ChatController extends ChangeNotifier {
       yield message;
       return;
     }
-    final segments = _splitBubbleSegments(message.content);
+    final segments = splitAssistantBubbles(message.content);
     if (segments.length <= 1) {
       yield message;
       return;
@@ -801,19 +802,4 @@ class ChatController extends ChangeNotifier {
     _stopRecoveryPolling();
     super.dispose();
   }
-}
-
-List<String> _splitBubbleSegments(String content) {
-  final segments = <String>[];
-  var start = 0;
-  for (var index = 0; index < content.length; index++) {
-    if ('。！？!?\n'.contains(content[index])) {
-      final segment = content.substring(start, index + 1).trim();
-      if (segment.isNotEmpty) segments.add(segment);
-      start = index + 1;
-    }
-  }
-  final remainder = content.substring(start).trim();
-  if (remainder.isNotEmpty) segments.add(remainder);
-  return segments;
 }

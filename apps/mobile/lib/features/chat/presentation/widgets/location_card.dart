@@ -6,21 +6,37 @@ import 'package:flutter/services.dart';
 
 class LocationMap extends StatefulWidget {
   const LocationMap(
-      {required this.location, this.url, this.accessToken, super.key});
+      {required this.location,
+      this.url,
+      this.accessToken,
+      this.compact = false,
+      super.key});
   final ChatLocation location;
   final String? url;
   final String? accessToken;
+  final bool compact;
   @override
   State<LocationMap> createState() => _LocationMapState();
 }
 
 class _LocationMapState extends State<LocationMap> {
   var _retry = 0;
+
+  String? get _mapUrl {
+    final url = widget.url;
+    if (!widget.compact || url == null) return url;
+    final uri = Uri.parse(url);
+    return uri.replace(queryParameters: {
+      ...uri.queryParameters,
+      'height': '480',
+    }).toString();
+  }
+
   @override
   Widget build(BuildContext context) => AspectRatio(
-      aspectRatio: 480 / 220,
+      aspectRatio: widget.compact ? 1 : 480 / 220,
       child: widget.location.hasCoordinates && widget.url != null
-          ? Image.network(widget.url!,
+          ? Image.network(_mapUrl!,
               key: ValueKey('${widget.url}:$_retry'),
               headers: {
                 if (widget.accessToken != null)
@@ -41,96 +57,131 @@ class _LocationMapState extends State<LocationMap> {
                   child: InkWell(
                       onTap: () {
                         PaintingBinding.instance.imageCache.evict(
-                            NetworkImage(widget.url!, headers: {
+                            NetworkImage(_mapUrl!, headers: {
                           if (widget.accessToken != null)
                             'Authorization': 'Bearer ${widget.accessToken}'
                         }));
                         setState(() => _retry++);
                       },
-                      child: const Center(
+                      child: Center(
                           child:
                               Column(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(Icons.map_outlined,
+                        const Icon(Icons.map_outlined,
                             color: BingoPalette.mintPrimary),
-                        SizedBox(height: 8),
-                        Text('地图未加载，点击重试',
-                            style: TextStyle(
-                                fontSize: 12, color: BingoPalette.mintPrimary)),
+                        if (!widget.compact) ...[
+                          const SizedBox(height: 8),
+                          const Text('地图未加载，点击重试',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: BingoPalette.mintPrimary)),
+                        ],
                       ])))))
-          : const ColoredBox(
+          : ColoredBox(
               color: BingoPalette.mintTint,
               child: Center(
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.location_on_outlined,
+                const Icon(Icons.location_on_outlined,
                     color: BingoPalette.mintPrimary),
-                SizedBox(height: 8),
-                Text('仅分享区县，不包含精确位置',
-                    style: TextStyle(
-                        fontSize: 12, color: BingoPalette.mintPrimary)),
+                if (!widget.compact) ...[
+                  const SizedBox(height: 8),
+                  const Text('仅分享区县，不包含精确位置',
+                      style: TextStyle(
+                          fontSize: 12, color: BingoPalette.mintPrimary)),
+                ],
               ]))));
 }
 
 class LocationCard extends StatelessWidget {
   const LocationCard(
-      {required this.location, this.mapUrl, this.accessToken, super.key});
+      {required this.location,
+      this.mapUrl,
+      this.accessToken,
+      this.isUser = false,
+      super.key});
   final ChatLocation location;
   final String? mapUrl;
   final String? accessToken;
+  final bool isUser;
   @override
   Widget build(BuildContext context) => ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 285),
+      constraints: const BoxConstraints(maxWidth: 274),
       child: Material(
-          color: Colors.white,
+          color: isUser ? const Color(0xFFE4F3E9) : Colors.white,
           clipBehavior: Clip.antiAlias,
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-              side: const BorderSide(color: BingoPalette.line)),
+              borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(isUser ? 16 : 4),
+                  topRight: Radius.circular(isUser ? 4 : 16),
+                  bottomLeft: const Radius.circular(16),
+                  bottomRight: const Radius.circular(16)),
+              side: BorderSide(
+                  color: isUser ? const Color(0xFFD0E7D9) : BingoPalette.line)),
           child: InkWell(
               onTap: () => Navigator.of(context).push<void>(MaterialPageRoute(
                   builder: (_) => LocationDetailPage(
                       location: location,
                       mapUrl: mapUrl,
                       accessToken: accessToken))),
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 15, 16, 12),
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(location.name,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
+              child: Padding(
+                  padding: const EdgeInsets.all(15),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(children: [
+                          Expanded(
+                              child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                Text(location.name,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600)),
+                                const SizedBox(height: 4),
+                                Text(location.address,
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        fontSize: 11,
+                                        height: 1.7,
+                                        color: Color(0xFF698776))),
+                              ])),
+                          const SizedBox(width: 13),
+                          Container(
+                              width: 76,
+                              height: 76,
+                              clipBehavior: Clip.antiAlias,
+                              decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                      color: Colors.white, width: 2)),
+                              child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: LocationMap(
+                                      location: location,
+                                      url: mapUrl,
+                                      accessToken: accessToken,
+                                      compact: true))),
+                        ]),
+                        const SizedBox(height: 12),
+                        Divider(
+                            height: 1,
+                            color: isUser
+                                ? const Color(0xFFCFE4D6)
+                                : BingoPalette.line),
+                        Padding(
+                            padding: const EdgeInsets.only(top: 10),
+                            child: Row(children: [
+                              const Icon(Icons.location_on_outlined,
+                                  size: 13, color: BingoPalette.mintPrimary),
+                              const SizedBox(width: 5),
+                              Text(isUser ? '我分享的位置' : '位置',
                                   style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700)),
-                              const SizedBox(height: 5),
-                              Text(location.address,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                      fontSize: 11,
-                                      height: 1.7,
-                                      color: Color(0xFF7D918A))),
+                                      fontSize: 10, color: Color(0xFF5C8971))),
                             ])),
-                    LocationMap(
-                        location: location,
-                        url: mapUrl,
-                        accessToken: accessToken),
-                    const Padding(
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 15, vertical: 9),
-                        child: Row(children: [
-                          Icon(Icons.location_on_outlined,
-                              size: 13, color: BingoPalette.mintPrimary),
-                          SizedBox(width: 5),
-                          Text('位置 · 点击查看',
-                              style: TextStyle(
-                                  fontSize: 10, color: Color(0xFF7D918A))),
-                        ])),
-                  ]))));
+                      ])))));
 }
 
 class LocationDetailPage extends StatelessWidget {

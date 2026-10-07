@@ -17,6 +17,7 @@ from bingo.agent.model_client import (
     ModelToolCalls,
 )
 from bingo.agent.runs import AgentRunCoordinator, AgentRunHandle
+from bingo.agent.segments import split_complete_segments
 from bingo.background import EngagementService
 from bingo.db.models import Conversation, Memory, Message, User
 from bingo.db.repositories import ConversationRepository, MemoryRepository, RoleRepository
@@ -320,9 +321,10 @@ class AgentRuntime:
                 break
 
             if pending.strip():
-                segment = pending.strip()
-                delivered_segments.append(segment)
-                yield {"type": "segment", "content": segment}
+                segments, _ = split_complete_segments(pending, final=True)
+                for segment in segments:
+                    delivered_segments.append(segment)
+                    yield {"type": "segment", "content": segment}
                 pending = ""
 
             for call in tool_calls:
@@ -375,9 +377,10 @@ class AgentRuntime:
             raise AgentRunInterrupted
 
         if pending.strip():
-            segment = pending.strip()
-            delivered_segments.append(segment)
-            yield {"type": "segment", "content": segment}
+            segments, _ = split_complete_segments(pending, final=True)
+            for segment in segments:
+                delivered_segments.append(segment)
+                yield {"type": "segment", "content": segment}
 
         reply = "".join(visible_reply).strip()
         assistant_message = await repository.add_message(
@@ -521,18 +524,6 @@ class AgentRuntime:
                 if fact:
                     await MemoryRepository(session, user_id).add(fact)
                 return
-
-
-def split_complete_segments(buffer: str) -> tuple[list[str], str]:
-    segments: list[str] = []
-    start = 0
-    for index, character in enumerate(buffer):
-        if character in "。！？!?\n":
-            segment = buffer[start : index + 1].strip()
-            if segment:
-                segments.append(segment)
-            start = index + 1
-    return segments, buffer[start:]
 
 
 def _duration_ms(started_at: float) -> int:

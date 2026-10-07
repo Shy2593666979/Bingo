@@ -28,7 +28,7 @@ class InterruptibleModel:
     ) -> AsyncIterator[ModelStreamEvent]:
         self._calls += 1
         if self._calls == 1:
-            yield ModelTextDelta("已经说出第一句。")
+            yield ModelTextDelta("已经说出第一句。\n")
             self.first_segment_sent.set()
             await asyncio.Event().wait()
             return

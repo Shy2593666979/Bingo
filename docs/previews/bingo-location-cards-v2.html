@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bingo · 位置卡片样式对比</title>
+  <style>
+    :root{color-scheme:light;--ink:#243e36;--muted:#899b94;--green:#159b82;--line:#e4eeea;--mint:#e9f7f1}
+    *{box-sizing:border-box}body{margin:0;background:#f3f7f5;color:var(--ink);font-family:system-ui,-apple-system,"Microsoft YaHei",sans-serif}button{font:inherit;cursor:pointer}
+    .studio{max-width:1240px;margin:auto;padding:42px 28px 60px}.eyebrow{font-size:12px;letter-spacing:2px;color:var(--green);font-weight:700}h1{font-size:30px;margin:12px 0;letter-spacing:-1px}.intro{font-size:14px;color:#72877e;line-height:1.8;margin:0}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:22px 0 28px}.toolbar button{border:1px solid var(--line);background:white;border-radius:24px;padding:10px 18px;color:#5f786d}.toolbar button[aria-pressed="true"]{background:var(--ink);color:white;border-color:var(--ink)}
+    .comparisons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}.variant-head{display:flex;align-items:center;justify-content:space-between;margin:0 4px 14px}.variant-head h2{font-size:17px;margin:0}.variant-head span{font-size:11px;border-radius:12px;background:#e2eee8;color:#608174;padding:5px 9px}.variant-note{font-size:13px;color:#71867c;line-height:1.8;margin:16px 5px 0}
+    .phone{width:100%;max-width:380px;margin:auto;border:1px solid #dbe5df;border-radius:30px;background:#f5faf7;box-shadow:0 20px 45px #385e4510;overflow:hidden}.status{height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:11px;font-weight:600;background:#f9fcfa}.status small{font-size:10px}.chat-head{height:62px;display:grid;grid-template-columns:42px 1fr 42px;align-items:center;text-align:center;padding:0 14px;border-bottom:1px solid #e8f0eb;background:#f9fcfa;font-weight:650;font-size:18px}.icon{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.chat-head button{border:0;background:none;color:#365e50;display:grid;place-items:center}.conversation{min-height:405px;padding:20px 16px 25px;background:linear-gradient(160deg,#f5fbf7,#f4f8f6)}.time{text-align:center;font-size:10px;color:#a0afa7;margin:0 0 20px}.incoming{display:flex;align-items:flex-start;gap:9px;margin-bottom:26px}.avatar{width:32px;height:32px;border-radius:50%;object-fit:cover}.bubble{font-size:13px;background:white;border-radius:4px 15px 15px 15px;padding:12px 14px;line-height:1.6;box-shadow:0 2px 5px #2f604407;max-width:235px}.outgoing{display:flex;justify-content:flex-end;position:relative}.location{position:relative;width:274px;max-width:100%;border-radius:17px;overflow:hidden;box-shadow:0 5px 18px #375b4510}.place-copy{padding:15px 16px 13px}.name{font-size:16px;font-weight:650;line-height:1.5;overflow-wrap:anywhere}.address{font-size:11px;color:#7c9086;line-height:1.65;margin-top:4px}.map{height:134px;background:#edf2ed;position:relative;overflow:hidden}.map img{width:100%;height:100%;object-fit:cover}.pin{position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);display:grid;place-items:center;width:29px;height:29px;border:5px solid white;border-radius:50%;background:var(--green);box-shadow:0 3px 10px #17452d35;pointer-events:none}.card-foot{display:flex;align-items:center;gap:5px;padding:9px 15px;font-size:10px}.card-foot .icon{width:13px;height:13px}.delivery{text-align:right;font-size:10px;color:#90a299;margin:9px 2px 25px}.reply{margin-top:0}.input{display:flex;align-items:center;gap:10px;padding:15px;background:#fff;border-top:1px solid var(--line)}.input .field{flex:1;height:34px;background:#f2f6f3;border-radius:10px}.input .icon{width:20px;height:20px;color:#637b70}
+    .classic{background:white;border:1px solid #dceae3;border-top:3px solid #89c8b1;border-radius:16px 4px 16px 16px}.classic .place-copy{background:#f1faf5}.classic .card-foot{background:#fafdfb;color:#759085}.classic .map{height:128px}
+    .map-first{background:white;border:1px solid #ddebe4;border-radius:18px 4px 18px 18px}.map-first .map{height:155px}.map-first .place-copy{padding-top:11px}.map-first .name{font-size:15px}.my-tag{position:absolute;top:10px;right:10px;padding:5px 9px;border:1px solid #ffffffa0;border-radius:14px;font-size:10px;background:#fffffff0;color:#287257;backdrop-filter:blur(6px)}.map-first .card-foot{margin:0 14px 11px;padding:6px 0 0;border-top:1px solid #edf3ef;color:#6a8b7c}
+    .compact{background:#e4f3e9;border:1px solid #d0e7d9;border-radius:16px 4px 16px 16px;padding:15px}.compact-content{display:flex;align-items:center;gap:13px}.compact .place-copy{padding:0;flex:1;min-width:0}.compact .name{font-size:15px}.compact .address{color:#698776}.compact .map{width:76px;height:76px;flex:none;border:2px solid white;border-radius:12px}.compact .pin{width:19px;height:19px;border-width:3px}.compact .card-foot{border-top:1px solid #cfe4d6;margin-top:12px;padding:10px 0 0;color:#5c8971}.hint{font-size:12px;color:#789183;margin:28px 2px 0}.variant[hidden]{display:none}.comparisons.focus{grid-template-columns:minmax(0,380px);justify-content:center}button:focus-visible{outline:3px solid #8acbb2;outline-offset:3px}
+    @media(max-width:1050px){.comparisons{gap:14px}.studio{padding:28px 16px}.conversation{padding-left:12px;padding-right:12px}.location{width:255px}.compact .map{width:66px;height:66px}}@media(max-width:850px){.comparisons{grid-template-columns:1fr}.variant{max-width:400px;margin:0 auto 16px;width:100%}.studio{padding:24px 18px}h1{font-size:25px}.conversation{padding:20px 16px}.location{width:274px}}
+    .delivery{display:none}
+  </style>
+</head>
+<body>
+  <svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"><defs>
+    <symbol id="back" viewBox="0 0 24 24"><path d="m14 5-7 7 7 7"/></symbol>
+    <symbol id="call" viewBox="0 0 24 24"><path d="m6 3 4 5-2 3c1 3 3 5 6 6l3-2 4 3c0 3-2 4-4 3C9 19 4 14 3 7c0-2 1-4 3-4Z"/></symbol>
+    <symbol id="point" viewBox="0 0 24 24"><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2"/></symbol>
+    <symbol id="plus" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M7 12h10M12 7v10"/></symbol>
+    <symbol id="smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14c2 3 6 3 8 0M8 9h.1M16 9h.1"/></symbol>
+    <symbol id="voice" viewBox="0 0 24 24"><path d="M9 8 5 11v2l4 3ZM13 8c3 2 3 6 0 8M16 5c5 4 5 10 0 14"/></symbol>
+  </defs></svg>
+  <main class="studio">
+    <div class="eyebrow">BINGO · 位置消息</div>
+    <h1>不显示头像，也能一眼看出是你发的。</h1>
+    <p class="intro">三版都沿用当前浅薄荷色与系统字体，卡片靠右。地图使用公共地标样图，不获取你的定位。<br>选地点 → 点击发送，默认发送选中地点的名称、地址和坐标；不自动发送。</p>
+    <nav class="toolbar" aria-label="切换预览"><button data-view="all" aria-pressed="true">三版对比</button><button data-view="a" aria-pressed="false">A · 经典地址卡</button><button data-view="b" aria-pressed="false">B · 地图优先</button><button data-view="c" aria-pressed="false">C · 轻量薄荷卡</button></nav>
+    <div class="comparisons" id="comparisons">
+      <section class="variant" data-variant="a"><div class="variant-head"><h2>A · 经典地址卡</h2><span>推荐</span></div><div class="phone">
+        <div class="status"><span>19:13</span><small>5G　▰</small></div><div class="chat-head"><button aria-label="返回"><svg class="icon"><use href="#back"/></svg></button><span>甜甜</span><button aria-label="电话"><svg class="icon"><use href="#call"/></svg></button></div>
+        <div class="conversation"><div class="time">今天 19:13</div><div class="incoming"><img class="avatar" src="assets/ui-kit/girlfriend.png" alt="甜甜"><div class="bubble">你到哪里啦？把位置发给我看看。</div></div>
+          <div class="outgoing"><div class="location classic"><div class="place-copy"><div class="name">天安门广场</div><div class="address">北京市东城区东长安街<br>天安门广场北侧</div></div><div class="map"><img src="assets/location/amap-public-sample.png" alt="公共地标地图样图"><span class="pin"></span></div><div class="card-foot"><svg class="icon"><use href="#point"/></svg>位置</div></div></div><div class="delivery">19:13 · 已发送</div>
+          <div class="incoming reply"><img class="avatar" src="assets/ui-kit/girlfriend.png" alt="甜甜"><div class="bubble">收到啦，路上注意安全呀。</div></div>
+        </div><div class="input"><svg class="icon"><use href="#voice"/></svg><div class="field"></div><svg class="icon"><use href="#smile"/></svg><svg class="icon"><use href="#plus"/></svg></div>
+      </div><p class="variant-note">标题在上、地图在下；右上角收紧，浅薄荷色区分自己发送。接近熟悉的聊天体验。</p></section>
+      <section class="variant" data-variant="b"><div class="variant-head"><h2>B · 地图优先</h2><span>更直观</span></div><div class="phone">
+        <div class="status"><span>19:13</span><small>5G　▰</small></div><div class="chat-head"><button aria-label="返回"><svg class="icon"><use href="#back"/></svg></button><span>甜甜</span><button aria-label="电话"><svg class="icon"><use href="#call"/></svg></button></div>
+        <div class="conversation"><div class="time">今天 19:13</div><div class="incoming"><img class="avatar" src="assets/ui-kit/girlfriend.png" alt="甜甜"><div class="bubble">你到哪里啦？把位置发给我看看。</div></div>
+          <div class="outgoing"><div class="location map-first"><div class="map"><img src="assets/location/amap-public-sample.png" alt="公共地标地图样图"><span class="pin"></span><span class="my-tag">我分享的位置</span></div><div class="place-copy"><div class="name">天安门广场</div><div class="address">北京市东城区东长安街<br>天安门广场北侧</div></div><div class="card-foot"><svg class="icon"><use href="#point"/></svg>位置</div></div></div><div class="delivery">19:13 · 已发送</div>
+          <div class="incoming reply"><img class="avatar" src="assets/ui-kit/girlfriend.png" alt="甜甜"><div class="bubble">收到啦，路上注意安全呀。</div></div>
+        </div><div class="input"><svg class="icon"><use href="#voice"/></svg><div class="field"></div><svg class="icon"><use href="#smile"/></svg><svg class="icon"><use href="#plus"/></svg></div>
+      </div><p class="variant-note">先看到地图，再看地址。“我分享的位置”轻标签明确消息来自你，不需要用户头像。</p></section>
+      <section class="variant" data-variant="c"><div class="variant-head"><h2>C · 轻量薄荷卡</h2><span>更紧凑</span></div><div class="phone">
+        <div class="status"><span>19:13</span><small>5G　▰</small></div><div class="chat-head"><button aria-label="返回"><svg class="icon"><use href="#back"/></svg></button><span>甜甜</span><button aria-label="电话"><svg class="icon"><use href="#call"/></svg></button></div>
+        <div class="conversation"><div class="time">今天 19:13</div><div class="incoming"><img class="avatar" src="assets/ui-kit/girlfriend.png" alt="甜甜"><div class="bubble">你到哪里啦？把位置发给我看看。</div></div>
+          <div class="outgoing"><div class="location compact"><div class="compact-content"><div class="place-copy"><div class="name">天安门广场</div><div class="address">北京市东城区东长安街<br>天安门广场北侧</div></div><div class="map"><img src="assets/location/amap-public-sample.png" alt="公共地标地图样图"><span class="pin"></span></div></div><div class="card-foot"><svg class="icon"><use href="#point"/></svg>我分享的位置</div></div></div><div class="delivery">19:13 · 已发送</div>
+          <div class="incoming reply"><img class="avatar" src="assets/ui-kit/girlfriend.png" alt="甜甜"><div class="bubble">收到啦，路上注意安全呀。</div></div>
+        </div><div class="input"><svg class="icon"><use href="#voice"/></svg><div class="field"></div><svg class="icon"><use href="#smile"/></svg><svg class="icon"><use href="#plus"/></svg></div>
+      </div><p class="variant-note">地址与小地图横向排列；整体使用发送方浅绿气泡色，少占空间，不打断聊天。</p></section>
+    </div>
+    <p class="hint">仅供样式选择，页面不会发送消息。卡片里的地点和伙伴回复均为演示内容。</p>
+  </main>
+  <script>
+    const comparisons = document.getElementById('comparisons');
+    const buttons = document.querySelectorAll('[data-view]');
+    buttons.forEach(button => button.addEventListener('click', () => {
+      const view = button.dataset.view;
+      buttons.forEach(option => option.setAttribute('aria-pressed', String(option === button)));
+      comparisons.classList.toggle('focus', view !== 'all');
+      document.querySelectorAll('[data-variant]').forEach(variant => {
+        variant.hidden = view !== 'all' && variant.dataset.variant !== view;
+      });
+    }));
+  </script>
+</body>
+</html>

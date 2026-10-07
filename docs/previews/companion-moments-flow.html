@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bingo · 陪伴功能逐页体验</title>
+  <link rel="stylesheet" href="companion-moments-flow.css">
+</head>
+<body>
+  <svg class="sprite" aria-hidden="true"><defs>
+    <symbol id="back" viewBox="0 0 24 24"><path d="m14 5-7 7 7 7"/></symbol>
+    <symbol id="plus" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></symbol>
+    <symbol id="focus" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6M12 2v3"/></symbol>
+    <symbol id="promise" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="16" rx="4"/><path d="M8 3v4M16 3v4M4 10h16m-12 5 3 3 5-5"/></symbol>
+    <symbol id="sleep" viewBox="0 0 24 24"><path d="M20 14A8.5 8.5 0 0 1 10 3a9 9 0 1 0 10 11Z"/><path d="M17 3v4M15 5h4"/></symbol>
+    <symbol id="diary" viewBox="0 0 24 24"><path d="M6 3h11a2 2 0 0 1 2 2v16H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3ZM6 3v18M10 8h5M10 12h5M10 16h3"/></symbol>
+    <symbol id="voice" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 11v1a6 6 0 0 0 12 0v-1M12 18v3M9 21h6"/></symbol>
+    <symbol id="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z"/></symbol>
+    <symbol id="pause" viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></symbol>
+    <symbol id="check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="heart" viewBox="0 0 24 24"><path d="M12 20 4 12C-1 5 7 0 12 7c5-7 13-2 8 5Z"/></symbol>
+    <symbol id="photo" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m4 17 5-5 4 4 3-3 4 4"/><circle cx="15" cy="9" r="1"/></symbol>
+    <symbol id="camera" viewBox="0 0 24 24"><path d="M3 8h4l2-4h6l2 4h4v12H3Z"/><circle cx="12" cy="13" r="4"/></symbol>
+    <symbol id="call" viewBox="0 0 24 24"><path d="m6 3 4 5-2 3c1 3 3 5 6 6l3-2 4 3c0 3-2 4-4 3C9 19 4 14 3 7c0-2 1-4 3-4Z"/></symbol>
+    <symbol id="point" viewBox="0 0 24 24"><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2"/></symbol>
+  </defs></svg>
+  <main class="studio">
+    <header><a href="companion-moments.html"><img src="assets/ui-kit/bingo_logo.png" alt="Bingo">Bingo <small>逐页体验</small></a><span>设计预览 · 不连接后台</span></header>
+    <section class="intro"><p>从打开入口，到伙伴回应</p><h1>每一次点击，<br>都给你看下一页。</h1><div>点手机里的按钮走完整流程，或者点步骤跳到任意一页。<br>四个功能各有六页，保留三种配色，输入内容会带到后续页面。</div></section>
+    <div class="selectors"><nav id="features" aria-label="功能"><button data-feature="focus">一起专注</button><button data-feature="promise">小约定</button><button data-feature="sleep">陪我入睡</button><button data-feature="diary">今日小记</button></nav><nav id="themes" aria-label="配色"><button data-theme="a">A · 轻薄荷</button><button data-theme="b">B · 温暖手帐</button><button data-theme="c">C · 安静留白</button></nav></div>
+    <nav id="steps" class="steps" aria-label="页面步骤"></nav>
+    <section class="stage"><div><div id="phone" class="phone"></div><div class="pager"><button id="previous">上一页</button><span id="page-number"></span><button id="next">下一页</button></div></div><aside id="guide"></aside></section>
+    <footer>逐页设计稿，不是已上线功能。倒计时仅在本页有效，提醒、语音、AI 回应和记录均为演示。不会开启麦克风或通知，不发送、不持久保存内容。</footer>
+  </main>
+  <script src="companion-moments-flow.js"></script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bingo · 陪伴小事 · 三套设计</title>
+  <link rel="stylesheet" href="companion-moments.css">
+</head>
+<body>
+  <svg class="svg-library" aria-hidden="true"><defs>
+    <symbol id="focus" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6M12 2v3M18 6l2-2"/></symbol>
+    <symbol id="promise" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="16" rx="4"/><path d="M8 3v4M16 3v4M4 10h16m-12 5 3 3 5-5"/></symbol>
+    <symbol id="sleep" viewBox="0 0 24 24"><path d="M20 14A8.5 8.5 0 0 1 10 3a9 9 0 1 0 10 11Z"/><path d="M17 3v4M15 5h4"/></symbol>
+    <symbol id="diary" viewBox="0 0 24 24"><path d="M6 3h11a2 2 0 0 1 2 2v16H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3ZM6 3v18M10 8h5M10 12h5M10 16h3"/></symbol>
+    <symbol id="back" viewBox="0 0 24 24"><path d="m14 5-7 7 7 7"/></symbol>
+    <symbol id="close" viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></symbol>
+    <symbol id="call" viewBox="0 0 24 24"><path d="m6 3 4 5-2 3c1 3 3 5 6 6l3-2 4 3c0 3-2 4-4 3C9 19 4 14 3 7c0-2 1-4 3-4Z"/></symbol>
+    <symbol id="plus" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M7 12h10M12 7v10"/></symbol>
+    <symbol id="photo" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m4 17 5-5 4 4 3-3 4 4"/><circle cx="15" cy="9" r="1"/></symbol>
+    <symbol id="camera" viewBox="0 0 24 24"><path d="M3 8h4l2-4h6l2 4h4v12H3Z"/><circle cx="12" cy="13" r="4"/></symbol>
+    <symbol id="point" viewBox="0 0 24 24"><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2"/></symbol>
+    <symbol id="voice" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 11v1a6 6 0 0 0 12 0v-1M12 18v3M9 21h6"/></symbol>
+    <symbol id="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z"/></symbol>
+    <symbol id="pause" viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></symbol>
+    <symbol id="leaf" viewBox="0 0 24 24"><path d="M4 20C3 10 9 4 20 4c0 11-6 17-14 13M4 20l11-11"/></symbol>
+    <symbol id="heart" viewBox="0 0 24 24"><path d="M12 20 4 12C-1 5 7 0 12 7c5-7 13-2 8 5Z"/></symbol>
+    <symbol id="check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+  </defs></svg>
+  <main class="studio">
+    <header class="studio-head"><a class="brand" href="companion-space.html"><img src="assets/ui-kit/bingo_logo.png" alt="Bingo">Bingo <span>陪伴小事</span></a><span class="demo-label">交互预览 · 不连接后台</span></header>
+    <section class="intro"><div><p class="eyebrow">让陪伴发生在日常里</p><h1>不只是聊天，<br>也一起过好小小的一天。</h1><p>保留当前浅色、自然的气质。四个入口放在加号菜单第二行，<br>点开就能开始，不增加首页负担。</p></div><div class="principles"><span><svg class="icon"><use href="#leaf"/></svg>浅色按钮，不用大块深绿</span><span><svg class="icon"><use href="#heart"/></svg>当前伙伴陪你，不是通用工具</span><span><svg class="icon"><use href="#check"/></svg>可点击体验，所有结果仅为演示</span></div></section>
+    <div class="controls"><nav class="features" aria-label="查看功能"><button data-feature="menu">加号菜单</button><button data-feature="focus" aria-pressed="true">一起专注</button><button data-feature="promise">小约定</button><button data-feature="sleep">陪我入睡</button><button data-feature="diary">今日小记</button></nav><nav class="views" aria-label="选择方案"><button data-view="all" aria-pressed="true">三版对比</button><button data-view="a">A</button><button data-view="b">B</button><button data-view="c">C</button></nav></div>
+    <section class="comparison" id="comparison">
+      <article class="variant" data-variant="a"><header class="variant-title"><div><b>A · 轻薄荷</b><span>最贴近现在的 APP</span></div><small>推荐</small></header><div class="phone theme-a" data-phone="a"></div><p class="design-note">轻薄荷色底、圆角浮层、柔和的选择按钮。保留现有聊天体验，改动最克制。</p></article>
+      <article class="variant" data-variant="b"><header class="variant-title"><div><b>B · 温暖手帐</b><span>更有生活感</span></div><small>温暖</small></header><div class="phone theme-b" data-phone="b"></div><p class="design-note">奶油色卡片、纸张般的层次与自然留白。小约定和今日小记更像两个人的手帐。</p></article>
+      <article class="variant" data-variant="c"><header class="variant-title"><div><b>C · 安静留白</b><span>更清爽、更轻盈</span></div><small>简洁</small></header><div class="phone theme-c" data-phone="c"></div><p class="design-note">雾蓝与浅薄荷搭配，少装饰、轻边框。控制项更紧凑，适合专注与睡前场景。</p></article>
+    </section>
+    <footer>HTML 仅演示交互：不获取麦克风、定位或通知权限，不播放真实声音，不创建提醒，不保存个人内容到后台。倒计时仅在本页有效；伙伴回应是固定示例。</footer>
+  </main>
+  <p style="text-align:center"><a href="companion-moments-flow.html" style="color:#267f67">查看新版：一页一页走完整流程 →</a></p>
+  <script src="companion-moments.js"></script>
+</body>
+</html>
