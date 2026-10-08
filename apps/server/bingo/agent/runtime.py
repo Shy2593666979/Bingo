@@ -17,7 +17,6 @@ from bingo.agent.model_client import (
     ModelToolCalls,
 )
 from bingo.agent.runs import AgentRunCoordinator, AgentRunHandle
-from bingo.agent.segments import split_complete_segments
 from bingo.background import EngagementService
 from bingo.db.models import Conversation, Memory, Message, User
 from bingo.db.repositories import ConversationRepository, MemoryRepository, RoleRepository
@@ -25,6 +24,7 @@ from bingo.schemas.maps import LocationInput
 from bingo.services.logging import log_event
 from bingo.tools import ToolRegistry
 from bingo.tools.base import ToolContext
+from bingo.utils.segments import split_complete_segments
 
 MAX_TOOL_TURNS = 8
 logger = logging.getLogger(__name__)

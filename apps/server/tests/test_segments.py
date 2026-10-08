@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from bingo.agent.segments import split_complete_segments
 from bingo.prompts.system import SYSTEM_PROMPT
+from bingo.utils.segments import split_complete_segments
 
 CASES = json.loads(
     (

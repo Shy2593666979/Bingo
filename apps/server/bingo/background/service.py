@@ -8,6 +8,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from bingo.agent.context import build_context
 from bingo.agent.model_client import ModelClient, ModelMessage
 from bingo.background.broker import (
     BackgroundJob,
@@ -22,6 +23,7 @@ from bingo.db.repositories import (
     MemoryCheckpointRepository,
     MemoryRepository,
     ProactiveMessageRepository,
+    RoleRepository,
     UserRepository,
 )
 from bingo.db.time import as_beijing, beijing_now
@@ -63,6 +65,7 @@ class EngagementService:
         self._poll_seconds = poll_seconds
         self._push_service = push_service
         self._timezone = timezone
+        self._location = location
         self._worker: asyncio.Task[None] | None = None
         self._recommendation_locks: dict[str, asyncio.Lock] = {}
         self._morning = MorningGreetingService(
@@ -319,6 +322,20 @@ class EngagementService:
             messages = await ConversationRepository(session, user.id).list_messages(
                 payload["conversation_id"], 30
             )
+            role = await RoleRepository(session).get(user.role_id)
+            memories = await MemoryRepository(session, user.id).list(30, role_id=user.role_id)
+            region = await self._location.current(user.id) if self._location else None
+            context = build_context(
+                [],
+                memories,
+                username=user.username or "用户",
+                assistant_name=user.assistant_name or "Bingo",
+                personality=user.personality or "温柔体贴",
+                role=user.role or "朋友",
+                timezone=self._timezone,
+                role_prompt=role.context_prompt if role else "",
+                current_location=region["display"] if region else "",
+            )
             chat_messages = [item for item in messages if item.message_type == "chat"]
             transcript = "\n".join(f"{item.role}: {item.content}" for item in chat_messages)
             prompt = FOLLOW_UP_PROMPT.format(
@@ -328,7 +345,7 @@ class EngagementService:
                 transcript=transcript,
             )
             content = (
-                await self._llm.complete([ModelMessage(role="user", content=prompt)])
+                await self._llm.complete([*context, ModelMessage(role="user", content=prompt)])
             ).strip()
             if content:
                 proactive = await ProactiveMessageRepository(session, user.id).create(

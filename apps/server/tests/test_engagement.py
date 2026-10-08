@@ -8,10 +8,11 @@ from bingo.agent.model_client import ModelMessage
 from bingo.background.broker import InMemoryTaskBroker
 from bingo.background.service import EngagementService
 from bingo.config import Settings
-from bingo.db.models import Conversation, MemoryCheckpoint, Message, User
+from bingo.db.models import Conversation, MemoryCheckpoint, Message, RolePreference, User
 from bingo.db.repositories import MemoryRepository, ProactiveMessageRepository, RoleRepository
 from bingo.db.session import Database
 from bingo.db.time import beijing_now
+from bingo.roles import role_id
 
 
 class EngagementModel:
@@ -93,6 +94,85 @@ async def _drain(service: EngagementService) -> None:
     broker = service._broker
     while job := await broker.pop_due():
         await service._execute(job)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("region", [None, {"display": "河南省郑州市金水区"}])
+async def test_followup_uses_shared_system_context_at_generation_time(
+    tmp_path, monkeypatch, region
+):
+    database, service, user_id, conversation_id = await _build_service(tmp_path)
+    captured = []
+    location_users = []
+    current_time = "2026年10月8日（周四下午） 16:32:00"
+
+    def format_time(timezone):
+        assert timezone == "Asia/Shanghai"
+        return current_time
+
+    async def complete(messages):
+        captured.append(messages)
+        return "今晚早点休息，好吗？"
+
+    class Location:
+        async def current(self, requested_user_id):
+            location_users.append(requested_user_id)
+            return region
+
+    monkeypatch.setattr("bingo.agent.context.format_current_time", format_time)
+    monkeypatch.setattr(service._llm, "complete", complete)
+    service._location = Location()
+    girlfriend_id = role_id("girlfriend")
+    boyfriend_id = role_id("boyfriend")
+    try:
+        async with database.session_factory() as session:
+            user = await session.get(User, user_id)
+            user.username = "小明"
+            user.role_id = boyfriend_id
+            session.add(user)
+            conversation = await session.get(Conversation, conversation_id)
+            conversation.role_id = girlfriend_id
+            session.add(conversation)
+            session.add(
+                RolePreference(user_id=user_id, role_id=girlfriend_id, personality="温柔俏皮")
+            )
+            await session.commit()
+            role = await RoleRepository(session).get(girlfriend_id)
+            role_prompt = role.context_prompt
+            memories = MemoryRepository(session, user_id)
+            await memories.add("用户喜欢浅烘咖啡")
+            await memories.add("喜欢温柔陪伴", scope="role", role_id=girlfriend_id)
+            await memories.add("约好周末散步", scope="user_role", role_id=girlfriend_id)
+            await memories.add("其他伙伴的约定", scope="user_role", role_id=boyfriend_id)
+        payload = {"user_id": user_id, "conversation_id": conversation_id, "stage": 1}
+        await service._create_follow_up(payload)
+        context, instruction = captured[0]
+        assert context.role == "system"
+        for expected in (
+            "甜甜，小明 的个人 AI 助理",
+            "关系角色：女朋友",
+            role_prompt,
+            "性格与说话风格：温柔俏皮",
+            f"当前时间：{current_time}",
+            "时区：Asia/Shanghai",
+            f"用户当前位置：{region['display'] if region else '暂未获取'}",
+            "用户喜欢浅烘咖啡",
+            "喜欢温柔陪伴",
+            "约好周末散步",
+        ):
+            assert expected in context.content
+        assert "其他伙伴的约定" not in context.content
+        assert instruction.role == "user"
+        assert "我喜欢浅烘咖啡" in instruction.content
+        assert "以系统提示词中的当前时间和时区为准" in instruction.content
+        current_time = "2026年10月8日（周四晚上） 20:32:00"
+        await service._create_follow_up(payload)
+        assert f"当前时间：{current_time}" in captured[1][0].content
+        assert "16:32:00" not in captured[1][0].content
+        assert location_users == [user_id, user_id]
+    finally:
+        await service.close()
+        await database.dispose()
 
 
 @pytest.mark.asyncio
