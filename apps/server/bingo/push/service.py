@@ -8,7 +8,7 @@ from datetime import timedelta
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from bingo.db.models import ProactiveMessage
+from bingo.db.models import Message, ProactiveMessage, Role
 from bingo.db.repositories import PushOutboxRepository
 from bingo.db.time import beijing_now
 from bingo.push.provider import PushDelivery, PushProvider
@@ -59,6 +59,7 @@ class PushService:
             return 0
         payload = {
             "type": "proactive_message",
+            "user_id": proactive.user_id,
             "proactive_id": proactive.id,
             "message_id": proactive.message_id,
             "conversation_id": proactive.conversation_id,
@@ -66,6 +67,11 @@ class PushService:
         }
 
         async def enqueue_in_session(target: AsyncSession) -> int:
+            message = await target.get(Message, proactive.message_id)
+            role = await target.get(Role, message.role_id) if message and message.role_id else None
+            if role and not role.deleted and role.owner_id in {None, proactive.user_id}:
+                payload["role_id"] = role.id
+                payload["avatar"] = role.avatar if role.owner_id is None else "bingo_logo.png"
             return await PushOutboxRepository(target).enqueue_for_user(
                 user_id=proactive.user_id,
                 proactive_message_id=proactive.id,
@@ -121,7 +127,8 @@ class PushService:
                         client_id=device.client_id,
                         title=outbox.title,
                         body=outbox.body,
-                        payload=json.loads(outbox.payload_json),
+                        payload={"user_id": outbox.user_id, **json.loads(outbox.payload_json)},
+                        role_avatar_notifications=device.role_avatar_notifications,
                     )
                 )
             except Exception as error:

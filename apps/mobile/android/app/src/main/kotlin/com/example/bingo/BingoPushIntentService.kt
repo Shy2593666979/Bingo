@@ -16,7 +16,9 @@ class BingoPushIntentService : GTIntentService() {
             .apply()
     }
 
-    override fun onReceiveMessageData(context: Context, message: GTTransmitMessage) = Unit
+    override fun onReceiveMessageData(context: Context, message: GTTransmitMessage) {
+        message.payload?.let { PartnerPushNotifications.receive(context, it) }
+    }
 
     override fun onReceiveOnlineState(context: Context, online: Boolean) = Unit
 

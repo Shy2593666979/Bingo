@@ -3,6 +3,7 @@ from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from uuid import uuid4
 
+from sqlalchemy import inspect
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     async_sessionmaker,
@@ -33,6 +34,7 @@ class Database:
             await connection.run_sync(_upgrade_local_sqlite_schema)
             await connection.run_sync(_upgrade_role_conversations)
             await connection.run_sync(_upgrade_morning_greetings)
+            await connection.run_sync(_upgrade_push_avatars)
 
     async def dispose(self) -> None:
         await self.engine.dispose()
@@ -40,6 +42,15 @@ class Database:
     async def session(self) -> AsyncIterator[AsyncSession]:
         async with self.session_factory() as session:
             yield session
+
+
+def _upgrade_push_avatars(connection) -> None:
+    columns = {column["name"] for column in inspect(connection).get_columns("push_devices")}
+    if "role_avatar_notifications" not in columns:
+        connection.exec_driver_sql(
+            "ALTER TABLE push_devices ADD COLUMN role_avatar_notifications BOOLEAN NOT NULL "
+            "DEFAULT FALSE"
+        )
 
 
 def _upgrade_morning_greetings(connection) -> None:

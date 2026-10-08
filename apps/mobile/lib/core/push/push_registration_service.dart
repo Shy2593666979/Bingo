@@ -16,6 +16,7 @@ class PushRegistrationService {
   String? _clientId;
   bool _configured = false;
   bool _authenticated = false;
+  String? _userId;
   bool _starting = false;
   bool _started = false;
 
@@ -30,7 +31,8 @@ class PushRegistrationService {
     if (_authenticated) unawaited(_startSdk());
   }
 
-  Future<void> activate() async {
+  Future<void> activate(String userId) async {
+    _userId = userId;
     _authenticated = true;
     if (!_configured) return;
     unawaited(_startSdk());
@@ -40,6 +42,10 @@ class PushRegistrationService {
     if (_starting) return;
     _starting = true;
     try {
+      final userId = _userId;
+      if (!_authenticated || userId == null) return;
+      await _channel.invokeMethod<void>('setAccount', {'user_id': userId});
+      if (!_authenticated || _userId != userId) return;
       await _channel.invokeMethod<void>('requestPermission');
       if (!_started) {
         _started = await _channel.invokeMethod<bool>('initialize') ?? false;
@@ -64,9 +70,11 @@ class PushRegistrationService {
 
   Future<void> deactivate() async {
     _authenticated = false;
+    _userId = null;
     final installationId = _deviceInfo?['installation_id'] as String?;
     if (!_configured || installationId == null) return;
     try {
+      await _channel.invokeMethod<void>('setAccount', {'user_id': null});
       await _gateway.unregisterPushDevice(installationId);
     } on Exception {
       // Logout must still work if the server is temporarily unavailable.
@@ -86,6 +94,7 @@ class PushRegistrationService {
       manufacturer: info['manufacturer'] as String?,
       model: info['model'] as String?,
       appVersion: info['app_version'] as String?,
+      roleAvatarNotifications: true,
     );
   }
 }

@@ -328,6 +328,7 @@ abstract interface class PushGateway {
     String? manufacturer,
     String? model,
     String? appVersion,
+    bool roleAvatarNotifications = false,
   });
 
   Future<void> unregisterPushDevice(String installationId);
@@ -1075,6 +1076,7 @@ class HttpApiGateway
     String? manufacturer,
     String? model,
     String? appVersion,
+    bool roleAvatarNotifications = false,
   }) async {
     await _request(
       'PUT',
@@ -1086,6 +1088,7 @@ class HttpApiGateway
         'manufacturer': manufacturer,
         'model': model,
         'app_version': appVersion,
+        'role_avatar_notifications': roleAvatarNotifications,
       },
     );
   }

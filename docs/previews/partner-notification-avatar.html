@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bingo · 伙伴通知头像预览</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#eef3ef;color:#26382f;font-family:system-ui,-apple-system,"Microsoft YaHei",sans-serif}.studio{max-width:800px;margin:auto;padding:30px 22px}h1{font-size:24px;font-weight:650;margin:0 0 12px}.intro{font-size:13px;color:#63756a;line-height:1.9;margin:0 0 23px}.controls{display:flex;gap:8px;margin-bottom:25px}button{font:inherit;font-size:12px;cursor:pointer;border:1px solid #d2e2d7;border-radius:12px;background:#fff;color:#547362;padding:9px 17px}button[aria-pressed=true]{background:#bfe5d4;color:#275c48;border-color:#b0d7c5}button:focus-visible{outline:3px solid #547362;outline-offset:3px}.variant{margin-bottom:26px}.heading{display:flex;align-items:center;gap:9px;margin-bottom:11px}.heading span{display:grid;place-items:center;width:25px;height:25px;border-radius:8px;background:#e0ece3;color:#547362;font-size:11px;font-weight:700}.heading h2{font-size:14px;font-weight:650;margin:0}.shade{background:linear-gradient(135deg,#9ea8a2,#929b97);border-radius:24px;padding:17px 17px 25px}.handle{width:56px;height:4px;margin:0 auto 16px;background:#c5cbc7;border-radius:5px}.notification{background:#f4f5f2f2;border-radius:24px;padding:19px 17px;display:flex;gap:14px;align-items:center;box-shadow:0 6px 22px #22392a08}.avatar{width:56px;height:56px;object-fit:cover;border-radius:50%;flex:none}.logo{width:47px;height:47px;object-fit:contain;border-radius:0;flex:none}.copy{flex:1;min-width:0}.title{display:flex;align-items:center;gap:9px;margin-bottom:6px}.title strong{font-size:16px;color:#202623;line-height:1.5}.title small{margin-left:auto;font-size:11px;color:#747d77;white-space:nowrap}.chevron{width:12px;height:12px;fill:none;stroke:#747d77;stroke-width:2;flex:none}.message{font-size:14px;line-height:1.8;color:#646e67;margin:0}.b .notification{gap:11px}.b .avatar{width:48px;height:48px}.b .logo{width:25px;height:25px;align-self:flex-start;margin-top:3px}.b .title strong{font-size:15px}.b .title small{font-size:10px}.note{font-size:11px;line-height:1.9;color:#687b6d;margin:11px 3px 0}.footer{font-size:11px;line-height:1.9;color:#6c7f70;margin-top:20px;padding-top:16px;border-top:1px solid #dbe5dd}@media(max-width:480px){.studio{padding:24px 14px}h1{font-size:22px}.shade{padding:15px 11px 21px}.notification{padding:16px 13px;gap:11px;border-radius:22px}.avatar{width:45px;height:45px}.title strong{font-size:15px}.message{font-size:12px}.b .notification{gap:9px}.b .avatar{width:42px;height:42px}.b .logo{width:21px;height:21px}.b .title strong{font-size:14px}.b .message{font-size:12px}}
+  </style>
+</head>
+<body>
+  <main class="studio">
+    <h1>让通知也像是 TA 发来的。</h1>
+    <p class="intro">保留伙伴名称和消息，只增加对应的伙伴头像。下面是两种可能的展示方式，可以切换甜甜、暖暖看看。</p>
+    <div class="controls" aria-label="选择伙伴"><button data-partner="girlfriend" aria-pressed="true">甜甜</button><button data-partner="boyfriend" aria-pressed="false">暖暖</button></div>
+    <section class="variant a">
+      <header class="heading"><span>A</span><h2>左侧直接展示伙伴头像</h2></header>
+      <div class="shade"><div class="handle"></div><div class="notification"><img class="avatar" src="assets/ui-kit/girlfriend.png" alt="甜甜头像"><div class="copy"><div class="title"><strong class="partner-name">甜甜</strong><small>刚刚</small><svg class="chevron" viewBox="0 0 12 12" aria-hidden="true"><path d="m2 4 4 4 4-4"/></svg></div><p class="message">今天忙了一天，辛苦啦。今晚就慢一点，想聊聊今天发生的事吗？</p></div></div></div>
+      <p class="note">最接近你想要的效果：左侧由 Bingo Logo 换成伙伴头像。但这个位置是否能替换，要看 OPPO 系统的通知样式。</p>
+    </section>
+    <section class="variant b">
+      <header class="heading"><span>B</span><h2>保留应用标识，右侧展示伙伴头像</h2></header>
+      <div class="shade"><div class="handle"></div><div class="notification"><img class="logo" src="assets/ui-kit/bingo_logo.png" alt="Bingo 应用标识"><div class="copy"><div class="title"><strong class="partner-name">甜甜</strong><small>刚刚</small><svg class="chevron" viewBox="0 0 12 12" aria-hidden="true"><path d="m2 4 4 4 4-4"/></svg></div><p class="message">今天忙了一天，辛苦啦。今晚就慢一点，想聊聊今天发生的事吗？</p></div><img class="avatar" src="assets/ui-kit/girlfriend.png" alt="甜甜头像"></div></div>
+      <p class="note">如果系统必须保留应用图标，就用角色头像作为通知附图：仍能清楚看出是谁发来的。</p>
+    </section>
+    <p class="footer">这只是大概样式，不是手机实测截图。通知布局、头像位置、圆角与截断方式由手机系统决定；本预览未修改 App 或推送服务。</p>
+  </main>
+  <script>
+    const partners={girlfriend:{name:'甜甜',text:'今天忙了一天，辛苦啦。今晚就慢一点，想聊聊今天发生的事吗？'},boyfriend:{name:'暖暖',text:'忙完了吗？别给自己太大压力，先好好吃顿饭。有想说的，我都在。'}};
+    document.querySelectorAll('[data-partner]').forEach(button=>button.addEventListener('click',()=>{
+      const partner=partners[button.dataset.partner];
+      document.querySelectorAll('[data-partner]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
+      document.querySelectorAll('.partner-name').forEach(item=>{item.textContent=partner.name;});
+      document.querySelectorAll('.message').forEach(item=>{item.textContent=partner.text;});
+      document.querySelectorAll('.avatar').forEach(item=>{item.src=`assets/ui-kit/${button.dataset.partner}.png`;item.alt=`${partner.name}头像`;});
+    }));
+  </script>
+</body>
+</html>

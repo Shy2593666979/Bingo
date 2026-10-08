@@ -382,6 +382,7 @@ class PushDevice(SQLModel, table=True):
     manufacturer: str | None = Field(default=None, max_length=80)
     model: str | None = Field(default=None, max_length=120)
     app_version: str | None = Field(default=None, max_length=40)
+    role_avatar_notifications: bool = Field(default=False)
     active: bool = Field(default=True, sa_column=Column(Boolean, nullable=False, index=True))
     last_seen_at: datetime = Field(
         default_factory=beijing_now,

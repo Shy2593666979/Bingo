@@ -643,6 +643,7 @@ class PushDeviceRepository:
         manufacturer: str | None,
         model: str | None,
         app_version: str | None,
+        role_avatar_notifications: bool = False,
     ) -> PushDevice:
         device = (
             await self._session.exec(
@@ -659,6 +660,7 @@ class PushDeviceRepository:
                 manufacturer=manufacturer,
                 model=model,
                 app_version=app_version,
+                role_avatar_notifications=role_avatar_notifications,
             )
             self._session.add(device)
         else:
@@ -668,6 +670,7 @@ class PushDeviceRepository:
             device.manufacturer = manufacturer
             device.model = model
             device.app_version = app_version
+            device.role_avatar_notifications = role_avatar_notifications
             device.active = True
             device.last_seen_at = now
         await self._session.commit()

@@ -12,6 +12,7 @@ void main() {
   Object? responseData;
   int statusCode = 200;
   final requests = <String>[];
+  final pushBodies = <Map<String, dynamic>>[];
 
   setUp(() async {
     server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
@@ -21,9 +22,15 @@ void main() {
     gateway.accessToken = 'test-token';
     statusCode = 200;
     requests.clear();
+    pushBodies.clear();
     server.listen((request) async {
       requests.add('${request.method} ${request.uri.path}');
-      await request.drain<void>();
+      if (request.uri.path == '/api/v1/push/devices') {
+        pushBodies.add(jsonDecode(await utf8.decoder.bind(request).join())
+            as Map<String, dynamic>);
+      } else {
+        await request.drain<void>();
+      }
       request.response.statusCode = statusCode;
       if (statusCode != 204) {
         request.response.headers.contentType = ContentType.json;
@@ -31,6 +38,22 @@ void main() {
       }
       await request.response.close();
     });
+  });
+
+  test('push registration advertises avatar support only when enabled',
+      () async {
+    responseData = {
+      'code': 0,
+      'message': 'ok',
+      'data': {'id': 'device'}
+    };
+    for (final enabled in [false, true]) {
+      await gateway.registerPushDevice(
+          installationId: 'installation-id',
+          clientId: 'getui-client-id',
+          roleAvatarNotifications: enabled);
+      expect(pushBodies.last['role_avatar_notifications'], enabled);
+    }
   });
 
   tearDown(() async {

@@ -449,6 +449,18 @@ class MainActivity : FlutterActivity() {
                         ).getString(BingoPushIntentService.CLIENT_ID, null)
                         result.success(cached ?: PushManager.getInstance().getClientid(this))
                     }
+                    "setAccount" -> {
+                        PartnerPushNotifications.setAccount(this, call.argument<String>("user_id"))
+                        result.success(null)
+                    }
+                    "cacheRoleAvatars" -> {
+                        val userId = call.argument<String>("user_id")
+                        val avatars = call.argument<Map<*, *>>("avatars")
+                        if (userId != null && avatars != null) {
+                            PartnerPushNotifications.cacheAvatars(applicationContext, userId, avatars)
+                        }
+                        result.success(null)
+                    }
                     else -> result.notImplemented()
                 }
             }

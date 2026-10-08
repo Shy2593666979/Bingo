@@ -8,6 +8,7 @@ class PushDeviceRegistration(BaseModel):
     manufacturer: str | None = Field(default=None, max_length=80)
     model: str | None = Field(default=None, max_length=120)
     app_version: str | None = Field(default=None, max_length=40)
+    role_avatar_notifications: bool = False
 
 
 class PushDeviceResponse(BaseModel):
