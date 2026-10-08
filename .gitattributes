@@ -3,4 +3,5 @@
 *.ps1 text eol=crlf
 *.sh text eol=lf
 *.jar binary
-
+apps/mobile/test/** linguist-detectable=false
+apps/mobile/lib/features/chat/data/** linguist-detectable=false
