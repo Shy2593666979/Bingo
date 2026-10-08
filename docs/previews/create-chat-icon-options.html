@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bingo · 创建与聊天图标减轻</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#f1f5f2;color:#263d31;font-family:system-ui,-apple-system,"Microsoft YaHei",sans-serif}button{font:inherit;cursor:pointer}button:focus-visible{outline:3px solid #5a896f;outline-offset:4px}.sprite{position:absolute;width:0;height:0;overflow:hidden}.studio{max-width:1120px;margin:auto;padding:34px 30px 48px}.brand{display:flex;gap:10px;align-items:center;font-size:13px;font-weight:750;letter-spacing:1px}.brand img{width:32px;height:32px}.brand small{margin-left:auto;font-weight:400;letter-spacing:0;font-size:11px;color:#697e70}h1{font-size:30px;font-weight:650;letter-spacing:-1px;margin:35px 0 12px}.intro{max-width:730px;font-size:13px;line-height:2;color:#63796a;margin:0}.baseline{margin-top:25px;background:#e9efea;border:1px solid #dae4dc;border-radius:22px;padding:19px 23px}.heading{display:flex;align-items:center;gap:10px;margin:0 0 19px}.heading h2{margin:0;font-size:15px}.heading small{margin-left:auto;color:#728273;font-size:10px}.badge{display:grid;place-items:center;width:29px;height:29px;border-radius:10px;background:#eaf3ed;color:#54745f;font-size:12px;font-weight:750}.pair{display:grid;grid-template-columns:1fr 1fr;gap:18px}.caption{font-size:10px;color:#6e8073;margin:0 4px 9px}.action{display:flex;gap:8px;align-items:center;justify-content:center;min-height:54px;width:100%;background:#bfe5d4;color:#275c48;border:1px solid #b0d7c5;border-radius:30px;font-size:16px;font-weight:700;padding:10px 13px}.action.create{font-size:18px}.symbol{width:25px;height:25px;display:block;flex:none;color:#47765e}.chat .symbol{width:20px;height:20px}.symbol use{fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}.symbol.solid use{stroke:none;fill:currentColor}.symbol.two-tone use{stroke:none}.baseline .symbol{color:#275c48}.options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:23px;margin-top:24px}.option{padding:22px;background:#fbfdfb;border:1px solid #dce7df;border-radius:23px;min-width:0;box-shadow:0 8px 24px #36563f04}.option[data-selected=true]{border-color:#75a98b;box-shadow:0 0 0 2px #dceee2}.option[data-selected=true] .badge{background:#d8ebdf;color:#345b42}.note{font-size:12px;line-height:1.95;color:#63796a;margin:17px 2px 0;min-height:47px}.choose{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:18px;padding-top:14px;border-top:1px solid #e4ece6}.choose small{font-size:10px;color:#728273}.choose button{border:1px solid #d2e2d6;background:#edf5ef;color:#416c50;border-radius:10px;padding:7px 12px;font-size:11px}.choose button[aria-pressed=true]{background:#dceee2;color:#31593e;border-color:#a9c9b4}.rules{font-size:12px;line-height:2;color:#63796a;margin:29px 2px 0}.rules b{color:#345740;font-weight:650}.feedback{font-size:12px;color:#466c54;line-height:1.9;margin-top:14px;min-height:24px}.footer{font-size:11px;color:#6b8072;line-height:1.9;margin-top:12px}.action:hover{filter:brightness(.98)}.action:active{filter:brightness(.95)}@media(max-width:800px){.studio{padding:26px 20px}.options{gap:16px}.option{padding:17px}.pair{gap:10px}.action,.action.create{font-size:14px}.symbol{width:23px;height:23px}.chat .symbol{width:20px;height:20px}.heading small{font-size:9px}}@media(max-width:620px){.studio{max-width:530px;padding:23px 14px}h1{font-size:25px;line-height:1.6}.brand small{font-size:9px}.intro{font-size:12px}.options{grid-template-columns:1fr}.option{padding:20px}.baseline{padding:17px}.action.create{font-size:16px}.action.chat{font-size:15px}.heading small{font-size:10px}.note{min-height:0}.symbol{width:25px;height:25px}}@media(max-width:370px){.option{padding:15px}.action.create,.action.chat{font-size:13px}.action{gap:6px}.symbol{width:23px;height:23px}.caption{font-size:9px}.heading h2{font-size:14px}}
+  </style>
+</head>
+<body>
+  <svg class="sprite" aria-hidden="true"><defs>
+    <symbol id="plus-solid" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 7v10M7 12h10" fill="none" stroke="#BFE5D4" stroke-width="2.3" stroke-linecap="round"/></symbol>
+    <symbol id="chat-solid" viewBox="0 0 24 24"><rect x="1" y="2" width="22" height="17" rx="9"/><path d="m5 16-2 7 9-5Z"/><g fill="#fff"><circle cx="7" cy="10.5" r="1.3"/><circle cx="12" cy="10.5" r="1.3"/><circle cx="17" cy="10.5" r="1.3"/></g></symbol>
+    <symbol id="plus-ring" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></symbol>
+    <symbol id="chat-line" viewBox="0 0 24 24"><path d="M21 11a8 8 0 0 1-8 8H8l-4 3 1-6a8 8 0 1 1 16-5Z"/><path d="M8 11h.1M12 11h.1M16 11h.1" stroke-width="2.6"/></symbol>
+    <symbol id="plus-plain" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="chat-round" viewBox="0 0 24 24"><path d="M7 4h10a4 4 0 0 1 4 4v6a4 4 0 0 1-4 4h-6l-6 4v-5a4 4 0 0 1-2-3V8a4 4 0 0 1 4-4Z"/><path d="M8 11h.1M12 11h.1M16 11h.1" stroke-width="2.6"/></symbol>
+    <symbol id="plus-duo" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#DDEFE5"/><circle cx="12" cy="12" r="8.8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+    <symbol id="chat-duo" viewBox="0 0 24 24"><path d="M21 11a8 8 0 0 1-8 8H8l-4 3 1-6a8 8 0 1 1 16-5Z" fill="#DDEFE5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="8" cy="11" r="1"/><circle cx="12" cy="11" r="1"/><circle cx="16" cy="11" r="1"/></g></symbol>
+  </defs></svg>
+  <main class="studio">
+    <header class="brand"><img src="assets/ui-kit/bingo_logo.png" alt="Bingo">BINGO<small>两个图标 · 四种减轻方式</small></header>
+    <h1>按钮不变，只把图标放轻一点。</h1>
+    <p class="intro">你选的 B 薄荷色按钮保留，文字也保留原来的深绿。只调整「创建伙伴」左边的加号和「进入聊天」左边的聊天图标，让它们不再是一块很深的实心绿。</p>
+    <section class="baseline"><header class="heading"><h2>现在的效果</h2><small>深色实心图标</small></header><div class="pair"></div></section>
+    <section class="options" aria-label="四种图标方案"></section>
+    <p class="rules"><b>推荐 A：</b>轮廓不变，去掉深色填充，减轻最明显。<br><b>推荐 B：</b>保留你熟悉的首页实心聊天图标，只让它的颜色浅一点。<br>图标减轻不靠整体透明度，保持边缘清晰；按钮大小、文字大小与颜色不改。</p>
+    <p class="feedback" role="status" aria-live="polite">点击任一方案的「选这个」，可以标记你喜欢的样式。</p>
+    <p class="footer">仅为 HTML 预览，尚未修改 App；本次只比较这两个图标。</p>
+  </main>
+  <script>
+    const options = [
+      {id:'a',name:'轻线条',hint:'推荐 · 不再是深色块',plus:'plus-ring',chat:'chat-line',type:'',note:'加号保留圆圈，但改为细线；聊天图标改为空心气泡。两个图标一起变轻。'},
+      {id:'b',name:'柔和实心',hint:'推荐 · 保留原图形',plus:'plus-solid',chat:'chat-solid',type:'solid',note:'保留圆形加号与首页同款实心聊天图标，只把图标从深绿换成柔和灰绿。'},
+      {id:'c',name:'双色柔边',hint:'轻底色 · 有一点层次',plus:'plus-duo',chat:'chat-duo',type:'two-tone',note:'非常浅的图标内底色，加一圈柔和轮廓。没有深色填充，仍保留小图标的完整感。'},
+      {id:'d',name:'极简细线',hint:'最简洁 · 去掉加号圆圈',plus:'plus-plain',chat:'chat-round',type:'',note:'加号只留两条线，聊天图标用圆角对话框。整体更轻，也更干净。'}
+    ];
+    const icon=(name,type='')=>`<svg class="symbol ${type}" aria-hidden="true"><use href="#${name}"/></svg>`;
+    const pair=(plus,chat,type)=>`<div><p class="caption">陪伴空间 · 创建入口</p><button class="action create">${icon(plus,type)}创建伙伴</button></div><div><p class="caption">伙伴详情 · 进入聊天</p><button class="action chat">${icon(chat,type)}进入聊天</button></div>`;
+    document.querySelector('.baseline .pair').innerHTML=pair('plus-solid','chat-solid','solid');
+    document.querySelector('.options').innerHTML=options.map(item=>`<article class="option" data-id="${item.id}"><header class="heading"><span class="badge">${item.id.toUpperCase()}</span><h2>${item.name}</h2><small>${item.hint}</small></header><div class="pair">${pair(item.plus,item.chat,item.type)}</div><p class="note">${item.note}</p><div class="choose"><small>仅修改图标 · 按钮配色不变</small><button data-select="${item.id}" aria-pressed="false">选这个</button></div></article>`).join('');
+    document.addEventListener('click',event=>{
+      const selection=event.target.closest('[data-select]');
+      if(selection){
+        document.querySelectorAll('.option').forEach(item=>{item.dataset.selected=String(item.dataset.id===selection.dataset.select);});
+        document.querySelectorAll('[data-select]').forEach(item=>{item.setAttribute('aria-pressed',String(item===selection));item.textContent=item===selection?'已选中':'选这个';});
+        const option=options.find(item=>item.id===selection.dataset.select);
+        document.querySelector('.feedback').textContent=`已标记 ${option.id.toUpperCase()} · ${option.name}，尚未应用到 App。`;
+      }else if(event.target.closest('.action')){
+        document.querySelector('.feedback').textContent='这里只预览图标，不会创建伙伴或进入真实聊天。';
+      }
+    });
+  </script>
+</body>
+</html>

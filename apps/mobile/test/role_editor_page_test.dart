@@ -63,6 +63,13 @@ void main() {
       (tester) async {
     await tester.pumpWidget(MaterialApp(
         home: RoleEditorPage(gateway: _RoleGateway(), roles: const [])));
+    final createStyle = tester
+        .widget<FilledButton>(find.widgetWithText(FilledButton, '创建伙伴'))
+        .style!;
+    expect(createStyle.backgroundColor!.resolve({}),
+        BingoPalette.companionActionSurface);
+    expect(createStyle.foregroundColor!.resolve({}),
+        BingoPalette.companionActionInk);
     final description = find.byWidgetPredicate((widget) =>
         widget is TextField &&
         widget.decoration?.hintText == 'TA 是谁？怎样说话？你希望 TA 怎样陪伴你？');

@@ -4,6 +4,7 @@ import 'package:bingo/features/auth/presentation/role_editor_page.dart';
 import 'package:bingo/features/roles/presentation/role_detail_page.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/roles/presentation/role_home_page.dart';
+import 'package:bingo/shared/widgets/partner_action_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -61,6 +62,20 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.getTopLeft(find.text('陪伴空间')).dx, 18);
     expect(tester.getTopLeft(find.text('在这里，慢慢聊~')).dx, 18);
+    final createStyle = tester
+        .widget<FilledButton>(find.widgetWithText(FilledButton, '创建伙伴'))
+        .style!;
+    expect(createStyle.backgroundColor!.resolve({}),
+        BingoPalette.companionActionSurface);
+    expect(createStyle.foregroundColor!.resolve({}),
+        BingoPalette.companionActionInk);
+    final createIcon = tester.widget<PartnerActionIcon>(find.descendant(
+        of: find.widgetWithText(FilledButton, '创建伙伴'),
+        matching: find.byType(PartnerActionIcon)));
+    expect(createIcon.symbol, PartnerActionSymbol.create);
+    expect(createIcon.color, BingoPalette.companionActionIcon);
+    expect(createIcon.size, 25);
+    expect(find.byIcon(Icons.add_circle_rounded), findsNothing);
     final profile = find.byTooltip('我的');
     final button = tester.widget<IconButton>(find.byWidgetPredicate(
         (widget) => widget is IconButton && widget.tooltip == '我的'));

@@ -1,6 +1,7 @@
 import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/chat/presentation/companion_records_page.dart';
+import 'package:bingo/shared/widgets/companion_records_icon.dart';
 import 'package:bingo/shared/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 
@@ -66,19 +67,21 @@ class _MyPageState extends State<MyPage> {
                       '小记、约定、专注和入睡记录',
                       () => Navigator.of(context).push(MaterialPageRoute(
                           builder: (_) =>
-                              CompanionRecordsPage(userId: _profile.id)))),
+                              CompanionRecordsPage(userId: _profile.id))),
+                      leading:
+                          const CompanionRecordsIcon(color: BingoPalette.blue)),
                   const Divider(height: 1, indent: 56, endIndent: 16),
                   _row(Icons.settings_rounded, '应用设置', '账号安全、通话字幕和连接状态',
                       widget.onOpenSettings),
                 ])),
           ])));
 
-  Widget _row(
-          IconData icon, String title, String subtitle, VoidCallback? onTap) =>
+  Widget _row(IconData icon, String title, String subtitle, VoidCallback? onTap,
+          {Widget? leading}) =>
       ListTile(
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
-          leading: Icon(icon, color: BingoPalette.blue),
+          leading: leading ?? Icon(icon, color: BingoPalette.blue),
           title: Text(title),
           subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
           trailing: const Icon(Icons.chevron_right, color: Color(0xFF8CA397)),

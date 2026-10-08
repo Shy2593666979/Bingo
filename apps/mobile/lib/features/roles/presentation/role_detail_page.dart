@@ -203,14 +203,34 @@ class _RoleDetailPageState extends State<RoleDetailPage> {
                 Expanded(
                     child: FilledButton.icon(
                         onPressed: _busy ? null : _chat,
-                        icon: const PartnerActionIcon(symbol: PartnerActionSymbol.chat),
+                        style: companionActionButtonStyle().copyWith(
+                            textStyle: const WidgetStatePropertyAll(TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w700))),
+                        icon: PartnerActionIcon(
+                            symbol: PartnerActionSymbol.chat,
+                            size: 20,
+                            color: _busy
+                                ? Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: .38)
+                                : BingoPalette.companionActionIcon),
                         label: Text(_busy ? '正在进入…' : '进入聊天'))),
                 if (widget.onEdit != null) ...[
                   const SizedBox(width: 12),
-                  OutlinedButton.icon(
-                      onPressed: _edit,
-                      icon: const PartnerActionIcon(symbol: PartnerActionSymbol.edit),
-                      label: const Text('编辑伙伴'))
+                  Expanded(
+                      child: OutlinedButton.icon(
+                          onPressed: _edit,
+                          style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(0, 54),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 12),
+                              iconSize: 22,
+                              textStyle: const TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w700)),
+                          icon: const PartnerActionIcon(
+                              symbol: PartnerActionSymbol.edit),
+                          label: const Text('编辑伙伴')))
                 ],
               ]))),
     );

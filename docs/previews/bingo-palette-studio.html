@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bingo · 五种陪伴的颜色</title>
+  <link rel="stylesheet" href="bingo-palette-studio.css">
+</head>
+<body>
+  <svg class="sprite" aria-hidden="true"><defs>
+    <symbol id="back" viewBox="0 0 24 24"><path d="m14 5-7 7 7 7"/></symbol>
+    <symbol id="next" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+    <symbol id="plus" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></symbol>
+    <symbol id="chat" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 1-8 8H7l-4 3 1-6a8 8 0 1 1 16-5Z"/><path d="M8 11h.1M12 11h.1M16 11h.1"/></symbol>
+    <symbol id="heart" viewBox="0 0 24 24"><path d="M12 20C9 17 3 13 3 8a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 5-6 9-9 12Z"/></symbol>
+    <symbol id="leaf" viewBox="0 0 24 24"><path d="M5 19C2 8 11 4 21 3c-1 11-5 17-14 14M4 21 16 9"/></symbol>
+    <symbol id="shield" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6ZM8 12l3 3 5-6"/></symbol>
+    <symbol id="sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1 1M18 18l1 1M5 19l1-1M18 6l1-1"/></symbol>
+    <symbol id="records" viewBox="0 0 24 24"><rect x="5" y="3" width="16" height="18" rx="3"/><path d="M3 7h4M3 12h4M3 17h4M13 15.5c-1-.9-4-2.9-4-4.8 0-2.5 3-3 4-1.1 1-1.9 4-1.4 4 1.1 0 1.9-3 3.9-4 4.8ZM10 18h6"/></symbol>
+    <symbol id="user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></symbol>
+    <symbol id="gear" viewBox="0 0 24 24"><path d="m10 3 4 0 1 3 3-1 2 3-2 3 2 3-2 3-3-1-1 3h-4l-1-3-3 1-2-3 2-3-2-3 2-3 3 1Z"/><circle cx="12" cy="11" r="3"/></symbol>
+    <symbol id="speaker" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4ZM17 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></symbol>
+    <symbol id="mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 11v1a6 6 0 0 0 12 0v-1M12 18v3M9 21h6"/></symbol>
+    <symbol id="photo" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1"/><path d="m4 18 6-6 4 4 3-3 4 5"/></symbol>
+    <symbol id="pin" viewBox="0 0 24 24"><path d="M19 9c0 6-7 12-7 12S5 15 5 9a7 7 0 0 1 14 0Z"/><circle cx="12" cy="9" r="2"/></symbol>
+    <symbol id="clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="moon" viewBox="0 0 24 24"><path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10Z"/></symbol>
+    <symbol id="edit" viewBox="0 0 24 24"><path d="m5 19 4-.8L19.2 8a2.3 2.3 0 0 0-3.2-3.2L5.8 15ZM14.8 6 18 9.2"/></symbol>
+    <symbol id="lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></symbol>
+    <symbol id="check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+  </defs></svg>
+  <main class="studio">
+    <header class="brand"><img src="assets/ui-kit/bingo_logo.png" alt="Bingo">BINGO <span>COLOR EXPLORATION / 2026</span></header>
+    <div class="intro"><div><p class="eyebrow">LESS COLOR. MORE COMPANY.</p><h1>把颜色放轻一点，<br>把陪伴留近一点。</h1></div><p>不再让深绿、浅绿各自为阵。每套只用一个主色，搭配安静的底色与统一的图标。保留现有伙伴卡片结构，看看你更喜欢哪一种氛围。</p></div>
+    <nav class="toolbar" aria-label="预览页面"><div class="page-tabs"></div><label>显示方案 <select id="filter"><option value="all">全部对比</option><option value="a">A · 雾感鼠尾草</option><option value="b">B · 晴空蓝</option><option value="c">C · 奶油杏</option><option value="d">D · 雾紫</option><option value="e">E · 纸白青灰</option></select></label></nav>
+    <section class="variants" aria-label="五套颜色方案"></section>
+    <section class="principles"><h2>统一的是规则，不只是换一种绿。</h2><div><p><b>01 / 大面积留白</b>背景与卡片接近中性，不把页面铺满彩色；颜色集中在真正需要点击的位置。</p><p><b>02 / 按钮分层</b>登录、创建用主按钮；进入聊天用轻底色；编辑、上传不再和主按钮抢注意力。</p><p><b>03 / 一个图标体系</b>圆润线条，不混用小表情。“陪伴记录”用心形记事本，与个人资料和设置保持同一线宽。</p></div></section>
+    <footer>配色为交互预览，不连接后端。可以点击伙伴的「进入」、用户头像与页面按钮查看效果。未更改 App 整体配色。</footer>
+  </main>
+  <script src="bingo-palette-studio.js"></script>
+</body>
+</html>

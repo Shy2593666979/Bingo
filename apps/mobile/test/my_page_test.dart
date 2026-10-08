@@ -1,6 +1,7 @@
 import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/settings/presentation/my_page.dart';
+import 'package:bingo/shared/widgets/companion_records_icon.dart';
 import 'package:bingo/shared/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,6 +33,8 @@ void main() {
             onOpenSettings: () async => settingsOpened = true)));
     expect(find.text('我的'), findsOneWidget);
     expect(find.text('陪伴记录'), findsOneWidget);
+    expect(find.byType(CompanionRecordsIcon), findsOneWidget);
+    expect(find.byIcon(Icons.bookmarks_outlined), findsNothing);
     expect(find.text('使用当前地区'), findsNothing);
     expect(find.byType(SwitchListTile), findsNothing);
     expect(find.byIcon(Icons.settings_rounded), findsOneWidget);

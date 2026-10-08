@@ -48,12 +48,13 @@ const roleTraits = <String, String>{
 };
 
 class TraitIcon extends StatelessWidget {
-  const TraitIcon(this.kind, {this.size = 19, super.key});
+  const TraitIcon(this.kind, {this.size = 19, this.color, super.key});
   final String kind;
   final double size;
+  final Color? color;
   @override
   Widget build(BuildContext context) => SizedBox.square(
-      dimension: size, child: CustomPaint(painter: _TraitPainter(kind)));
+      dimension: size, child: CustomPaint(painter: _TraitPainter(kind, color)));
 }
 
 class TraitBadge extends StatelessWidget {
@@ -75,18 +76,20 @@ class TraitBadge extends StatelessWidget {
 }
 
 class _TraitPainter extends CustomPainter {
-  const _TraitPainter(this.kind);
+  const _TraitPainter(this.kind, this.color);
   final String kind;
+  final Color? color;
   @override
   void paint(Canvas canvas, Size size) {
     canvas.scale(size.width / 24, size.height / 24);
-    final color = switch (kind) {
-      'heart' => const Color(0xFFFF94AC),
-      'sun' || 'moon' || 'star' || 'bulb' => const Color(0xFFFFC62E),
-      'plane' || 'book' => const Color(0xFF47B6D2),
-      'coffee' => const Color(0xFFAA9993),
-      _ => const Color(0xFF119D83),
-    };
+    final color = this.color ??
+        switch (kind) {
+          'heart' => const Color(0xFFFF94AC),
+          'sun' || 'moon' || 'star' || 'bulb' => const Color(0xFFFFC62E),
+          'plane' || 'book' => const Color(0xFF47B6D2),
+          'coffee' => const Color(0xFFAA9993),
+          _ => const Color(0xFF119D83),
+        };
     final fill = Paint()..color = color;
     final stroke = Paint()
       ..color = color
@@ -279,5 +282,6 @@ class _TraitPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_TraitPainter oldDelegate) => oldDelegate.kind != kind;
+  bool shouldRepaint(_TraitPainter oldDelegate) =>
+      oldDelegate.kind != kind || oldDelegate.color != color;
 }

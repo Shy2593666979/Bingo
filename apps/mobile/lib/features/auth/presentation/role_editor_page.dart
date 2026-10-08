@@ -786,12 +786,7 @@ class _RoleEditorPageState extends State<RoleEditorPage>
                         height: 54,
                         child: FilledButton(
                             onPressed: _busy ? null : _save,
-                            style: FilledButton.styleFrom(
-                                backgroundColor: const Color(0xFFD7EDDE),
-                                foregroundColor: const Color(0xFF376A4A),
-                                side:
-                                    const BorderSide(color: Color(0xFFB8D8C3)),
-                                shape: const StadiumBorder()),
+                            style: companionActionButtonStyle(),
                             child: Text(widget.role == null ? '创建伙伴' : '保存修改',
                                 style: const TextStyle(
                                     fontSize: 17,

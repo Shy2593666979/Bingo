@@ -34,8 +34,10 @@ class DetailGateway implements RoleGateway, ConversationGateway {
 }
 
 void main() {
-  testWidgets('detail uses HTML action icons without changing button actions',
+  testWidgets('detail uses option A chat icon and balances action buttons',
       (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     var edits = 0;
     var chats = 0;
     await tester.pumpWidget(MaterialApp(
@@ -58,6 +60,16 @@ void main() {
         of: editButton, matching: find.byType(PartnerActionIcon));
     expect(tester.widget<PartnerActionIcon>(chatIcon).symbol,
         PartnerActionSymbol.chat);
+    expect(tester.widget<PartnerActionIcon>(chatIcon).size, 20);
+    expect(tester.widget<PartnerActionIcon>(chatIcon).color,
+        BingoPalette.companionActionIcon);
+    final chatStyle = tester.widget<FilledButton>(chatButton).style!;
+    expect(chatStyle.backgroundColor!.resolve({}),
+        BingoPalette.companionActionSurface);
+    expect(chatStyle.foregroundColor!.resolve({}),
+        BingoPalette.companionActionInk);
+    expect(tester.getSize(chatButton), tester.getSize(editButton));
+    expect(tester.getSize(chatButton).height, 54);
     expect(tester.widget<PartnerActionIcon>(editIcon).symbol,
         PartnerActionSymbol.edit);
     expect(find.byIcon(Icons.tune_rounded), findsOneWidget);

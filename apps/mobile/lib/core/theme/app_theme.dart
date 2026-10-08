@@ -19,6 +19,10 @@ abstract final class BingoPalette {
   static const chatMenuSurface = Color(0xFFF6FBF8);
   static const chatMenuInk = Color(0xFF447F65);
   static const chatMenuBorder = Color(0xFFDFEBE3);
+  static const companionActionSurface = Color(0xFFBFE5D4);
+  static const companionActionInk = Color(0xFF275C48);
+  static const companionActionIcon = Color(0xFF47765E);
+  static const companionActionBorder = Color(0xFFB0D7C5);
 
   static const brandGradient = LinearGradient(
     begin: Alignment.topLeft,
@@ -44,6 +48,15 @@ abstract final class BingoPalette {
     colors: [Color(0xFFE6F7ED), Color(0x00E6F7ED)],
   );
 }
+
+ButtonStyle companionActionButtonStyle({double height = 54}) =>
+    FilledButton.styleFrom(
+        backgroundColor: BingoPalette.companionActionSurface,
+        foregroundColor: BingoPalette.companionActionInk,
+        minimumSize: Size(0, height),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        side: const BorderSide(color: BingoPalette.companionActionBorder),
+        shape: const StadiumBorder());
 
 ThemeData buildMintTheme(BuildContext context) {
   final theme = Theme.of(context);

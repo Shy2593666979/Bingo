@@ -8,6 +8,7 @@ import 'package:bingo/features/roles/role_traits.dart';
 import 'package:bingo/features/roles/data/local_role_order_store.dart';
 import 'package:bingo/features/roles/presentation/role_detail_page.dart';
 import 'package:bingo/shared/widgets/assistant_avatar.dart';
+import 'package:bingo/shared/widgets/partner_action_icon.dart';
 import 'package:bingo/shared/widgets/user_avatar.dart';
 import 'package:bingo/shared/widgets/partner_swipe_card.dart';
 import 'package:bingo/core/role_avatar_store.dart';
@@ -267,13 +268,14 @@ class RoleHomePageState extends State<RoleHomePage>
                       height: 56,
                       child: FilledButton.icon(
                           onPressed: _openingId == null ? _edit : null,
-                          icon: const Icon(Icons.add_circle_rounded, size: 25),
+                          icon: const PartnerActionIcon(
+                              symbol: PartnerActionSymbol.create,
+                              size: 25,
+                              color: BingoPalette.companionActionIcon),
                           label: const Text('创建伙伴',
                               style: TextStyle(
                                   fontSize: 18, fontWeight: FontWeight.w700)),
-                          style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFF129A81),
-                              shape: const StadiumBorder())))),
+                          style: companionActionButtonStyle(height: 56)))),
             ]))));
   }
 
