@@ -22,6 +22,7 @@ class ChatMessage {
     this.callStatus,
     this.callDurationSeconds,
     this.location,
+    this.deviceAction,
   });
 
   final String id;
@@ -37,11 +38,15 @@ class ChatMessage {
   final String? callStatus;
   final int? callDurationSeconds;
   final ChatLocation? location;
+  final Map<String, dynamic>? deviceAction;
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
         id: json['id'] as String,
         role: json['role'] == 'user' ? ChatRole.user : ChatRole.assistant,
         content: json['content'] as String,
+        deviceAction: json['device_action'] == null
+            ? null
+            : Map<String, dynamic>.from(json['device_action'] as Map),
         type: ChatMessageType.values.firstWhere(
             (type) => type.name == json['message_type'],
             orElse: () => ChatMessageType.chat),
@@ -91,6 +96,7 @@ class ChatMessage {
       callStatus: callStatus ?? this.callStatus,
       callDurationSeconds: callDurationSeconds ?? this.callDurationSeconds,
       location: location ?? this.location,
+      deviceAction: deviceAction,
     );
   }
 }

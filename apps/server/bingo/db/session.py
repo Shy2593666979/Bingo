@@ -3,7 +3,6 @@ from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from sqlalchemy import inspect
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     async_sessionmaker,
@@ -34,7 +33,7 @@ class Database:
             await connection.run_sync(_upgrade_local_sqlite_schema)
             await connection.run_sync(_upgrade_role_conversations)
             await connection.run_sync(_upgrade_morning_greetings)
-            await connection.run_sync(_upgrade_push_avatars)
+            await connection.run_sync(_upgrade_device_actions)
 
     async def dispose(self) -> None:
         await self.engine.dispose()
@@ -44,13 +43,18 @@ class Database:
             yield session
 
 
-def _upgrade_push_avatars(connection) -> None:
-    columns = {column["name"] for column in inspect(connection).get_columns("push_devices")}
-    if "role_avatar_notifications" not in columns:
+def _upgrade_device_actions(connection) -> None:
+    if connection.dialect.name != "sqlite":
+        return
+    columns = {row[1] for row in connection.exec_driver_sql("PRAGMA table_info(device_actions)")}
+    if "conversation_id" not in columns:
         connection.exec_driver_sql(
-            "ALTER TABLE push_devices ADD COLUMN role_avatar_notifications BOOLEAN NOT NULL "
-            "DEFAULT FALSE"
+            "ALTER TABLE device_actions ADD COLUMN conversation_id VARCHAR(36)"
         )
+    connection.exec_driver_sql(
+        "CREATE INDEX IF NOT EXISTS ix_device_actions_conversation_id "
+        "ON device_actions(conversation_id)"
+    )
 
 
 def _upgrade_morning_greetings(connection) -> None:

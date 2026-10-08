@@ -12,7 +12,7 @@ void main() {
   Object? responseData;
   int statusCode = 200;
   final requests = <String>[];
-  final pushBodies = <Map<String, dynamic>>[];
+  final actionBodies = <Map<String, dynamic>>[];
 
   setUp(() async {
     server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
@@ -22,12 +22,12 @@ void main() {
     gateway.accessToken = 'test-token';
     statusCode = 200;
     requests.clear();
-    pushBodies.clear();
+    actionBodies.clear();
     server.listen((request) async {
       requests.add('${request.method} ${request.uri.path}');
-      if (request.uri.path == '/api/v1/push/devices') {
-        pushBodies.add(jsonDecode(await utf8.decoder.bind(request).join())
-            as Map<String, dynamic>);
+      if (request.uri.path.contains('/device-actions/')) {
+        actionBodies.add(Map<String, dynamic>.from(
+            jsonDecode(await utf8.decoder.bind(request).join()) as Map));
       } else {
         await request.drain<void>();
       }
@@ -40,25 +40,29 @@ void main() {
     });
   });
 
-  test('push registration advertises avatar support only when enabled',
-      () async {
-    responseData = {
-      'code': 0,
-      'message': 'ok',
-      'data': {'id': 'device'}
-    };
-    for (final enabled in [false, true]) {
-      await gateway.registerPushDevice(
-          installationId: 'installation-id',
-          clientId: 'getui-client-id',
-          roleAvatarNotifications: enabled);
-      expect(pushBodies.last['role_avatar_notifications'], enabled);
-    }
-  });
-
   tearDown(() async {
     gateway.close();
     await server.close(force: true);
+  });
+
+  test('opening system clock reports submission rather than alarm success',
+      () async {
+    responseData = {
+      'code': 0,
+      'message': '操作成功',
+      'data': {
+        'id': 'alarm',
+        'tool': 'device_alarm_create',
+        'arguments': <String, dynamic>{},
+        'status': 'submitted',
+        'result': '已提交给系统时钟创建闹钟',
+      }
+    };
+    final action = await gateway.completeDeviceAction('alarm',
+        succeeded: true, result: '已提交给系统时钟创建闹钟');
+    expect(actionBodies.single['status'], 'submitted');
+    expect(action.status, 'submitted');
+    expect(action.result, '已提交给系统时钟创建闹钟');
   });
 
   test('ASR unwraps JSON envelope without changing audio input', () async {

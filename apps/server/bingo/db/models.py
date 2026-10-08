@@ -154,6 +154,7 @@ class DeviceAction(SQLModel, table=True):
     )
     tool_name: str = Field(max_length=80, index=True)
     arguments_json: str = Field(sa_column=Column(Text, nullable=False))
+    conversation_id: str | None = Field(default=None, index=True, max_length=36)
     status: str = Field(default="pending", max_length=20, index=True)
     result: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
     created_at: datetime = Field(
@@ -382,7 +383,6 @@ class PushDevice(SQLModel, table=True):
     manufacturer: str | None = Field(default=None, max_length=80)
     model: str | None = Field(default=None, max_length=120)
     app_version: str | None = Field(default=None, max_length=40)
-    role_avatar_notifications: bool = Field(default=False)
     active: bool = Field(default=True, sa_column=Column(Boolean, nullable=False, index=True))
     last_seen_at: datetime = Field(
         default_factory=beijing_now,

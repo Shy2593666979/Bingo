@@ -203,6 +203,7 @@ class AndroidLocalChatStore implements LocalChatStore {
                 'description': action.description,
                 'arguments': action.arguments,
                 'status': action.status,
+                'result': action.result,
               },
             _ => throw StateError('Unsupported local timeline item'),
           },

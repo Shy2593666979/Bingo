@@ -16,7 +16,6 @@ async def register_push_device(
         manufacturer=body.manufacturer,
         model=body.model,
         app_version=body.app_version,
-        role_avatar_notifications=body.role_avatar_notifications,
     )
     return PushDeviceResponse.model_validate(device, from_attributes=True)
 

@@ -3,6 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from bingo.schemas.device_action import DeviceActionResponse
 from bingo.schemas.maps import LocationInput
 
 
@@ -50,6 +51,7 @@ class MessageResponse(BaseModel):
     call_status: str | None = None
     call_duration_seconds: int | None = None
     created_at: datetime
+    device_action: DeviceActionResponse | None = None
 
 
 class ConversationResponse(BaseModel):

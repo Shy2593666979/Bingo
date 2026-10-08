@@ -65,17 +65,28 @@ class DeviceActionCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(action.description),
+            if (action.result != null &&
+                {
+                  'failed',
+                  'submitted',
+                  'report_pending',
+                  'failure_report_pending'
+                }.contains(action.status)) ...[
+              const SizedBox(height: 8),
+              Text(action.result!,
+                  style: Theme.of(context).textTheme.bodySmall),
+            ],
             if (isPending) ...[
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton(onPressed: onReject, child: const Text('拒绝')),
+                  TextButton(onPressed: onReject, child: const Text('取消')),
                   const SizedBox(width: 8),
                   FilledButton.icon(
                     onPressed: onApprove,
                     icon: const Icon(Icons.check_rounded, size: 18),
-                    label: const Text('允许'),
+                    label: const Text('创建'),
                   ),
                 ],
               ),
@@ -110,9 +121,13 @@ class _StatusLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, icon) = switch (status) {
-      'succeeded' => ('已完成', Icons.check_circle_outline_rounded),
-      'failed' => ('失败', Icons.error_outline_rounded),
-      'rejected' => ('已拒绝', Icons.block_rounded),
+      'succeeded' => ('已创建', Icons.check_circle_outline_rounded),
+      'submitted' => ('待系统确认', Icons.schedule_rounded),
+      'report_pending' => ('待同步', Icons.cloud_upload_outlined),
+      'failure_report_pending' => ('失败 · 待同步', Icons.cloud_upload_outlined),
+      'approved' => ('待设备反馈', Icons.schedule_rounded),
+      'failed' => ('创建失败', Icons.error_outline_rounded),
+      'rejected' => ('已取消', Icons.block_rounded),
       'processing' => ('处理中', Icons.sync_rounded),
       _ => ('待确认', Icons.shield_outlined),
     };

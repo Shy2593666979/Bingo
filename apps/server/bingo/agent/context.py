@@ -42,7 +42,8 @@ def build_context(
             ),
         )
         for message in messages
-        if message.status != "streaming" and message.message_type in {"chat", "location"}
+        if message.status != "streaming"
+        and message.message_type in {"chat", "location", "device_action"}
     ]
     return [ModelMessage(role="system", content=system_prompt), *history]
 

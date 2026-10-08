@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:bingo/core/theme/app_theme.dart';
-import 'package:bingo/core/push/push_role_avatar_cache.dart';
 import 'package:bingo/core/widgets/center_toast.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/auth/presentation/role_editor_page.dart';
@@ -82,7 +81,6 @@ class RoleHomePageState extends State<RoleHomePage>
       }
       final roles = await widget.gateway.listRoles();
       if (mounted && accountVersion == _accountVersion && !_dragging) {
-        unawaited(PushRoleAvatarCache.sync(userId, roles));
         setState(() {
           _roles = applyLocalRoleOrder(roles, _orderIds);
           _error = null;

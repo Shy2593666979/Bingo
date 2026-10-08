@@ -103,7 +103,7 @@ class _BingoAppState extends State<BingoApp> with WidgetsBindingObserver {
         _controller.setAssistantRole(_profile!.role);
         await _controller.bindAccount(_profile!.id);
         if (_profile!.onboardingComplete && _profile!.birthday != null) {
-          await _pushRegistration.activate(_profile!.id);
+          await _pushRegistration.activate();
         }
       }
     } on Exception {
@@ -120,7 +120,7 @@ class _BingoAppState extends State<BingoApp> with WidgetsBindingObserver {
     _controller.setAssistantRole(result.user.role);
     await _controller.bindAccount(result.user.id);
     if (result.user.onboardingComplete && result.user.birthday != null) {
-      await _pushRegistration.activate(result.user.id);
+      await _pushRegistration.activate();
     }
     if (mounted) setState(() => _profile = result.user);
   }
@@ -153,7 +153,7 @@ class _BingoAppState extends State<BingoApp> with WidgetsBindingObserver {
     setState(() {
       _profile = updated;
     });
-    await _pushRegistration.activate(updated.id);
+    await _pushRegistration.activate();
   }
 
   @override

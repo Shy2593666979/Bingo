@@ -13,7 +13,7 @@ class AndroidDeviceToolExecutor implements DeviceToolExecutor {
       case 'device_alarm_create':
         final mode =
             await _channel.invokeMethod<String>('createAlarm', arguments);
-        if (mode == null) {
+        if (mode != 'system_alarm' && mode != 'in_app') {
           throw PlatformException(
             code: 'alarm_unavailable',
             message: '无法创建闹钟',

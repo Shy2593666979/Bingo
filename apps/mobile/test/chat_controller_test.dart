@@ -78,6 +78,7 @@ class FakeApprovalGateway implements ChatGateway, DeviceActionGateway {
   var approved = false;
   var completed = false;
   var sendCount = 0;
+  var completionFailures = 0;
 
   static const action = DeviceAction(
     id: 'action-1',
@@ -122,6 +123,10 @@ class FakeApprovalGateway implements ChatGateway, DeviceActionGateway {
     required bool succeeded,
     String? result,
   }) async {
+    if (completionFailures > 0) {
+      completionFailures--;
+      throw Exception('offline');
+    }
     completed = true;
     return action.copyWith(status: succeeded ? 'succeeded' : 'failed');
   }
@@ -275,6 +280,85 @@ class RecoveringChatGateway implements ChatGateway, ConversationGateway {
 }
 
 void main() {
+  test('does not create an alarm again when reporting its result fails',
+      () async {
+    final gateway = FakeApprovalGateway()..completionFailures = 1;
+    final executor = FakeDeviceToolExecutor();
+    final controller = ChatController(
+        gateway: gateway, deviceActions: gateway, deviceToolExecutor: executor);
+    await controller.send('明早叫我');
+    final original = controller.deviceActions.single;
+    await controller.approveDeviceAction(original);
+    expect(controller.deviceActions.single.status, 'report_pending');
+    expect(controller.deviceActions.single.result, isNotNull);
+    expect(gateway.completed, isFalse);
+    await controller.approveDeviceAction(original);
+    expect(gateway.completed, isFalse);
+    expect(controller.deviceActions.single.status, 'report_pending');
+    controller.dispose();
+  });
+  test(
+      'restores resolved alarm cards from server history without turning them into text',
+      () async {
+    final gateway = RecoveringChatGateway([
+      const ChatMessage(
+          id: 'user-message', role: ChatRole.user, content: '明早叫我'),
+      ChatMessage.fromJson({
+        'id': 'alarm-card',
+        'role': 'user',
+        'message_type': 'device_action',
+        'content': '[闹钟操作记录] 用户已取消，未创建',
+        'device_action': {
+          'id': 'alarm-card',
+          'tool': 'device_alarm_create',
+          'title': '创建闹钟',
+          'description': '明天 07:00 · 起床',
+          'arguments': <String, dynamic>{},
+          'status': 'rejected',
+          'result': null,
+        },
+      }),
+    ]);
+    final store = MemoryChatStore();
+    final controller = ChatController(
+        gateway: gateway, remoteHistory: gateway, localStore: store);
+    await controller.bindUser('user-1');
+    await controller.reloadConversation('conversation-1');
+    expect(controller.messages, hasLength(1));
+    expect(controller.timelineItems.whereType<DeviceAction>().single.status,
+        'rejected');
+    await controller.syncActiveConversation();
+    expect(controller.timelineItems.whereType<DeviceAction>().single.status,
+        'rejected');
+    final restored = ChatController(gateway: gateway, localStore: store);
+    await restored.bindUser('user-1');
+    expect(restored.timelineItems.whereType<DeviceAction>().single.status,
+        'rejected');
+    controller.dispose();
+    restored.dispose();
+  });
+
+  test('history synchronization retains legacy local alarm cards', () async {
+    final gateway = FakeApprovalGateway();
+    final history = RecoveringChatGateway([
+      const ChatMessage(
+          id: 'server-user', role: ChatRole.user, content: '明早叫我'),
+      const ChatMessage(
+          id: 'server-answer', role: ChatRole.assistant, content: '等待确认。'),
+    ]);
+    final controller = ChatController(
+        gateway: gateway,
+        deviceActions: gateway,
+        deviceToolExecutor: FakeDeviceToolExecutor(),
+        remoteHistory: history);
+    await controller.send('明早叫我');
+    await controller.rejectDeviceAction(controller.deviceActions.single);
+    await controller.syncActiveConversation();
+    expect(controller.timelineItems.whereType<DeviceAction>().single.status,
+        'rejected');
+    controller.dispose();
+  });
+
   testWidgets('chat header centers name with speaker and keeps call in menu',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(360, 780));

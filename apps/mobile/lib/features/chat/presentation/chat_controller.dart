@@ -137,7 +137,9 @@ class ChatController extends ChangeNotifier {
 
   Future<void> reloadConversation(String conversationId) async {
     final gateway = _remoteHistory;
-    if (gateway == null) return;
+    if (gateway == null) {
+      return;
+    }
     final binding = _bindingSequence;
     try {
       final messages = await gateway.listMessages(conversationId);
@@ -151,7 +153,10 @@ class ChatController extends ChangeNotifier {
         ..addAll(_expandAssistantMessages(messages));
       _timelineItems
         ..clear()
-        ..addAll(_messages);
+        ..addAll(_expandTimelineItems(messages));
+      _deviceActionItems
+        ..clear()
+        ..addAll(_timelineItems.whereType<DeviceAction>());
       _title = messages
           .where((message) => message.role == ChatRole.user)
           .map((message) => message.content)
@@ -224,14 +229,15 @@ class ChatController extends ChangeNotifier {
         final remoteItems = await _remoteHistory.listConversations();
         if (remoteItems.isNotEmpty) {
           final item = remoteItems.first;
-          final messages = _expandAssistantMessages(
-            await _remoteHistory.listMessages(item.id),
-          ).toList(growable: false);
+          final remoteMessages = await _remoteHistory.listMessages(item.id);
+          final messages =
+              _expandAssistantMessages(remoteMessages).toList(growable: false);
           await store.saveConversation(
             userId: userId,
             conversationId: item.id,
             title: item.title,
             messages: messages,
+            timelineItems: _expandTimelineItems(remoteMessages).toList(),
             updatedAt: item.createdAt,
           );
           await store.setActive(userId, item.id);
@@ -563,6 +569,7 @@ class ChatController extends ChangeNotifier {
     _syncingRemote = true;
     final binding = _bindingSequence;
     try {
+      await _reportPendingActions();
       final remoteMessages = await gateway.listMessages(conversationId);
       if (binding != _bindingSequence) return;
       final pendingRunId = _unfinishedRunId();
@@ -584,9 +591,30 @@ class ChatController extends ChangeNotifier {
       _messages
         ..clear()
         ..addAll(_expandAssistantMessages(remoteMessages));
+      final previousActions = _timelineItems.indexed
+          .where((entry) => entry.$2 is DeviceAction)
+          .map((entry) => (entry.$1, entry.$2 as DeviceAction))
+          .toList();
       _timelineItems
         ..clear()
-        ..addAll(_messages);
+        ..addAll(_expandTimelineItems(remoteMessages));
+      for (final (index, action) in previousActions) {
+        final remoteIndex = _timelineItems
+            .indexWhere((item) => item is DeviceAction && item.id == action.id);
+        if (remoteIndex < 0) {
+          _timelineItems.insert(index.clamp(0, _timelineItems.length), action);
+        } else if ({'report_pending', 'failure_report_pending', 'processing'}
+                .contains(action.status) &&
+            {
+              'pending',
+              'approved'
+            }.contains((_timelineItems[remoteIndex] as DeviceAction).status)) {
+          _timelineItems[remoteIndex] = action;
+        }
+      }
+      _deviceActionItems
+        ..clear()
+        ..addAll(_timelineItems.whereType<DeviceAction>());
       _title = remoteMessages
           .where((message) => message.role == ChatRole.user)
           .map((message) => message.content)
@@ -790,32 +818,55 @@ class ChatController extends ChangeNotifier {
     final executor = _deviceToolExecutor;
     if (gateway == null ||
         executor == null ||
-        !{'pending', 'failed'}.contains(action.status)) {
+        !{'pending', 'failed'}.contains(_deviceActionItems
+            .where((item) => item.id == action.id)
+            .firstOrNull
+            ?.status)) {
       return;
     }
 
     _replaceAction(action.copyWith(status: 'processing'));
+    var approvedOnServer = false;
+    String? executionResult;
     try {
       final approved = await gateway.approveDeviceAction(action.id);
-      final result = await executor.execute(approved.tool, approved.arguments);
+      approvedOnServer = true;
+      executionResult =
+          await executor.execute(approved.tool, approved.arguments);
       final completed = await gateway.completeDeviceAction(
         action.id,
         succeeded: true,
-        result: result,
+        result: executionResult,
       );
-      _replaceAction(action.copyWith(status: completed.status));
+      _replaceAction(action.copyWith(
+          status: completed.status,
+          result: completed.result ?? executionResult));
     } on Exception catch (error) {
-      try {
-        await gateway.completeDeviceAction(
-          action.id,
-          succeeded: false,
-          result: error.toString(),
-        );
-      } on Exception {
-        // The server may be unreachable or the action may not have been approved.
+      if (executionResult != null) {
+        _replaceAction(
+            action.copyWith(status: 'report_pending', result: executionResult));
+        _errorMessage = '设备操作已执行，但结果同步失败，将在连接恢复后同步，请勿重复创建。';
+      } else if (approvedOnServer) {
+        try {
+          await gateway.completeDeviceAction(
+            action.id,
+            succeeded: false,
+            result: error.toString(),
+          );
+        } on Exception {
+          _replaceAction(action.copyWith(
+              status: 'failure_report_pending', result: error.toString()));
+        }
+        if (_deviceActionItems.any(
+            (item) => item.id == action.id && item.status == 'processing')) {
+          _replaceAction(
+              action.copyWith(status: 'failed', result: error.toString()));
+        }
+        _errorMessage = '无法执行设备操作：$error';
+      } else {
+        _replaceAction(action.copyWith(status: action.status));
+        _errorMessage = '确认失败，请检查服务连接。';
       }
-      _replaceAction(action.copyWith(status: 'failed'));
-      _errorMessage = '无法执行设备操作：$error';
     }
     await _persist();
     notifyListeners();
@@ -823,7 +874,14 @@ class ChatController extends ChangeNotifier {
 
   Future<void> rejectDeviceAction(DeviceAction action) async {
     final gateway = _deviceActions;
-    if (gateway == null || action.status != 'pending') return;
+    if (gateway == null ||
+        _deviceActionItems
+                .where((item) => item.id == action.id)
+                .firstOrNull
+                ?.status !=
+            'pending') {
+      return;
+    }
     _replaceAction(action.copyWith(status: 'processing'));
     try {
       await gateway.rejectDeviceAction(action.id);
@@ -857,6 +915,28 @@ class ChatController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> _reportPendingActions() async {
+    final gateway = _deviceActions;
+    if (gateway == null) {
+      return;
+    }
+    for (final action in List<DeviceAction>.of(_deviceActionItems)) {
+      if (!{'report_pending', 'failure_report_pending'}
+          .contains(action.status)) {
+        continue;
+      }
+      try {
+        final completed = await gateway.completeDeviceAction(action.id,
+            succeeded: action.status == 'report_pending',
+            result: action.result);
+        _replaceAction(action.copyWith(
+            status: completed.status, result: completed.result));
+      } on Exception {
+        continue;
+      }
+    }
+  }
+
   void _addMessage(ChatMessage message) {
     _messages.add(message);
     _timelineItems.add(message);
@@ -866,6 +946,9 @@ class ChatController extends ChangeNotifier {
     Iterable<ChatMessage> messages,
   ) sync* {
     for (final message in messages) {
+      if (message.deviceAction != null) {
+        continue;
+      }
       yield* _expandAssistantMessage(_withAssistantRoleSnapshot(message));
     }
   }
@@ -873,7 +956,11 @@ class ChatController extends ChangeNotifier {
   Iterable<Object> _expandTimelineItems(Iterable<Object> items) sync* {
     for (final item in items) {
       if (item is ChatMessage) {
-        yield* _expandAssistantMessage(_withAssistantRoleSnapshot(item));
+        if (item.deviceAction != null) {
+          yield DeviceAction.fromJson(item.deviceAction!);
+        } else {
+          yield* _expandAssistantMessage(_withAssistantRoleSnapshot(item));
+        }
       } else {
         yield item;
       }

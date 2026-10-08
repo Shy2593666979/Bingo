@@ -138,6 +138,7 @@ class DeviceAction {
     required this.description,
     required this.arguments,
     this.status = 'pending',
+    this.result,
   });
 
   final String id;
@@ -146,14 +147,16 @@ class DeviceAction {
   final String description;
   final Map<String, dynamic> arguments;
   final String status;
+  final String? result;
 
-  DeviceAction copyWith({String? status}) => DeviceAction(
+  DeviceAction copyWith({String? status, String? result}) => DeviceAction(
         id: id,
         tool: tool,
         title: title,
         description: description,
         arguments: arguments,
         status: status ?? this.status,
+        result: result ?? this.result,
       );
 
   factory DeviceAction.fromJson(Map<String, dynamic> json) => DeviceAction(
@@ -165,6 +168,7 @@ class DeviceAction {
           json['arguments'] as Map<String, dynamic>,
         ),
         status: json['status'] as String? ?? 'pending',
+        result: json['result'] as String?,
       );
 }
 
@@ -328,7 +332,6 @@ abstract interface class PushGateway {
     String? manufacturer,
     String? model,
     String? appVersion,
-    bool roleAvatarNotifications = false,
   });
 
   Future<void> unregisterPushDevice(String installationId);
@@ -750,7 +753,11 @@ class HttpApiGateway
       'POST',
       config.endpoint('/device-actions/$actionId/complete'),
       body: {
-        'status': succeeded ? 'succeeded' : 'failed',
+        'status': !succeeded
+            ? 'failed'
+            : (result?.startsWith('已提交给系统') ?? false)
+                ? 'submitted'
+                : 'succeeded',
         'result': result,
       },
     ) as Map<String, dynamic>;
@@ -1076,7 +1083,6 @@ class HttpApiGateway
     String? manufacturer,
     String? model,
     String? appVersion,
-    bool roleAvatarNotifications = false,
   }) async {
     await _request(
       'PUT',
@@ -1088,7 +1094,6 @@ class HttpApiGateway
         'manufacturer': manufacturer,
         'model': model,
         'app_version': appVersion,
-        'role_avatar_notifications': roleAvatarNotifications,
       },
     );
   }

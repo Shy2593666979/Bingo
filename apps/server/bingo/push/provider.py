@@ -1,5 +1,4 @@
 import hashlib
-import json
 import time
 from dataclasses import dataclass
 from typing import Protocol
@@ -16,7 +15,6 @@ class PushDelivery:
     title: str
     body: str
     payload: dict[str, str]
-    role_avatar_notifications: bool = False
 
 
 class PushProvider(Protocol):
@@ -69,27 +67,6 @@ class GetuiPushProvider:
 
     async def send(self, delivery: PushDelivery) -> str | None:
         token = await self._access_token()
-        message = {
-            "notification": {
-                "title": delivery.title,
-                "body": delivery.body,
-                "click_type": "startapp",
-            }
-        }
-        if delivery.role_avatar_notifications:
-            message = {
-                "transmission": json.dumps(
-                    {
-                        **delivery.payload,
-                        "title": delivery.title[:50],
-                        "body": delivery.body[:500],
-                        "channel_id": self._channel_id,
-                        "channel_name": self._channel_name,
-                    },
-                    ensure_ascii=False,
-                    separators=(",", ":"),
-                )
-            }
         response = await self._client.post(
             f"{self._base_url}/v2/{self._app_id}/push/single/cid",
             headers={"token": token},
@@ -97,7 +74,13 @@ class GetuiPushProvider:
                 "request_id": delivery.request_id.replace("-", "")[:32],
                 "settings": {"ttl": 24 * 60 * 60 * 1000, "strategy": {"default": 1}},
                 "audience": {"cid": [delivery.client_id]},
-                "push_message": message,
+                "push_message": {
+                    "notification": {
+                        "title": delivery.title,
+                        "body": delivery.body,
+                        "click_type": "startapp",
+                    }
+                },
                 "push_channel": {
                     "android": {
                         "ups": {

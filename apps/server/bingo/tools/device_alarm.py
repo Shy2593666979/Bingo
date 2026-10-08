@@ -51,7 +51,7 @@ class DeviceAlarmCreateTool(BaseTool):
             "recurrence": recurrence,
         }
         action = await DeviceActionRepository(context.session, context.user.id).create(
-            self.name, json.dumps(normalized, ensure_ascii=False)
+            self.name, json.dumps(normalized, ensure_ascii=False), context.conversation_id
         )
         return ToolResult(
             content=f"已请求用户确认创建闹钟：{scheduled_at.isoformat()}，标签：{label}",

@@ -8,8 +8,7 @@ from bingo.push.provider import GetuiPushProvider, PushDelivery
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("native", [False, True])
-async def test_getui_notification_opens_app_and_reuses_auth_token(native: bool) -> None:
+async def test_getui_notification_opens_app_and_reuses_auth_token() -> None:
     settings = Settings()
     settings.push.getui.app_id = "test-app"
     settings.push.getui.app_key = "test-key"
@@ -19,33 +18,18 @@ async def test_getui_notification_opens_app_and_reuses_auth_token(native: bool) 
     def respond(request: httpx.Request) -> httpx.Response:
         requests.append(request)
         if request.url.path.endswith("/auth"):
-            return httpx.Response(
-                200,
-                json={
-                    "code": 0,
-                    "data": {"token": "test-token", "expire_time": 9999999999999},
-                },
-            )
+            return httpx.Response(200, json={
+                "code": 0,
+                "data": {"token": "test-token", "expire_time": 9999999999999},
+            })
         assert request.headers["token"] == "test-token"
         body = json.loads(request.content)
         assert body["audience"]["cid"] == ["test-client"]
-        if native:
-            assert set(body["push_message"]) == {"transmission"}
-            payload = json.loads(body["push_message"]["transmission"])
-            assert payload["title"] == "甜甜"
-            assert payload["body"] == "今天过得怎么样？"
-            assert payload["type"] == "proactive_message"
-            assert payload["user_id"] == "test-user"
-            assert payload["avatar"] == "girlfriend.png"
-            assert payload["channel_id"] == settings.push.android.channel_id
-            assert len(body["push_message"]["transmission"]) <= 3072
-        else:
-            assert body["push_message"]["notification"] == {
-                "title": "甜甜",
-                "body": "今天过得怎么样？",
-                "click_type": "startapp",
-            }
-        assert body["push_channel"]["android"]["ups"]["notification"]["click_type"] == "startapp"
+        assert body["push_message"]["notification"] == {
+            "title": "甜甜",
+            "body": "今天过得怎么样？",
+            "click_type": "startapp",
+        }
         return httpx.Response(200, json={"code": 0, "data": {"task-1": {}}})
 
     provider = GetuiPushProvider(settings)
@@ -56,8 +40,7 @@ async def test_getui_notification_opens_app_and_reuses_auth_token(native: bool) 
         client_id="test-client",
         title="甜甜",
         body="今天过得怎么样？",
-        payload={"type": "proactive_message", "user_id": "test-user", "avatar": "girlfriend.png"},
-        role_avatar_notifications=native,
+        payload={"type": "proactive_message"},
     )
     try:
         assert await provider.send(delivery) == "task-1"
