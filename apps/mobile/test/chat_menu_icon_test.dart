@@ -1,9 +1,21 @@
+import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/features/chat/presentation/widgets/chat_menu_icon.dart';
 import 'package:bingo/features/chat/presentation/widgets/companion_moment_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('focus uses the plain HTML clock and preserves the menu color',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(
+        home: Center(child: ChatMenuIcon(symbol: ChatMenuSymbol.focus))));
+    final drawing = tester.widget<CustomPaint>(find.byType(CustomPaint).last);
+    expect(
+        (Canvas canvas) =>
+            drawing.painter!.paint(canvas, const Size.square(24)),
+        paints
+          ..circle(x: 12, y: 12, radius: 9, color: BingoPalette.chatMenuInk));
+  });
   for (final entry in {
     '一起专注': ChatMenuSymbol.focus,
     '小约定': ChatMenuSymbol.promise,

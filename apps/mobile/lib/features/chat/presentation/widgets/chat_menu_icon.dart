@@ -81,44 +81,29 @@ class _ChatMenuIconPainter extends CustomPainter {
           ..close();
         canvas.drawCircle(const Offset(12, 10), 2, stroke);
       case ChatMenuSymbol.focus:
-        canvas.drawCircle(const Offset(12, 13), 8, stroke);
+        canvas.drawCircle(const Offset(12, 12), 9, stroke);
         path
-          ..moveTo(12, 9)
-          ..lineTo(12, 13)
-          ..lineTo(15, 15)
-          ..moveTo(9, 2)
-          ..lineTo(15, 2)
-          ..moveTo(12, 2)
-          ..lineTo(12, 5);
+          ..moveTo(12, 7)
+          ..lineTo(12, 12)
+          ..lineTo(15, 14);
       case ChatMenuSymbol.promise:
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-              const Rect.fromLTWH(4, 5, 16, 16), const Radius.circular(4)),
-          stroke,
-        );
         path
-          ..moveTo(8, 3)
-          ..lineTo(8, 7)
-          ..moveTo(16, 3)
-          ..lineTo(16, 7)
-          ..moveTo(4, 10)
-          ..lineTo(20, 10)
-          ..moveTo(8, 15)
-          ..lineTo(11, 18)
-          ..lineTo(16, 13);
+          ..moveTo(12, 20)
+          ..lineTo(3.6, 12)
+          ..arcToPoint(const Offset(12, 5.4),
+              radius: const Radius.circular(5.3))
+          ..arcToPoint(const Offset(20.4, 12),
+              radius: const Radius.circular(5.3))
+          ..close();
       case ChatMenuSymbol.sleep:
         path
-          ..moveTo(20, 14)
-          ..arcToPoint(const Offset(10, 3), radius: const Radius.circular(8.5))
-          ..arcToPoint(const Offset(20, 14),
+          ..moveTo(20, 15)
+          ..arcToPoint(const Offset(9, 3), radius: const Radius.circular(9))
+          ..arcToPoint(const Offset(20, 15),
               radius: const Radius.circular(9),
               largeArc: true,
               clockwise: false)
-          ..close()
-          ..moveTo(17, 3)
-          ..lineTo(17, 7)
-          ..moveTo(15, 5)
-          ..lineTo(19, 5);
+          ..close();
       case ChatMenuSymbol.diary:
         path
           ..moveTo(6, 3)

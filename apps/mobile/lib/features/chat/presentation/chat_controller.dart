@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bingo/features/chat/presentation/bubble_pacer.dart';
 import 'package:bingo/core/device/device_tool_executor.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/chat/data/local_chat_store.dart';
@@ -27,6 +28,10 @@ class ChatController extends ChangeNotifier {
         _engagement = engagement;
 
   final ChatGateway _gateway;
+  final _bubblePacer = BubblePacer();
+  final Set<String> _hiddenBubbleIds = {};
+  final Set<String> _pacedActionIds = {};
+  bool _bubblePacingSuspended = false;
   final _replyAudio = ReplyAudioPlayer();
   final _companionStore = CompanionStore();
   bool _readAloudEnabled = false;
@@ -40,6 +45,7 @@ class ChatController extends ChangeNotifier {
   String? get userId => _userId;
 
   Future<void> activateSpeech() async {
+    _bubblePacingSuspended = false;
     _speechActive = true;
     final userId = _userId;
     if (userId == null) return;
@@ -79,6 +85,8 @@ class ChatController extends ChangeNotifier {
   }
 
   void deactivateSpeech() {
+    _bubblePacingSuspended = true;
+    _resetBubblePacing();
     _speechActive = false;
     _updateSpeechGateway();
     unawaited(stopSpeech());
@@ -120,12 +128,19 @@ class ChatController extends ChangeNotifier {
   Timer? _recoveryTimer;
   int _recoveryAttempts = 0;
 
-  List<ChatMessage> get messages => List.unmodifiable(_messages);
+  List<ChatMessage> get messages => List.unmodifiable(
+      _messages.where((message) => !_hiddenBubbleIds.contains(message.id)));
   List<DeviceAction> get deviceActions => List.unmodifiable(_deviceActionItems);
-  List<Object> get timelineItems => List.unmodifiable(_timelineItems);
-  ChatStatus get status => _status;
+  List<Object> get timelineItems =>
+      List.unmodifiable(_timelineItems.where((item) => item is ChatMessage
+          ? !_hiddenBubbleIds.contains(item.id)
+          : item is! DeviceAction ||
+              !_bubblePacer.isPending ||
+              !_pacedActionIds.contains(item.id)));
+  ChatStatus get status =>
+      _bubblePacer.isPending ? ChatStatus.sending : _status;
   String? get errorMessage => _errorMessage;
-  bool get isBusy => _status == ChatStatus.sending;
+  bool get isBusy => _status == ChatStatus.sending || _bubblePacer.isPending;
   List<String> get recommendations => List.unmodifiable(_recommendations);
   String? get conversationId => _conversationId;
 
@@ -368,8 +383,10 @@ class ChatController extends ChangeNotifier {
     String? momentSessionId,
   }) async {
     if (content.isEmpty && image == null && location == null) return;
+    _resetBubblePacing();
     await stopSpeech();
     _acceptAudio = (spoken || _readAloudEnabled) && _speechActive;
+    final paceBubbles = !_acceptAudio;
     lastAudioSeconds = 0;
     lastAudioStartedAt = null;
     if (_gateway case final ReplySpeechGateway gateway) {
@@ -501,6 +518,15 @@ class ChatController extends ChangeNotifier {
               status: ChatMessageStatus.streaming,
             );
             _addMessage(message);
+            if (paceBubbles && !_bubblePacingSuspended) {
+              final messageIndex = _messages.length - 1;
+              _hiddenBubbleIds.add(message.id);
+              _bubblePacer.enqueue(message.content, () {
+                if (generation != _runSequence) return;
+                _hiddenBubbleIds.remove(_messages[messageIndex].id);
+                notifyListeners();
+              });
+            }
             await _persist();
           case ChatFinished():
             final lastAssistantIndex = _messages.length - 1;
@@ -519,6 +545,8 @@ class ChatController extends ChangeNotifier {
                 ),
               );
             }
+            _pacedActionIds
+                .addAll(_pendingTimelineActions.map((action) => action.id));
             _timelineItems.addAll(_pendingTimelineActions);
             _pendingTimelineActions.clear();
             _status = ChatStatus.idle;
@@ -531,6 +559,7 @@ class ChatController extends ChangeNotifier {
             await stopSpeech();
             _incomingCall = event.invitation;
           case ChatInterrupted():
+            _resetBubblePacing();
             await stopSpeech();
             _markRunInterrupted(event.runId);
             _status = ChatStatus.idle;
@@ -539,11 +568,15 @@ class ChatController extends ChangeNotifier {
         }
         notifyListeners();
       }
-      if (generation == _runSequence && isBusy) {
+      if (generation == _runSequence && _status == ChatStatus.sending) {
         throw const FormatException('响应未正常结束');
       }
+      if (generation != _runSequence) return;
+      await _bubblePacer.drained;
+      if (generation == _runSequence) notifyListeners();
     } catch (_) {
       if (generation != _runSequence) return;
+      _resetBubblePacing();
       _timelineItems.addAll(_pendingTimelineActions);
       _pendingTimelineActions.clear();
       _status = ChatStatus.failed;
@@ -1005,6 +1038,9 @@ class ChatController extends ChangeNotifier {
 
   void _replaceMessageAt(int messageIndex, ChatMessage replacement) {
     final previous = _messages[messageIndex];
+    if (_hiddenBubbleIds.remove(previous.id)) {
+      _hiddenBubbleIds.add(replacement.id);
+    }
     _messages[messageIndex] = replacement;
     final timelineIndex = _timelineItems.lastIndexWhere(
       (item) => item is ChatMessage && item.id == previous.id,
@@ -1037,8 +1073,15 @@ class ChatController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _runSequence++;
     deactivateSpeech();
     _stopRecoveryPolling();
     super.dispose();
+  }
+
+  void _resetBubblePacing() {
+    _bubblePacer.reset();
+    _hiddenBubbleIds.clear();
+    _pacedActionIds.clear();
   }
 }

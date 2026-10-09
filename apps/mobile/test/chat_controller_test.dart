@@ -534,6 +534,40 @@ void main() {
     expect(controller.messages.last.id, 'message-1');
   });
 
+  testWidgets('stream completion keeps later bubbles queued until their turn',
+      (tester) async {
+    final controller = ChatController(gateway: FakeChatGateway());
+    final sending = controller.send('测试');
+    await tester.pump();
+    expect(
+        controller.messages.map((message) => message.content), ['测试', '第一句。']);
+    expect(controller.timelineItems, hasLength(2));
+    expect(controller.isBusy, isTrue);
+    await tester.pump(const Duration(milliseconds: 799));
+    expect(controller.messages, hasLength(2));
+    await tester.pump(const Duration(milliseconds: 1201));
+    await sending;
+    expect(controller.messages.last.content, '第二句！');
+    expect(controller.messages.last.id, 'message-1');
+    expect(controller.isBusy, isFalse);
+    controller.dispose();
+  });
+
+  testWidgets('leaving chat cancels pacing without losing received bubbles',
+      (tester) async {
+    final controller = ChatController(gateway: FakeChatGateway());
+    final sending = controller.send('测试');
+    await tester.pump();
+    expect(controller.messages, hasLength(2));
+    controller.deactivateSpeech();
+    await sending;
+    expect(controller.messages, hasLength(3));
+    expect(controller.timelineItems, hasLength(3));
+    await tester.pump(const Duration(seconds: 3));
+    expect(controller.messages, hasLength(3));
+    controller.dispose();
+  });
+
   test('sends images through the normal chat stream', () async {
     final gateway = FakeChatGateway();
     final controller = ChatController(gateway: gateway);
