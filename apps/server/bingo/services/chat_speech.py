@@ -39,7 +39,14 @@ class ChatSpeechService:
             await self.stop(user_id, run_id)
 
     async def events(
-        self, subscription, user_id: str, run_id: str, voice: str, *, timeout_seconds=180
+        self,
+        subscription,
+        user_id: str,
+        run_id: str,
+        voice: str,
+        *,
+        timeout_seconds=180,
+        synchronize_bubbles=False,
     ):
         output = asyncio.Queue(maxsize=128)
         sentences = asyncio.Queue(maxsize=256)
@@ -62,6 +69,7 @@ class ChatSpeechService:
 
         async def read_text():
             pending = ""
+            segment_index = 0
 
             async def enqueue(piece):
                 if speech.done():
@@ -77,14 +85,22 @@ class ChatSpeechService:
             try:
                 async for event in subscription.events():
                     if event["type"] == "text_delta":
-                        pending += event["content"]
-                        pieces, pending = split_speech_text(pending)
-                        for piece in pieces:
-                            await enqueue(piece)
+                        if not synchronize_bubbles:
+                            pending += event["content"]
+                            pieces, pending = split_speech_text(pending)
+                            for piece in pieces:
+                                await enqueue(piece)
                     else:
                         if event["type"] in {"interrupted", "error", "incoming_call"}:
                             speech.cancel()
-                        await output.put(event)
+                        if event["type"] == "segment" and synchronize_bubbles:
+                            await output.put({**event, "segment_index": segment_index})
+                            await enqueue(
+                                {"text": event["content"], "segment_index": segment_index}
+                            )
+                            segment_index += 1
+                        else:
+                            await output.put(event)
                 if not speech.done():
                     pieces, _ = split_speech_text(pending, final=True)
                     for piece in pieces:
@@ -147,32 +163,42 @@ class ChatSpeechService:
                     raise ValueError("Speech session unavailable")
                 if event.get("type") == "session.updated":
                     break
-            while (sentence := await sentences.get()) is not None:
-                await socket.send(
-                    json.dumps(
-                        {
-                            "type": "conversation.item.create",
-                            "item": {
-                                "type": "message",
-                                "role": "user",
-                                "content": [{"type": "input_text", "text": sentence}],
-                            },
-                        },
-                        ensure_ascii=False,
-                    )
+            while (item := await sentences.get()) is not None:
+                segment_index = item["segment_index"] if isinstance(item, dict) else None
+                pieces = (
+                    split_speech_text(item["text"], final=True)[0]
+                    if isinstance(item, dict)
+                    else [item]
                 )
-                await socket.send(json.dumps({"type": "response.create"}))
-                while True:
-                    event = json.loads(await asyncio.wait_for(socket.recv(), 30))
-                    if event.get("type") == "response.audio.delta":
-                        base64.b64decode(event["delta"], validate=True)
-                        await output.put(
-                            {"type": "audio", "data": event["delta"], "sample_rate": 24000}
+                for sentence in pieces:
+                    await socket.send(
+                        json.dumps(
+                            {
+                                "type": "conversation.item.create",
+                                "item": {
+                                    "type": "message",
+                                    "role": "user",
+                                    "content": [{"type": "input_text", "text": sentence}],
+                                },
+                            },
+                            ensure_ascii=False,
                         )
-                    elif event.get("type") == "error":
-                        raise ValueError("Speech generation unavailable")
-                    elif event.get("type") == "response.done":
-                        if event.get("response", {}).get("status") == "failed":
-                            raise ValueError("Speech generation failed")
-                        break
+                    )
+                    await socket.send(json.dumps({"type": "response.create"}))
+                    while True:
+                        event = json.loads(await asyncio.wait_for(socket.recv(), 30))
+                        if event.get("type") == "response.audio.delta":
+                            base64.b64decode(event["delta"], validate=True)
+                            audio = {"type": "audio", "data": event["delta"], "sample_rate": 24000}
+                            if segment_index is not None:
+                                audio["segment_index"] = segment_index
+                            await output.put(audio)
+                        elif event.get("type") == "error":
+                            raise ValueError("Speech generation unavailable")
+                        elif event.get("type") == "response.done":
+                            if event.get("response", {}).get("status") == "failed":
+                                raise ValueError("Speech generation failed")
+                            break
+                if segment_index is not None:
+                    await output.put({"type": "audio_segment_done", "segment_index": segment_index})
             await output.put({"type": "audio_done"})

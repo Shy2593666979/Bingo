@@ -23,8 +23,9 @@ class ReplyAudioPlayer {
   }
 
   Future<void> finish() async {
+    final generation = _generation;
     if (_started) await _channel.invokeMethod<void>('finishReplyAudio');
-    _started = false;
+    if (generation == _generation) _started = false;
   }
 
   Future<void> stop() async {

@@ -309,8 +309,9 @@ class MainActivity : FlutterActivity() {
                     "playReplyAudio" -> runCatching {
                         replyAudio.play(requireNotNull(call.arguments as? ByteArray))
                     }.fold({ result.success(null) }, { result.error("reply_audio", it.message, null) })
-                    "finishReplyAudio" -> runCatching { replyAudio.finish() }
-                        .fold({ result.success(null) }, { result.error("reply_audio", it.message, null) })
+                    "finishReplyAudio" -> runCatching {
+                        replyAudio.finish { runOnUiThread { result.success(null) } }
+                    }.onFailure { result.error("reply_audio", it.message, null) }
                     "stopReplyAudio" -> { replyAudio.stop(); result.success(null) }
                     "openLocationMap" -> {
                         val longitude = call.argument<Number>("longitude")?.toDouble()

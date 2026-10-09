@@ -17,6 +17,7 @@ class ReplyAudioPlayer(context: Context) {
     private var track: AudioTrack? = null
     private var worker: Thread? = null
     private var focus: AudioFocusRequest? = null
+    private var completion: (() -> Unit)? = null
     private val manager = context.getSystemService(AudioManager::class.java)
     private val focusListener = AudioManager.OnAudioFocusChangeListener { change -> if (change < 0) stop() }
 
@@ -84,8 +85,14 @@ class ReplyAudioPlayer(context: Context) {
         }
     }
 
-    @Synchronized fun finish() {
-        if (track != null) check(queue.offer(ByteArray(0))) { "朗读缓冲已满" }
+    @Synchronized fun finish(onComplete: () -> Unit) {
+        if (track == null) {
+            onComplete()
+            return
+        }
+        check(completion == null) { "朗读正在结束" }
+        check(queue.offer(ByteArray(0))) { "朗读缓冲已满" }
+        completion = onComplete
     }
 
     @Synchronized fun stop() {
@@ -104,5 +111,8 @@ class ReplyAudioPlayer(context: Context) {
             manager.abandonAudioFocus(focusListener)
         }
         focus = null
+        val callback = completion
+        completion = null
+        callback?.invoke()
     }
 }

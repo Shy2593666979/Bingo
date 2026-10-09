@@ -94,7 +94,9 @@ class SpokenSubscription:
         self.voice = voice
 
     def events(self):
-        return self.speech.events(self.subscription, self.user_id, self.run_id, self.voice)
+        return self.speech.events(
+            self.subscription, self.user_id, self.run_id, self.voice, synchronize_bubbles=True
+        )
 
     async def close(self):
         await self.speech.stop(self.user_id, self.run_id)

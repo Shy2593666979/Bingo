@@ -5,6 +5,7 @@ import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/chat/data/local_chat_store.dart';
 import 'package:bingo/features/chat/data/companion_store.dart';
 import 'package:bingo/features/chat/data/reply_audio_player.dart';
+import 'package:bingo/features/chat/data/segmented_reply_audio.dart';
 import 'package:bingo/features/chat/models/chat_message.dart';
 import 'package:bingo/features/chat/models/assistant_segments.dart';
 import 'package:bingo/features/chat/models/chat_location.dart';
@@ -33,6 +34,13 @@ class ChatController extends ChangeNotifier {
   final Set<String> _pacedActionIds = {};
   bool _bubblePacingSuspended = false;
   final _replyAudio = ReplyAudioPlayer();
+  late final _segmentedAudio = SegmentedReplyAudio(_replyAudio,
+      onStarted: () => lastAudioStartedAt ??= DateTime.now(),
+      onError: () {
+        _speechError = '朗读播放失败，文字回复不受影响';
+        unawaited(stopSpeech());
+        notifyListeners();
+      });
   final _companionStore = CompanionStore();
   bool _readAloudEnabled = false;
   bool _speechActive = false;
@@ -94,6 +102,7 @@ class ChatController extends ChangeNotifier {
 
   Future<void> stopSpeech() async {
     _acceptAudio = false;
+    _segmentedAudio.cancel();
     await _replyAudio.stop();
     if (_gateway case final ReplySpeechGateway gateway) {
       unawaited(gateway.stopReplySpeech());
@@ -386,7 +395,7 @@ class ChatController extends ChangeNotifier {
     _resetBubblePacing();
     await stopSpeech();
     _acceptAudio = (spoken || _readAloudEnabled) && _speechActive;
-    final paceBubbles = !_acceptAudio;
+    final legacyAudio = <ChatAudio>[];
     lastAudioSeconds = 0;
     lastAudioStartedAt = null;
     if (_gateway case final ReplySpeechGateway gateway) {
@@ -475,22 +484,22 @@ class ChatController extends ChangeNotifier {
           case ChatAudio():
             lastAudioSeconds += event.bytes.length / 48000;
             if (_acceptAudio && _speechActive) {
-              try {
-                await _replyAudio.add(event.bytes);
-                lastAudioStartedAt ??= DateTime.now();
-              } catch (_) {
-                _speechError = '朗读播放失败，文字回复不受影响';
-                await stopSpeech();
+              if (event.segmentIndex case final index?) {
+                _segmentedAudio.add(index, event.bytes);
+              } else {
+                if (lastAudioSeconds > 8 * 1024 * 1024 / 48000) {
+                  _speechError = '回复较长，已停止朗读，文字回复继续显示';
+                  await stopSpeech();
+                  legacyAudio.clear();
+                } else {
+                  legacyAudio.add(event);
+                }
               }
             }
+          case ChatAudioSegmentDone():
+            if (_acceptAudio) _segmentedAudio.end(event.segmentIndex);
           case ChatAudioDone():
-            if (_acceptAudio) {
-              try {
-                await _replyAudio.finish();
-              } catch (_) {
-                await stopSpeech();
-              }
-            }
+            if (_acceptAudio) _segmentedAudio.finish();
           case ChatAudioError():
             _speechError = event.message;
             await stopSpeech();
@@ -518,14 +527,21 @@ class ChatController extends ChangeNotifier {
               status: ChatMessageStatus.streaming,
             );
             _addMessage(message);
-            if (paceBubbles && !_bubblePacingSuspended) {
+            if (!_bubblePacingSuspended) {
               final messageIndex = _messages.length - 1;
+              final audioIndex = _acceptAudio ? event.segmentIndex : null;
               _hiddenBubbleIds.add(message.id);
               _bubblePacer.enqueue(message.content, () {
                 if (generation != _runSequence) return;
                 _hiddenBubbleIds.remove(_messages[messageIndex].id);
                 notifyListeners();
-              });
+                if (audioIndex != null && _acceptAudio && _speechActive) {
+                  _segmentedAudio.reveal(audioIndex);
+                }
+              },
+                  played: audioIndex == null
+                      ? null
+                      : _segmentedAudio.played(audioIndex));
             }
             await _persist();
           case ChatFinished():
@@ -572,7 +588,26 @@ class ChatController extends ChangeNotifier {
         throw const FormatException('响应未正常结束');
       }
       if (generation != _runSequence) return;
+      if (_acceptAudio) _segmentedAudio.finish();
       await _bubblePacer.drained;
+      if (generation != _runSequence) return;
+      if (_acceptAudio && _speechActive && legacyAudio.isNotEmpty) {
+        try {
+          for (final audio in legacyAudio) {
+            if (generation != _runSequence || !_acceptAudio) break;
+            await _replyAudio.add(audio.bytes);
+            lastAudioStartedAt ??= DateTime.now();
+          }
+          if (generation == _runSequence && _acceptAudio) {
+            await _replyAudio.finish();
+          }
+        } catch (_) {
+          if (generation == _runSequence) {
+            _speechError = '朗读播放失败，文字回复不受影响';
+            await stopSpeech();
+          }
+        }
+      }
       if (generation == _runSequence) notifyListeners();
     } catch (_) {
       if (generation != _runSequence) return;

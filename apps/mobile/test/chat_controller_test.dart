@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:bingo/core/device/device_tool_executor.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
@@ -10,6 +9,7 @@ import 'package:bingo/shared/widgets/assistant_avatar.dart';
 import 'package:bingo/features/chat/presentation/chat_page.dart';
 import 'package:bingo/features/chat/presentation/widgets/message_bubble.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class FakeSpeechGateway implements SpeechGateway {
@@ -46,6 +46,33 @@ class FakeChatGateway implements ChatGateway {
       createdAt: assistantCreatedAt,
       assistantRole: 'teacher',
     );
+  }
+}
+
+class SegmentedSpeechGateway implements ChatGateway, ReplySpeechGateway {
+  @override
+  bool readAloud = false;
+
+  @override
+  Future<void> stopReplySpeech() async {}
+
+  @override
+  Stream<ChatStreamEvent> send({
+    String? conversationId,
+    required String content,
+    required String runId,
+    String? supersedesRunId,
+    List<ChatImageUpload> images = const [],
+  }) async* {
+    yield const ChatStarted('conversation-1');
+    yield const ChatSegment('早呀', segmentIndex: 0);
+    yield ChatAudio(Uint8List.fromList([1, 0]), segmentIndex: 0);
+    yield const ChatAudioSegmentDone(0);
+    yield const ChatSegment('昨晚睡得怎么样？', segmentIndex: 1);
+    yield ChatAudio(Uint8List.fromList([2, 0]), segmentIndex: 1);
+    yield const ChatAudioSegmentDone(1);
+    yield const ChatFinished('message-1');
+    yield const ChatAudioDone();
   }
 }
 
@@ -543,9 +570,9 @@ void main() {
         controller.messages.map((message) => message.content), ['测试', '第一句。']);
     expect(controller.timelineItems, hasLength(2));
     expect(controller.isBusy, isTrue);
-    await tester.pump(const Duration(milliseconds: 799));
+    await tester.pump(const Duration(milliseconds: 999));
     expect(controller.messages, hasLength(2));
-    await tester.pump(const Duration(milliseconds: 1201));
+    await tester.pump(const Duration(milliseconds: 2001));
     await sending;
     expect(controller.messages.last.content, '第二句！');
     expect(controller.messages.last.id, 'message-1');
@@ -566,6 +593,53 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
     expect(controller.messages, hasLength(3));
     controller.dispose();
+  });
+
+  testWidgets('read aloud waits for playback and reveals matching text first',
+      (tester) async {
+    const channel = MethodChannel('bingo/device_tools');
+    final firstPlayback = Completer<void>();
+    final playback = <int>[];
+    var finishes = 0;
+    late ChatController controller;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'playReplyAudio') {
+        final bytes = call.arguments as Uint8List;
+        playback.add(bytes.first);
+        expectSync(controller.messages.last.content,
+            bytes.first == 1 ? '早呀' : '昨晚睡得怎么样？');
+      }
+      if (call.method == 'finishReplyAudio' && finishes++ == 0) {
+        await firstPlayback.future;
+      }
+      return null;
+    });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+    final gateway = SegmentedSpeechGateway();
+    controller = ChatController(gateway: gateway);
+    await controller.activateSpeech();
+    await controller.setReadAloud(true);
+    final sending = controller.send('你好');
+    await tester.pump();
+    expect(gateway.readAloud, isTrue);
+    expect(playback, [1]);
+    expect(controller.messages.map((message) => message.content), ['你好', '早呀']);
+    await tester.pump(const Duration(seconds: 4));
+    expect(controller.speechError, isNull);
+    expect(playback, [1]);
+    expect(controller.messages, hasLength(2));
+    firstPlayback.complete();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 3));
+    await sending;
+    expect(playback, [1, 2]);
+    expect(controller.messages.last.content, '昨晚睡得怎么样？');
+    controller.dispose();
+    await tester.pump();
   });
 
   test('sends images through the normal chat stream', () async {

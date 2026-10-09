@@ -37,13 +37,20 @@ class ChatStarted extends ChatStreamEvent {
 }
 
 class ChatSegment extends ChatStreamEvent {
-  const ChatSegment(this.content);
+  const ChatSegment(this.content, {this.segmentIndex});
   final String content;
+  final int? segmentIndex;
 }
 
 class ChatAudio extends ChatStreamEvent {
-  const ChatAudio(this.bytes);
+  const ChatAudio(this.bytes, {this.segmentIndex});
   final Uint8List bytes;
+  final int? segmentIndex;
+}
+
+class ChatAudioSegmentDone extends ChatStreamEvent {
+  const ChatAudioSegmentDone(this.segmentIndex);
+  final int segmentIndex;
 }
 
 class ChatAudioDone extends ChatStreamEvent {
@@ -695,9 +702,13 @@ class HttpApiGateway
                   : DateTime.parse(json['created_at'] as String),
             );
           case 'segment':
-            yield ChatSegment(json['content'] as String);
+            yield ChatSegment(json['content'] as String,
+                segmentIndex: json['segment_index'] as int?);
           case 'audio':
-            yield ChatAudio(base64Decode(json['data'] as String));
+            yield ChatAudio(base64Decode(json['data'] as String),
+                segmentIndex: json['segment_index'] as int?);
+          case 'audio_segment_done':
+            yield ChatAudioSegmentDone(json['segment_index'] as int);
           case 'audio_done':
             yield const ChatAudioDone();
           case 'audio_error':
