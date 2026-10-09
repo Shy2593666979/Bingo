@@ -26,7 +26,6 @@ from bingo.db.repositories import (
     RoleRepository,
     UserRepository,
 )
-from bingo.db.time import as_beijing, beijing_now
 from bingo.prompts import (
     FOLLOW_UP_PROMPT,
     FOLLOW_UP_STAGE_INSTRUCTIONS,
@@ -67,7 +66,6 @@ class EngagementService:
         self._timezone = timezone
         self._location = location
         self._worker: asyncio.Task[None] | None = None
-        self._recommendation_locks: dict[str, asyncio.Lock] = {}
         self._morning = MorningGreetingService(
             session_factory, llm, location=location, push_service=push_service, timezone=timezone
         )
@@ -93,8 +91,14 @@ class EngagementService:
         await self._broker.close()
 
     async def record_user_activity(self, user_id: str, conversation_id: str | None = None) -> str:
-        await self.clear_recommendations(user_id, conversation_id)
-        return await self._broker.record_activity(user_id)
+        key, target = await self._recommendation_target(user_id, conversation_id)
+        return await self._broker.record_activity(
+            key,
+            recommendation_payload=(
+                {"user_id": user_id, "conversation_id": target} if target else None
+            ),
+            recommendation_delay=self._recommendation_delay,
+        )
 
     async def schedule_after_turn(
         self,
@@ -120,18 +124,13 @@ class EngagementService:
         )
         for stage, delay in enumerate(self._follow_up_delays, start=1):
             await self._broker.schedule("follow_up", {**common, "stage": stage}, delay)
-        await self._broker.schedule(
-            "recommendations",
-            common,
-            self._recommendation_delay,
-        )
         log_event(
             logger,
             logging.INFO,
             "background.scheduled",
             user_id=user_id,
             conversation_id=conversation_id,
-            count=len(self._follow_up_delays) + 2,
+            count=len(self._follow_up_delays) + 1,
         )
 
     async def _recommendation_target(
@@ -155,38 +154,6 @@ class EngagementService:
     ) -> list[str]:
         key, _ = await self._recommendation_target(user_id, conversation_id)
         return await self._broker.get_recommendations(key)
-
-    async def recommendations_for_entry(
-        self, user_id: str, conversation_id: str | None = None
-    ) -> list[str]:
-        key, target = await self._recommendation_target(user_id, conversation_id)
-        items = await self._broker.get_recommendations(key)
-        if items:
-            return items
-
-        lock = self._recommendation_locks.setdefault(key, asyncio.Lock())
-        async with lock:
-            items = await self._broker.get_recommendations(key)
-            if items:
-                return items
-            async with self._session_factory() as session:
-                messages = (
-                    await ConversationRepository(session, user_id).list_messages(target, 200)
-                    if target
-                    else []
-                )
-                latest = next(
-                    (message for message in reversed(messages) if message.role == "user"), None
-                )
-            if latest is None:
-                return []
-            idle_seconds = (beijing_now() - as_beijing(latest.created_at)).total_seconds()
-            if idle_seconds < self._recommendation_delay:
-                return []
-            await self._create_recommendations(
-                {"user_id": user_id, "conversation_id": latest.conversation_id}
-            )
-            return await self._broker.get_recommendations(key)
 
     async def clear_recommendations(self, user_id: str, conversation_id: str | None = None) -> None:
         key, _ = await self._recommendation_target(user_id, conversation_id)
@@ -232,7 +199,16 @@ class EngagementService:
         elif job.kind == "follow_up":
             await self._create_follow_up(job.payload)
         elif job.kind == "recommendations":
-            await self._create_recommendations(job.payload)
+            try:
+                await self._create_recommendations(job.payload)
+            except Exception:
+                attempts = job.payload.get("attempts", 0)
+                if attempts < 3 and await self._is_current(job.payload):
+                    await self._broker.schedule(
+                        "recommendations", {**job.payload, "attempts": attempts + 1},
+                        60 * (attempts + 1),
+                    )
+                raise
         log_event(
             logger,
             logging.INFO,
@@ -243,7 +219,8 @@ class EngagementService:
         )
 
     async def _is_current(self, payload: dict[str, Any]) -> bool:
-        return await self._broker.current_version(payload["user_id"]) == payload["activity_version"]
+        key = f"{payload['user_id']}:{payload['conversation_id']}"
+        return await self._broker.current_version(key) == payload["activity_version"]
 
     async def _extract_memories(self, payload: dict[str, Any]) -> None:
         completed_message_id = payload.get("completed_message_id")
@@ -363,6 +340,8 @@ class EngagementService:
                     )
 
     async def _create_recommendations(self, payload: dict[str, Any]) -> None:
+        if not await self._is_current(payload):
+            return
         async with self._session_factory() as session:
             user = await UserRepository(session).get(payload["user_id"])
             if user is None:
@@ -395,7 +374,8 @@ class EngagementService:
                     "帮我回看最近的目标，找出最值得继续深入的线索",
                 ]
             await self._broker.save_recommendations(
-                f"{user.id}:{payload['conversation_id']}", items[:3]
+                f"{user.id}:{payload['conversation_id']}", items[:3],
+                activity_version=payload["activity_version"],
             )
 
 

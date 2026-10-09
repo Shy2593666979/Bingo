@@ -1,3 +1,4 @@
+import asyncio
 from datetime import timedelta
 from pathlib import Path
 
@@ -207,6 +208,7 @@ async def test_extracts_memory_and_creates_engagement_content(tmp_path: Path) ->
 @pytest.mark.asyncio
 async def test_new_activity_invalidates_old_engagement_jobs(tmp_path: Path) -> None:
     database, service, user_id, conversation_id = await _build_service(tmp_path)
+    service._recommendation_delay = 18000
     try:
         old_version = await service.record_user_activity(user_id)
         await service.schedule_after_turn(
@@ -393,17 +395,17 @@ async def test_memory_context_only_includes_current_role(tmp_path: Path) -> None
 
 
 @pytest.mark.asyncio
-async def test_entry_regenerates_recommendations_when_delay_has_elapsed(
+async def test_entry_only_reads_recommendation_cache_even_after_delay(
     tmp_path: Path,
 ) -> None:
-    database, service, user_id, _ = await _build_service(tmp_path)
+    database, service, user_id, conversation_id = await _build_service(tmp_path)
     try:
         assert await service.get_recommendations(user_id) == []
-
-        recommendations = await service.recommendations_for_entry(user_id)
-
-        assert len(recommendations) == 3
-        assert await service.get_recommendations(user_id) == recommendations
+        assert service._llm.prompts == []
+        key = f"{user_id}:{conversation_id}"
+        await service._broker.save_recommendations(key, ["缓存话题"])
+        assert await service.get_recommendations(user_id) == ["缓存话题"]
+        assert service._llm.prompts == []
     finally:
         await service.close()
         await database.dispose()
@@ -437,6 +439,136 @@ def test_in_memory_activity_clears_recommendations() -> None:
         await broker.record_activity("user-1")
         assert await broker.get_recommendations("user-1") == []
 
-    import asyncio
-
     asyncio.run(scenario())
+
+
+@pytest.mark.asyncio
+async def test_recommendation_timer_resets_from_user_message_not_reply(tmp_path, monkeypatch):
+    database, service, user_id, conversation_id = await _build_service(tmp_path)
+    service._recommendation_delay = 18000
+    now = [100.0]
+    monkeypatch.setattr("bingo.background.broker.time.time", lambda: now[0])
+    try:
+        version = await service.record_user_activity(user_id, conversation_id)
+        now[0] += 120
+        await service.schedule_after_turn(
+            user_id=user_id, conversation_id=conversation_id, activity_version=version,
+            completed_message_id="completed-message",
+        )
+        jobs = [entry for entry in service._broker._jobs if entry[2].kind == "recommendations"]
+        assert len(jobs) == 1 and jobs[0][0] == 18100
+        now[0] = 3700
+        next_version = await service.record_user_activity(user_id, conversation_id)
+        jobs = [entry for entry in service._broker._jobs if entry[2].kind == "recommendations"]
+        assert len(jobs) == 1 and jobs[0][0] == 21700
+        assert jobs[0][2].payload["activity_version"] == next_version != version
+        now[0] = 18100
+        await _drain(service)
+        assert await service.get_recommendations(user_id, conversation_id) == []
+        now[0] = 21700
+        await _drain(service)
+        assert len(await service.get_recommendations(user_id, conversation_id)) == 3
+    finally:
+        await service.close()
+        await database.dispose()
+
+
+@pytest.mark.asyncio
+async def test_partner_activity_and_cache_are_independent(tmp_path):
+    database, service, user_id, conversation_id = await _build_service(tmp_path)
+    try:
+        async with database.session_factory() as session:
+            second = Conversation(user_id=user_id, role_id=role_id("boyfriend"))
+            session.add(second)
+            await session.commit()
+            second_id = second.id
+        first_version = await service.record_user_activity(user_id, conversation_id)
+        second_version = await service.record_user_activity(user_id, second_id)
+        assert await service._is_current({
+            "user_id": user_id, "conversation_id": conversation_id,
+            "activity_version": first_version,
+        })
+        assert await service._is_current({
+            "user_id": user_id, "conversation_id": second_id,
+            "activity_version": second_version,
+        })
+        await _drain(service)
+        first_items = await service.get_recommendations(user_id, conversation_id)
+        second_items = await service.get_recommendations(user_id, second_id)
+        assert len(first_items) == len(second_items) == 3
+        await service.clear_recommendations(user_id, conversation_id)
+        assert await service.get_recommendations(user_id, conversation_id) == []
+        assert await service.get_recommendations(user_id, second_id) == second_items
+        service._recommendation_delay = 18000
+        await service.record_user_activity(user_id, conversation_id)
+        assert await service.get_recommendations(user_id, second_id) == second_items
+    finally:
+        await service.close()
+        await database.dispose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("new_message", [True, False])
+async def test_inflight_recommendations_cannot_restore_cleared_cache(tmp_path, new_message):
+    database, service, user_id, conversation_id = await _build_service(tmp_path)
+    started = asyncio.Event()
+    resume = asyncio.Event()
+
+    async def complete(messages):
+        started.set()
+        await resume.wait()
+        return '["旧话题一","旧话题二","旧话题三"]'
+
+    service._llm.complete = complete
+    try:
+        await service.record_user_activity(user_id, conversation_id)
+        job = await service._broker.pop_due()
+        generating = asyncio.create_task(service._execute(job))
+        await asyncio.wait_for(started.wait(), timeout=3)
+        service._recommendation_delay = 18000
+        if new_message:
+            await service.record_user_activity(user_id, conversation_id)
+        else:
+            await service.clear_recommendations(user_id, conversation_id)
+        resume.set()
+        await generating
+        assert await service.get_recommendations(user_id, conversation_id) == []
+        jobs = [entry for entry in service._broker._jobs if entry[2].kind == "recommendations"]
+        assert len(jobs) == int(new_message)
+    finally:
+        resume.set()
+        await service.close()
+        await database.dispose()
+
+
+@pytest.mark.asyncio
+async def test_failed_background_recommendations_retry_without_entry_generation(
+    tmp_path, monkeypatch,
+):
+    database, service, user_id, conversation_id = await _build_service(tmp_path)
+    now = [100.0]
+    monkeypatch.setattr("bingo.background.broker.time.time", lambda: now[0])
+    calls = []
+
+    async def complete(messages):
+        calls.append(messages)
+        if len(calls) == 1:
+            raise RuntimeError("temporary failure")
+        return '["话题一","话题二","话题三"]'
+
+    service._llm.complete = complete
+    try:
+        await service.record_user_activity(user_id, conversation_id)
+        job = await service._broker.pop_due()
+        with pytest.raises(RuntimeError):
+            await service._execute(job)
+        assert await service.get_recommendations(user_id, conversation_id) == []
+        assert len(calls) == 1
+        assert await service._broker.pop_due() is None
+        now[0] = 160
+        await _drain(service)
+        assert len(calls) == 2
+        assert len(await service.get_recommendations(user_id, conversation_id)) == 3
+    finally:
+        await service.close()
+        await database.dispose()

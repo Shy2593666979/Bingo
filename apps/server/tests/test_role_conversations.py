@@ -177,7 +177,7 @@ async def test_recommendations_and_follow_up_use_the_original_role(tmp_path):
             await session.commit()
         await service._broker.save_recommendations(f"{user.id}:{girlfriend.id}", ["女朋友话题"])
         await service._broker.save_recommendations(f"{user.id}:{boyfriend.id}", ["男朋友话题"])
-        assert await service.recommendations_for_entry(user.id, girlfriend.id) == ["女朋友话题"]
+        assert await service.get_recommendations(user.id, girlfriend.id) == ["女朋友话题"]
         await service.clear_recommendations(user.id, girlfriend.id)
         assert await service.get_recommendations(user.id, boyfriend.id) == ["男朋友话题"]
         await service._create_follow_up(
