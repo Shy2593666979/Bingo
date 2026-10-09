@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bingo · 气泡里的闹钟确认</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root { color-scheme: light; --ink:#172723; --muted:#85928c; --mint:#bfe5d4; --line:#e3eee8; --accent:#47765e; }
+    body { margin:0; background:#edf5f1; color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif; }
+    button,select { font:inherit; }
+    button { cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    button:focus-visible,select:focus-visible { outline:3px solid #5b9e80; outline-offset:3px; }
+    svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.65; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+    .symbols { position:absolute; width:0; height:0; overflow:hidden; }
+    main { max-width:1280px; padding:44px 26px 34px; margin:auto; }
+    .eyebrow { color:#60846f; font-size:12px; letter-spacing:3px; font-weight:650; }
+    h1 { margin:10px 0 12px; font-size:clamp(25px,3vw,36px); font-weight:650; letter-spacing:-1px; }
+    .intro { max-width:750px; color:#6d7b73; font-size:14px; line-height:1.9; margin:0; }
+    .toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin:22px 0 28px; }
+    label { font-size:13px; color:#65766b; }
+    select,.reset { border:1px solid #d7e4dc; border-radius:12px; padding:10px 13px; background:#f9fcfa; color:#375546; font-size:13px; }
+    .reset { display:flex; align-items:center; gap:7px; }
+    .reset svg { width:16px; height:16px; }
+    .variants { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:26px; align-items:start; }
+    .variant-heading { display:flex; align-items:center; gap:9px; margin:0 0 13px; }
+    .letter { display:grid; place-items:center; background:white; border:1px solid #d8e8df; border-radius:9px; width:30px; height:30px; font-size:13px; font-weight:650; color:#50765e; }
+    h2 { font-size:16px; margin:0; font-weight:600; }
+    .recommended { color:#678671; font-size:11px; background:#deeee4; padding:4px 7px; border-radius:6px; }
+    .phone { border:7px solid #fff; border-radius:38px; overflow:hidden; background:#f6fbf9; box-shadow:0 15px 45px #314d3810,0 0 0 1px #dce7e0; }
+    .status-bar { display:flex; justify-content:space-between; padding:16px 21px 10px; font-size:11px; font-weight:650; }
+    .status-bar svg { width:36px; height:13px; }
+    .chat-header { display:flex; align-items:center; justify-content:space-between; padding:12px 18px 17px; border-bottom:1px solid #e9f1eb; }
+    .chat-header button { padding:4px; border:0; background:none; color:#36554a; display:flex; }
+    .chat-header strong { font-size:17px; font-weight:650; }
+    .chat { height:500px; overflow-y:auto; overflow-anchor:none; padding:21px 12px 28px; scrollbar-width:none; }
+    .time { text-align:center; color:#9aa69f; font-size:10px; margin:0 0 21px; }
+    .row { display:flex; gap:8px; align-items:flex-end; margin:0 0 16px; }
+    .row.user { justify-content:flex-end; margin-bottom:23px; }
+    .avatar { width:31px; height:31px; object-fit:cover; border-radius:50%; flex-shrink:0; }
+    .user .avatar { border-radius:9px; }
+    .bubble { background:#edf5f2; border:1px solid #fff; border-radius:23px 23px 23px 6px; max-width:calc(100% - 39px); padding:15px 16px; font-size:14px; line-height:1.75; min-width:0; }
+    .user .bubble { background:#d5f0e3; border:0; border-radius:22px 22px 6px 22px; padding:12px 15px; }
+    .bubble p { margin:0; }
+    .request { flex:1; }
+    .alarm-data { margin:13px 0 0; display:flex; align-items:center; gap:10px; }
+    .alarm-icon { display:flex; align-items:center; justify-content:center; color:#658572; background:#e1eee6; width:37px; height:37px; border-radius:12px; }
+    .alarm-time { display:block; font-size:25px; letter-spacing:-.8px; font-weight:620; line-height:1.25; }
+    .alarm-meta { font-size:11px; color:#7a8d80; display:block; margin-top:3px; }
+    .actions { display:flex; gap:9px; margin-top:16px; }
+    .actions button { height:37px; border-radius:11px; border:1px solid #d9e7df; padding:0 13px; font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:5px; }
+    .actions svg { width:15px; height:15px; }
+    .confirm { flex:1; color:#365e49; background:var(--mint); border-color:#b0d7c5!important; }
+    .reject { color:#7c8a81; background:#f7faf8; }
+    .outcome { display:none; align-items:center; gap:7px; font-size:12px; line-height:1.6; color:#54715e; padding:11px 0 0; margin-top:13px; border-top:1px solid #dce9e1; }
+    .outcome svg { width:17px; height:17px; }
+    .request[data-state="processing"] .outcome svg { animation:rotate 1s linear infinite; }
+    .request[data-state="processing"] .outcome { color:#809286; }
+    .request[data-state="rejected"] .outcome { color:#8e9892; }
+    .request[data-state="submitted"] .outcome { color:#8a8261; }
+    .request:not([data-state="pending"]) .actions { display:none; }
+    .request:not([data-state="pending"]) .outcome { display:flex; }
+    .a .actions { padding-top:13px; border-top:1px solid #dce9e1; }
+    .b .alarm-section { background:#f8fcfa; border:1px solid #e1ede5; padding:14px 12px 12px; border-radius:16px; margin-top:12px; }
+    .b .alarm-data { margin:0; }
+    .b .actions { margin-top:13px; }
+    .b .alarm-icon { background:#e6f3eb; }
+    .b .alarm-time { font-size:27px; }
+    .c .request { background:#fbfdfc; }
+    .c .alarm-data { margin-top:10px; }
+    .c .alarm-icon { background:none; border:1px solid #deebe2; border-radius:50%; width:31px; height:31px; }
+    .c .alarm-time { font-size:19px; letter-spacing:0; }
+    .c .actions { background:#edf6f0; padding:5px; border:1px solid #e3eee7; border-radius:13px; gap:5px; }
+    .c .actions button { border:0!important; height:32px; }
+    .c .confirm { background:#d5ebde; }
+    .c .reject { background:transparent; flex:1; }
+    .composer { display:flex; align-items:center; gap:10px; margin:0 10px 18px; padding:11px 12px; background:white; border:1px solid #e4eee7; border-radius:24px; color:#829589; }
+    .composer span { font-size:13px; flex:1; }
+    .composer svg { width:20px; height:20px; color:#57816b; }
+    .home-line { height:4px; width:95px; border-radius:3px; background:#263d3233; margin:0 auto 10px; }
+    .caption { font-size:12px; line-height:1.8; color:#7a8c80; margin:13px 4px 0; }
+    .footer { text-align:center; margin:30px 0 0; font-size:12px; line-height:1.9; color:#87968d; }
+    @keyframes rotate { to { transform:rotate(360deg); } }
+    @media(max-width:1050px) { .variants { grid-template-columns:1fr; max-width:390px; margin:auto; gap:32px; } main { padding:27px 20px; } .toolbar { margin-bottom:26px; } }
+    @media(prefers-reduced-motion:reduce) { .request[data-state="processing"] .outcome svg { animation:none; } }
+  </style>
+</head>
+<body>
+  <svg class="symbols" aria-hidden="true"><defs>
+    <symbol id="alarm" viewBox="0 0 24 24"><circle cx="12" cy="13" r="7.5"/><path d="M12 9v4l3 2M5 3 2 6m17-3 3 3M6 20l-1 2m13-2 1 2"/></symbol>
+    <symbol id="check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="close" viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></symbol>
+    <symbol id="back" viewBox="0 0 24 24"><path d="m14 5-7 7 7 7"/></symbol>
+    <symbol id="sound" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4ZM15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></symbol>
+    <symbol id="mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 11v1a6 6 0 0 0 12 0v-1M12 18v3m-3 0h6"/></symbol>
+    <symbol id="plus" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8m-4-4h8"/></symbol>
+    <symbol id="reset" viewBox="0 0 24 24"><path d="M4 11a8 8 0 1 1 2 7M4 5v6h6"/></symbol>
+    <symbol id="clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="battery" viewBox="0 0 36 13"><rect x="1" y="2" width="29" height="9" rx="2"/><path d="M33 5v3M5 5h20v3H5Z"/></symbol>
+  </defs></svg>
+  <main>
+    <div class="eyebrow">BINGO / CHAT ACTIONS</div>
+    <h1>回复说完，最后一个气泡创建闹钟</h1>
+    <p class="intro">先展示 AI 的文字回复，再在最后展示独立的闹钟气泡。「确认创建 / 拒绝」放在这个气泡内部，操作后原位更新结果，不消失、不跳到回复开头。</p>
+    <div class="toolbar">
+      <label for="result-mode">确认后的状态演示</label>
+      <select id="result-mode"><option value="succeeded">设备回执成功 → 已创建</option><option value="submitted">仅打开系统时钟 → 待系统确认</option></select>
+      <button class="reset" type="button"><svg aria-hidden="true"><use href="#reset"/></svg>重新选择</button>
+    </div>
+    <div class="variants" id="variants"></div>
+    <p class="footer">这是交互样式预览，不会真的创建闹钟。只有可靠的成功回执才能显示「已创建」；仅打开系统时钟不能当作成功。<br>当前仅制作预览，没有修改 APP、部署或打包。</p>
+  </main>
+  <script>
+    const options = [
+      {key:'a',name:'气泡底部轻按钮',recommended:true,caption:'独立闹钟气泡放在整段回复最后，确认与拒绝放在气泡底部。'},
+      {key:'b',name:'气泡内的闹钟便签',recommended:false,caption:'独立闹钟气泡放在整段回复最后，用小便签突出时间与操作。'},
+      {key:'c',name:'轻量双选操作条',recommended:false,caption:'更紧凑、留白更轻。确认和拒绝并排，操作结束后收成一行结果。'}
+    ];
+    const icon = name => `<svg aria-hidden="true"><use href="#${name}"/></svg>`;
+    const request = option => {
+      const information = `<div class="alarm-data"><span class="alarm-icon">${icon('alarm')}</span><div><strong class="alarm-time">07:00</strong><span class="alarm-meta">明天 · 起床 · 不重复</span></div></div>`;
+      const controls = `<div class="actions"><button class="reject" type="button" data-action="reject">${icon('close')}拒绝</button><button class="confirm" type="button" data-action="confirm">${icon('check')}确认创建</button></div><div class="outcome" role="status" aria-live="polite"></div>`;
+      return `<div class="bubble request" data-state="pending"><p>创建闹钟</p>${option.key === 'b' ? `<div class="alarm-section">${information}${controls}</div>` : information + controls}</div>`;
+    };
+    const variants = document.getElementById('variants');
+    variants.innerHTML = options.map(option => `<section class="variant ${option.key}"><div class="variant-heading"><span class="letter">${option.key.toUpperCase()}</span><h2>${option.name}</h2>${option.recommended ? '<span class="recommended">推荐</span>' : ''}</div><div class="phone"><div class="status-bar"><span>21:30</span>${icon('battery')}</div><header class="chat-header"><span>${icon('back')}</span><strong>甜甜</strong><span>${icon('sound')}</span></header><div class="chat"><div class="time">今天 21:30</div><div class="row user"><div class="bubble">明天早上七点叫我起床。</div><img class="avatar" src="assets/ui-kit/bingo_logo.png" alt="我的头像"></div><div class="row"><img class="avatar" src="assets/ui-kit/girlfriend.png" alt="甜甜头像"><div class="bubble">好呀，帮你准备一个明早七点的起床闹钟，你确认一下就好。</div></div><div class="row"><img class="avatar" src="assets/ui-kit/girlfriend.png" alt="甜甜头像"><div class="bubble">今晚早点休息呀，明天不用急急忙忙的。</div></div><div class="row"><img class="avatar" src="assets/ui-kit/girlfriend.png" alt="甜甜头像">${request(option)}</div></div><div class="composer">${icon('mic')}<span>输入消息</span>${icon('plus')}</div><div class="home-line"></div></div><p class="caption">${option.caption}</p></section>`).join('');
+    let generation = 0;
+    variants.addEventListener('click', event => {
+      const button = event.target.closest('button[data-action]');
+      if (!button) return;
+      const bubble = button.closest('.request');
+      if (bubble.dataset.state !== 'pending') return;
+      const chat = bubble.closest('.chat');
+      const scrollPosition = chat.scrollTop;
+      const outcome = bubble.querySelector('.outcome');
+      if (button.dataset.action === 'reject') {
+        bubble.dataset.state = 'rejected';
+        outcome.innerHTML = `${icon('close')}<span>已拒绝 · 不会创建这个闹钟</span>`;
+        chat.scrollTop = scrollPosition;
+        return;
+      }
+      const selectedMode = document.getElementById('result-mode').value;
+      const currentGeneration = generation;
+      bubble.dataset.state = 'processing';
+      outcome.innerHTML = `${icon('reset')}<span>正在创建…</span>`;
+      chat.scrollTop = scrollPosition;
+      setTimeout(() => {
+        if (currentGeneration !== generation) return;
+        const currentScroll = chat.scrollTop;
+        bubble.dataset.state = selectedMode;
+        outcome.innerHTML = selectedMode === 'succeeded' ? `${icon('check')}<span>已创建 · 明天 07:00，起床</span>` : `${icon('clock')}<span>已交给系统时钟 · 待系统确认</span>`;
+        chat.scrollTop = currentScroll;
+      }, 500);
+    });
+    document.querySelector('.reset').addEventListener('click', () => {
+      generation++;
+      variants.querySelectorAll('.request').forEach(bubble => {
+        const chat = bubble.closest('.chat');
+        const scrollPosition = chat.scrollTop;
+        bubble.dataset.state = 'pending';
+        bubble.querySelector('.outcome').replaceChildren();
+        chat.scrollTop = scrollPosition;
+      });
+    });
+  </script>
+</body>
+</html>

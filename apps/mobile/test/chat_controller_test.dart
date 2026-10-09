@@ -318,13 +318,24 @@ void main() {
           'result': null,
         },
       }),
+      const ChatMessage(
+          id: 'answer-after-alarm',
+          role: ChatRole.assistant,
+          content: '今晚早点休息。'),
+      const ChatMessage(
+          id: 'next-user-message', role: ChatRole.user, content: '谢谢'),
     ]);
     final store = MemoryChatStore();
     final controller = ChatController(
         gateway: gateway, remoteHistory: gateway, localStore: store);
     await controller.bindUser('user-1');
     await controller.reloadConversation('conversation-1');
-    expect(controller.messages, hasLength(1));
+    expect(controller.messages, hasLength(3));
+    expect(
+        (controller.timelineItems[1] as ChatMessage).id, 'answer-after-alarm');
+    expect(controller.timelineItems[2], isA<DeviceAction>());
+    expect(
+        (controller.timelineItems[3] as ChatMessage).id, 'next-user-message');
     expect(controller.timelineItems.whereType<DeviceAction>().single.status,
         'rejected');
     await controller.syncActiveConversation();
@@ -336,6 +347,57 @@ void main() {
         'rejected');
     controller.dispose();
     restored.dispose();
+  });
+
+  testWidgets('alarm status updates do not move the chat scroll position',
+      (tester) async {
+    final gateway = FakeApprovalGateway();
+    final history = RecoveringChatGateway([
+      for (var index = 0; index < 25; index++)
+        ChatMessage(
+            id: 'history-$index',
+            role: ChatRole.assistant,
+            content: '第 $index 条历史回复，今晚记得早点休息。'),
+      ChatMessage.fromJson({
+        'id': 'action-1',
+        'role': 'user',
+        'content': '闹钟操作',
+        'device_action': {
+          'id': 'action-1',
+          'tool': 'device_alarm_create',
+          'title': '创建闹钟',
+          'description': FakeApprovalGateway.action.description,
+          'arguments': FakeApprovalGateway.action.arguments,
+          'status': 'pending',
+        },
+      }),
+    ]);
+    final controller = ChatController(
+        gateway: gateway,
+        deviceActions: gateway,
+        deviceToolExecutor: FakeDeviceToolExecutor(),
+        remoteHistory: history);
+    await controller.reloadConversation('conversation-1');
+    await tester.pumpWidget(MaterialApp(
+        home: ChatPage(
+            controller: controller,
+            assistantName: '甜甜',
+            assistantRole: '女朋友',
+            speechGateway: FakeSpeechGateway(),
+            onStartCall: () {},
+            onIncomingCall: (_) async {},
+            onOpenSettings: () {})));
+    await tester.pumpAndSettle();
+    final list = tester.widget<ListView>(find.byType(ListView));
+    list.controller!.jumpTo(100);
+    await tester.pumpAndSettle();
+    final before = list.controller!.offset;
+    await controller.approveDeviceAction(controller.deviceActions.single);
+    await tester.pumpAndSettle();
+    expect(list.controller!.offset, closeTo(before, 1));
+    expect(controller.deviceActions.single.status, 'succeeded');
+    await tester.pumpWidget(const SizedBox.shrink());
+    controller.dispose();
   });
 
   test('history synchronization retains legacy local alarm cards', () async {

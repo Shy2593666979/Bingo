@@ -954,17 +954,25 @@ class ChatController extends ChangeNotifier {
   }
 
   Iterable<Object> _expandTimelineItems(Iterable<Object> items) sync* {
+    final actions = <DeviceAction>[];
     for (final item in items) {
       if (item is ChatMessage) {
         if (item.deviceAction != null) {
-          yield DeviceAction.fromJson(item.deviceAction!);
+          actions.add(DeviceAction.fromJson(item.deviceAction!));
         } else {
+          if (item.role == ChatRole.user) {
+            yield* actions;
+            actions.clear();
+          }
           yield* _expandAssistantMessage(_withAssistantRoleSnapshot(item));
         }
+      } else if (item is DeviceAction) {
+        actions.add(item);
       } else {
         yield item;
       }
     }
+    yield* actions;
   }
 
   Iterable<ChatMessage> _expandAssistantMessage(ChatMessage message) sync* {

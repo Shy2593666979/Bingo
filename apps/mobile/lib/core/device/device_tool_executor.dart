@@ -19,7 +19,9 @@ class AndroidDeviceToolExecutor implements DeviceToolExecutor {
             message: '无法创建闹钟',
           );
         }
-        return mode == 'system_alarm' ? '已提交给系统时钟创建闹钟' : '已由 Bingo 在设备本地创建闹钟';
+        return mode == 'system_alarm'
+            ? '用户已确认创建闹钟，按约定视为创建成功；已打开系统时钟'
+            : '已由 Bingo 在设备本地创建闹钟';
       default:
         throw PlatformException(
           code: 'unsupported_tool',

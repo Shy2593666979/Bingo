@@ -57,6 +57,9 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   final _scrollController = ScrollController();
+  int _lastTimelineLength = 0;
+  String? _lastMessageContent;
+  bool _lastBusy = false;
 
   @override
   void initState() {
@@ -131,13 +134,22 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
 
   void _onChanged() {
     if (!mounted) return;
+    final controller = widget.controller;
+    final lastContent = controller.messages.lastOrNull?.content;
+    final shouldScroll =
+        controller.timelineItems.length != _lastTimelineLength ||
+            lastContent != _lastMessageContent ||
+            controller.isBusy != _lastBusy;
+    _lastTimelineLength = controller.timelineItems.length;
+    _lastMessageContent = lastContent;
+    _lastBusy = controller.isBusy;
     final incomingCall = widget.controller.takeIncomingCall();
     setState(() {});
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (incomingCall != null && mounted) {
         unawaited(widget.onIncomingCall(incomingCall));
       }
-      if (_scrollController.hasClients) {
+      if (mounted && shouldScroll && _scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
           duration: const Duration(milliseconds: 180),
@@ -293,7 +305,9 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                             }
                             if (item case final DeviceAction action) {
                               return DeviceActionCard(
+                                key: ValueKey('device-action-${action.id}'),
                                 action: action,
+                                assistantRole: widget.assistantRole,
                                 onApprove: () =>
                                     controller.approveDeviceAction(action),
                                 onReject: () =>

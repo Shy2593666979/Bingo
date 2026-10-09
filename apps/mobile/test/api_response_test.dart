@@ -45,8 +45,7 @@ void main() {
     await server.close(force: true);
   });
 
-  test('opening system clock reports submission rather than alarm success',
-      () async {
+  test('legacy submission records keep their original status', () async {
     responseData = {
       'code': 0,
       'message': '操作成功',
@@ -63,6 +62,27 @@ void main() {
     expect(actionBodies.single['status'], 'submitted');
     expect(action.status, 'submitted');
     expect(action.result, '已提交给系统时钟创建闹钟');
+  });
+
+  test('confirmed system alarm reports success without a second confirmation',
+      () async {
+    const result = '用户已确认创建闹钟，按约定视为创建成功；已打开系统时钟';
+    responseData = {
+      'code': 0,
+      'message': '操作成功',
+      'data': {
+        'id': 'alarm',
+        'tool': 'device_alarm_create',
+        'arguments': <String, dynamic>{},
+        'status': 'succeeded',
+        'result': result,
+      }
+    };
+    final action = await gateway.completeDeviceAction('alarm',
+        succeeded: true, result: result);
+    expect(actionBodies.single['status'], 'succeeded');
+    expect(action.status, 'succeeded');
+    expect(result, contains('用户已确认'));
   });
 
   test('ASR unwraps JSON envelope without changing audio input', () async {
