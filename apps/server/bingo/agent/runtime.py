@@ -121,7 +121,7 @@ class AgentRuntime:
             )
             if image_data_urls and context and context[-1].role == "user":
                 context[-1] = ModelMessage(
-                    role="user", content=content, image_data_urls=image_data_urls
+                    role="user", content=context[-1].content, image_data_urls=image_data_urls
                 )
             reply = await self._llm.complete(context)
             assistant_message = await repository.add_message(
@@ -278,7 +278,7 @@ class AgentRuntime:
         )
         if image_data_urls and history and history[-1].role == "user":
             history[-1] = ModelMessage(
-                role="user", content=content, image_data_urls=image_data_urls
+                role="user", content=history[-1].content, image_data_urls=image_data_urls
             )
         visible_reply: list[str] = []
         delivered_segments: list[str] = []

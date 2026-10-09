@@ -49,7 +49,7 @@ def test_location_history_retains_model_structure_and_user_role():
         current_location="河南省郑州市金水区",
     )
     assert context[1].role == "user"
-    assert json.loads(context[1].content)["location"]["name"] == "天安门"
+    assert json.loads(context[1].content.split("] ", 1)[1])["location"]["name"] == "天安门"
     assert "用户当前位置：河南省郑州市金水区" in context[0].content
 
 
@@ -87,7 +87,7 @@ def test_location_message_reaches_model_and_survives_history(client):
     response = client.post("/api/v1/chat", json={"location": POINT})
     assert response.status_code == 200
     result = api_payload(response)
-    model_input = json.loads(result["content"].removeprefix("You said: "))
+    model_input = json.loads(result["content"].removeprefix("You said: ").split("] ", 1)[1])
     assert model_input["type"] == "location"
     assert model_input["location"]["longitude"] == POINT["longitude"]
     history = api_payload(client.get(f"/api/v1/conversations/{result['conversation_id']}/messages"))

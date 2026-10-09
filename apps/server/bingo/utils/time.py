@@ -1,6 +1,6 @@
 """Human-readable, timezone-aware time formatting for prompts and logs."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 WEEKDAYS = ("一", "二", "三", "四", "五", "六", "日")
@@ -36,3 +36,23 @@ def format_current_time(timezone: str, now: datetime | None = None) -> str:
         f"（周{WEEKDAYS[current.weekday()]}{time_period(current.hour)}）"
         f" {current:%H:%M:%S}"
     )
+
+
+def format_message_time(sent_at: datetime, timezone: str, now: datetime) -> str:
+    zone = ZoneInfo(timezone)
+    sent = sent_at.replace(tzinfo=zone) if sent_at.tzinfo is None else sent_at.astimezone(zone)
+    current = now.replace(tzinfo=zone) if now.tzinfo is None else now.astimezone(zone)
+    days_ago = (current.date() - sent.date()).days
+    if 0 <= days_ago < 7:
+        if days_ago == 0:
+            relative = "今天"
+        elif days_ago == 1:
+            relative = "昨天"
+        else:
+            week_start = current.date() - timedelta(days=current.weekday())
+            prefix = "上周" if sent.date() < week_start else "周"
+            relative = f"{prefix}{WEEKDAYS[sent.weekday()]}"
+        date = f"{sent.month}月{sent.day}日 {relative}"
+    else:
+        date = f"{sent.year}年{sent.month}月{sent.day}日"
+    return f"[{date} {time_period(sent.hour)} {sent:%H:%M}]"

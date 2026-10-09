@@ -1,8 +1,11 @@
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 from bingo.agent.model_client import ModelMessage
 from bingo.db.models import Memory, Message
 from bingo.prompts import SYSTEM_PROMPT
 from bingo.schemas.maps import LocationInput
-from bingo.utils.time import format_current_time
+from bingo.utils.time import format_current_time, format_message_time
 
 
 def build_context(
@@ -16,14 +19,16 @@ def build_context(
     timezone: str,
     role_prompt: str = "",
     current_location: str = "",
+    now: datetime | None = None,
 ) -> list[ModelMessage]:
+    current = now or datetime.now(ZoneInfo(timezone))
     system_prompt = SYSTEM_PROMPT.format(
         assistant_name=assistant_name,
         username=username,
         personality=personality,
         role=role,
         role_prompt=role_prompt or "按照当前角色自然互动。",
-        current_time=format_current_time(timezone),
+        current_time=format_current_time(timezone, now) if now else format_current_time(timezone),
         timezone=timezone,
         current_location=current_location or "暂未获取",
         user_memories=_format_memories(memories, "user"),
@@ -34,6 +39,11 @@ def build_context(
         ModelMessage(
             role=message.role,
             content=(
+                f"{format_message_time(message.created_at, timezone, current)} "
+                if message.role == "user"
+                else ""
+            )
+            + (
                 f"{message.content}\n[上一轮回答在此处被用户中断]"
                 if message.role == "assistant" and message.status == "interrupted"
                 else LocationInput.model_validate(message.location).model_content(message.content)

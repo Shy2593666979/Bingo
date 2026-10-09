@@ -75,7 +75,8 @@ def test_image_chat_uses_image_model_and_persists_messages(client: TestClient) -
 
     assert response.status_code == 200
     payload = api_payload(response)
-    assert payload["content"] == "Image received: 这是什么？"
+    assert payload["content"].startswith("Image received: [")
+    assert payload["content"].endswith("] 这是什么？")
     messages = client.get(f"/api/v1/conversations/{payload['conversation_id']}/messages")
     assert messages.status_code == 200
     assert [item["role"] for item in api_payload(messages)] == ["user", "assistant"]
@@ -118,10 +119,8 @@ def test_image_chat_stream_uses_unified_endpoint(client: TestClient) -> None:
     events = [json.loads(line) for line in response.text.splitlines()]
     assert events[0]["type"] == "start"
     assert events[0]["image_id"]
-    assert (
-        "".join(event["content"] for event in events if event["type"] == "segment")
-        == "Image received:"
-    )
+    reply = "".join(event["content"] for event in events if event["type"] == "segment")
+    assert reply.startswith("Image received: [")
     assert events[-1]["type"] == "done"
 
     removed_endpoint = client.post(
@@ -221,7 +220,8 @@ def test_chat_and_history(client: TestClient) -> None:
 
     assert response.status_code == 200
     body = api_payload(response)
-    assert body["content"] == "You said: hello"
+    assert body["content"].startswith("You said: [")
+    assert body["content"].endswith("] hello")
 
     history = client.get(f"/api/v1/conversations/{body['conversation_id']}/messages")
     assert history.status_code == 200
@@ -278,8 +278,9 @@ def test_http_stream_splits_chat_sentences_and_keeps_paragraphs(
         "segment",
         "done",
     ]
-    assert [event["content"] for event in events[1:-1]] == [
-        "You said: 版本 1.2.3。",
+    assert events[1]["content"].startswith("You said: [")
+    assert events[1]["content"].endswith("] 版本 1.2.3。")
+    assert [event["content"] for event in events[2:-1]] == [
         "Second?",
         "Third!",
         "换行结束",

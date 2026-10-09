@@ -1,6 +1,45 @@
+from datetime import datetime
+
 from bingo.agent.context import build_context
 from bingo.db.models import Memory, Message
 from bingo.prompts import SYSTEM_PROMPT
+
+
+def test_only_user_context_gets_timestamp_without_changing_messages_or_memories() -> None:
+    messages = [
+        Message(
+            conversation_id="conversation",
+            role="user",
+            content="今天好累",
+            created_at=datetime.fromisoformat("2026-10-02T21:30:00+08:00"),
+        ),
+        Message(conversation_id="conversation", role="assistant", content="怎么了？"),
+        Message(
+            conversation_id="conversation",
+            role="user",
+            content="我刚才说的那件事……",
+            created_at=datetime.fromisoformat("2026-10-09T10:05:00+08:00"),
+        ),
+    ]
+    memories = [Memory(content="用户喜欢浅烘咖啡", scope="user")]
+    context = build_context(
+        messages,
+        memories,
+        username="小明",
+        assistant_name="Bingo",
+        personality="温柔",
+        role="朋友",
+        timezone="Asia/Shanghai",
+        now=datetime.fromisoformat("2026-10-09T10:10:00+08:00"),
+    )
+    assert context[1].content == "[2026年10月2日 晚上 21:30] 今天好累"
+    assert context[2].content == "怎么了？"
+    assert context[3].content == "[10月9日 今天 上午 10:05] 我刚才说的那件事……"
+    assert messages[0].content == "今天好累"
+    assert messages[2].content == "我刚才说的那件事……"
+    assert memories[0].content == "用户喜欢浅烘咖啡"
+    assert "用户全局记忆：\n- [fact] 用户喜欢浅烘咖啡" in context[0].content
+    assert "用户消息开头的方括号是时间信息，不是用户说的话。" in context[0].content
 
 
 def test_location_is_a_system_template_field() -> None:
@@ -67,7 +106,8 @@ def test_context_excludes_call_timeline_records() -> None:
         timezone="Asia/Shanghai",
     )
 
-    assert [message.content for message in context[1:]] == ["hello"]
+    assert len(context) == 2
+    assert context[1].content.endswith("] hello")
 
 
 def test_context_separates_memory_scopes_and_prioritizes_current_role() -> None:
