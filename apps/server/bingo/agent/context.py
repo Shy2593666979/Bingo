@@ -5,6 +5,7 @@ from bingo.agent.model_client import ModelMessage
 from bingo.db.models import Memory, Message
 from bingo.prompts import SYSTEM_PROMPT
 from bingo.schemas.maps import LocationInput
+from bingo.utils.assistant_text import clean_assistant_text
 from bingo.utils.time import format_current_time, format_message_time
 
 
@@ -44,16 +45,19 @@ def build_context(
                 else ""
             )
             + (
-                f"{message.content}\n[上一轮回答在此处被用户中断]"
+                f"{clean_assistant_text(message.content)}\n[上一轮回答在此处被用户中断]"
                 if message.role == "assistant" and message.status == "interrupted"
                 else LocationInput.model_validate(message.location).model_content(message.content)
                 if message.message_type == "location" and message.location
+                else clean_assistant_text(message.content)
+                if message.role == "assistant"
                 else message.content
             ),
         )
         for message in messages
         if message.status != "streaming"
         and message.message_type in {"chat", "location", "device_action"}
+        and (message.role != "assistant" or clean_assistant_text(message.content).strip())
     ]
     return [ModelMessage(role="system", content=system_prompt), *history]
 

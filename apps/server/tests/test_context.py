@@ -5,6 +5,30 @@ from bingo.db.models import Memory, Message
 from bingo.prompts import SYSTEM_PROMPT
 
 
+def test_context_cleans_only_assistant_text_and_keeps_user_and_memory_unchanged():
+    messages = [
+        Message(conversation_id="chat", role="user", content="我说的是————这个"),
+        Message(conversation_id="chat", role="assistant", content="抱抱你——辛苦了。"),
+        Message(conversation_id="chat", role="assistant", content="————"),
+    ]
+    memory = Memory(content="保留——原始记忆")
+    context = build_context(
+        messages,
+        [memory],
+        username="用户",
+        assistant_name="Bingo",
+        personality="温柔",
+        role="朋友",
+        timezone="Asia/Shanghai",
+    )
+    assert "保留——原始记忆" in context[0].content
+    assert context[1].content.endswith("我说的是————这个")
+    assert context[2].content == "抱抱你，辛苦了。"
+    assert len(context) == 3
+    assert messages[1].content == "抱抱你——辛苦了。"
+    assert memory.content == "保留——原始记忆"
+
+
 def test_only_user_context_gets_timestamp_without_changing_messages_or_memories() -> None:
     messages = [
         Message(

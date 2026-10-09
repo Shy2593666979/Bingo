@@ -311,6 +311,83 @@ def test_rejects_empty_message(client: TestClient) -> None:
     assert response.status_code == 422
 
 
+@pytest.mark.parametrize("mode", ["complete", "stream", "spoken"])
+def test_assistant_dash_cleanup_is_shared_by_response_history_and_speech(client, mode):
+    from bingo.services.chat_speech import ChatSpeechService
+
+    chunks = ["抱抱你—", "—今天辛苦了。\n ", "——", "——\n慢慢聊。"]
+    spoken = []
+
+    class Model:
+        async def complete(self, messages):
+            return "".join(chunks)
+
+        async def stream(self, messages, tools=None):
+            for chunk in chunks:
+                yield ModelTextDelta(chunk)
+
+    runtime = AgentRuntime(
+        Model(), ToolRegistry(), assistant_name="Bingo", persona="温柔", timezone="Asia/Shanghai"
+    )
+    client.app.state.runtime = runtime
+    client.app.state.chat_runs = ChatRunService(client.app.state.database.session_factory, runtime)
+    speech = ChatSpeechService(None)
+
+    async def synthesize(sentences, output, voice):
+        while (item := await sentences.get()) is not None:
+            spoken.append(item["text"])
+            await output.put({"type": "audio_segment_done", "segment_index": item["segment_index"]})
+        await output.put({"type": "audio_done"})
+
+    speech._synthesize = synthesize
+    client.app.state.services.chat_speech = speech
+    user_text = "我说的是————这个"
+    response = client.post(
+        "/api/v1/chat" if mode == "complete" else "/api/v1/chat/stream",
+        json={"content": user_text, "read_aloud": mode == "spoken"},
+    )
+    assert response.status_code == 200
+    expected = "抱抱你，今天辛苦了。\n慢慢聊。"
+    if mode == "complete":
+        result = api_payload(response)
+        assert result["content"] == expected
+        conversation_id = result["conversation_id"]
+    else:
+        events = [json.loads(line) for line in response.text.splitlines()]
+        conversation_id = events[0]["conversation_id"]
+        assert [event["content"] for event in events if event["type"] == "segment"] == [
+            "抱抱你，今天辛苦了。",
+            "慢慢聊。",
+        ]
+    history = api_payload(client.get(f"/api/v1/conversations/{conversation_id}/messages"))
+    assert [(message["role"], message["content"]) for message in history] == [
+        ("user", user_text),
+        ("assistant", expected),
+    ]
+    if mode == "spoken":
+        assert spoken == ["抱抱你，今天辛苦了。", "慢慢聊。"]
+
+
+def test_separator_only_reply_does_not_create_an_empty_assistant_bubble(client):
+    class Model:
+        async def stream(self, messages, tools=None):
+            yield ModelTextDelta("——")
+            yield ModelTextDelta("——\n")
+
+    runtime = AgentRuntime(
+        Model(), ToolRegistry(), assistant_name="Bingo", persona="温柔", timezone="Asia/Shanghai"
+    )
+    client.app.state.runtime = runtime
+    client.app.state.chat_runs = ChatRunService(client.app.state.database.session_factory, runtime)
+    response = client.post("/api/v1/chat/stream", json={"content": "你好"})
+    events = [json.loads(line) for line in response.text.splitlines()]
+    assert [event["type"] for event in events] == ["start", "error"]
+    history = api_payload(
+        client.get(f"/api/v1/conversations/{events[0]['conversation_id']}/messages")
+    )
+    assert [message["role"] for message in history] == ["user"]
+
+
 class _NoopTool(BaseTool):
     name = "noop"
     description = "Return a fixed result."

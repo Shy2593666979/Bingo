@@ -27,6 +27,7 @@ from bingo.services.exceptions import ServiceError
 from bingo.services.location import LocationService
 from bingo.services.logging import log_event
 from bingo.services.weather import WeatherService
+from bingo.utils.assistant_text import clean_assistant_text
 
 logger = logging.getLogger(__name__)
 
@@ -262,7 +263,7 @@ class MorningGreetingService:
             weather=weather or "未获取",
         )
         async with asyncio.timeout(90):
-            content = (
+            content = clean_assistant_text(
                 await self._llm.complete([*context, ModelMessage(role="user", content=prompt)])
             ).strip()
         if not content:

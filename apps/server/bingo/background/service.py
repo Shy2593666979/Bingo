@@ -35,6 +35,7 @@ from bingo.prompts import (
 from bingo.push import PushService
 from bingo.services.location import LocationService
 from bingo.services.logging import log_event
+from bingo.utils.assistant_text import clean_assistant_text
 from bingo.utils.time import format_current_time
 
 logger = logging.getLogger(__name__)
@@ -205,7 +206,8 @@ class EngagementService:
                 attempts = job.payload.get("attempts", 0)
                 if attempts < 3 and await self._is_current(job.payload):
                     await self._broker.schedule(
-                        "recommendations", {**job.payload, "attempts": attempts + 1},
+                        "recommendations",
+                        {**job.payload, "attempts": attempts + 1},
                         60 * (attempts + 1),
                     )
                 raise
@@ -321,7 +323,7 @@ class EngagementService:
                 stage_instruction=FOLLOW_UP_STAGE_INSTRUCTIONS[stage],
                 transcript=transcript,
             )
-            content = (
+            content = clean_assistant_text(
                 await self._llm.complete([*context, ModelMessage(role="user", content=prompt)])
             ).strip()
             if content:
@@ -374,7 +376,8 @@ class EngagementService:
                     "帮我回看最近的目标，找出最值得继续深入的线索",
                 ]
             await self._broker.save_recommendations(
-                f"{user.id}:{payload['conversation_id']}", items[:3],
+                f"{user.id}:{payload['conversation_id']}",
+                items[:3],
                 activity_version=payload["activity_version"],
             )
 

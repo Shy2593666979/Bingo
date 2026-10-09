@@ -24,6 +24,7 @@ from bingo.schemas.maps import LocationInput
 from bingo.services.logging import log_event
 from bingo.tools import ToolRegistry
 from bingo.tools.base import ToolContext
+from bingo.utils.assistant_text import AssistantTextCleaner, clean_assistant_text
 from bingo.utils.segments import split_complete_segments
 
 MAX_TOOL_TURNS = 8
@@ -123,7 +124,9 @@ class AgentRuntime:
                 context[-1] = ModelMessage(
                     role="user", content=context[-1].content, image_data_urls=image_data_urls
                 )
-            reply = await self._llm.complete(context)
+            reply = clean_assistant_text(await self._llm.complete(context))
+            if not reply.strip():
+                raise ValueError("Empty assistant reply")
             assistant_message = await repository.add_message(
                 conversation.id,
                 "assistant",
@@ -292,6 +295,7 @@ class AgentRuntime:
 
         for _ in range(MAX_TOOL_TURNS):
             turn_text: list[str] = []
+            cleaner = AssistantTextCleaner()
             tool_calls: tuple[ModelToolCall, ...] = ()
             try:
                 async for event in _interruptible_stream(
@@ -299,17 +303,27 @@ class AgentRuntime:
                     run_handle.cancelled,
                 ):
                     if isinstance(event, ModelTextDelta):
+                        text = cleaner.feed(event.content)
+                        if not text:
+                            continue
                         if include_text_deltas:
-                            yield {"type": "text_delta", "content": event.content}
-                        turn_text.append(event.content)
-                        visible_reply.append(event.content)
-                        pending += event.content
+                            yield {"type": "text_delta", "content": text}
+                        turn_text.append(text)
+                        visible_reply.append(text)
+                        pending += text
                         segments, pending = split_complete_segments(pending)
                         for segment in segments:
                             delivered_segments.append(segment)
                             yield {"type": "segment", "content": segment}
                     elif isinstance(event, ModelToolCalls):
                         tool_calls = event.calls
+                tail = cleaner.feed("", final=True)
+                if tail:
+                    if include_text_deltas:
+                        yield {"type": "text_delta", "content": tail}
+                    turn_text.append(tail)
+                    visible_reply.append(tail)
+                    pending += tail
             except AgentRunInterrupted:
                 await self._save_interrupted_reply(
                     repository,
@@ -394,6 +408,9 @@ class AgentRuntime:
                 yield {"type": "segment", "content": segment}
 
         reply = "".join(visible_reply).strip()
+        if not reply:
+            yield {"type": "error", "message": "暂时没有生成有效回复，请再试一次"}
+            return
         assistant_message = await repository.add_message(
             conversation.id,
             "assistant",
