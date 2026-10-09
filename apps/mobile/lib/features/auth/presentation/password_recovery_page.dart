@@ -2,34 +2,6 @@ import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/shared/widgets/birthday_picker_sheet.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-
-Future<void> showRecoveryCode(BuildContext context, String code) => showDialog<
-        void>(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) => PopScope(
-        canPop: false,
-        child: AlertDialog(
-            title: const Text('请保存你的恢复码'),
-            content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('找回密码时需要用户昵称、生日和此恢复码。恢复码只展示这一次，请存入密码管理器，不要分享给别人。'),
-                  const SizedBox(height: 18),
-                  SelectableText(code,
-                      style: const TextStyle(
-                          fontSize: 17, fontWeight: FontWeight.w700)),
-                ]),
-            actions: [
-              TextButton(
-                  onPressed: () => Clipboard.setData(ClipboardData(text: code)),
-                  child: const Text('复制恢复码')),
-              FilledButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('我已妥善保存'))
-            ])));
 
 class PasswordRecoveryPage extends StatefulWidget {
   const PasswordRecoveryPage(
@@ -77,14 +49,12 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
           widget.onPasswordChanged!();
         }
       } else {
-        final code = await widget.gateway.resetPassword(
+        await widget.gateway.resetPassword(
             phone: _phone.text.trim(),
             username: _username.text.trim(),
             birthday: _birthday!,
-            recoveryCode: _code.text.trim(),
             newPassword: _password.text);
         if (!mounted) return;
-        await showRecoveryCode(context, code);
         if (mounted) {
           ScaffoldMessenger.of(context)
               .showSnackBar(const SnackBar(content: Text('密码已重置，请重新登录')));
@@ -118,7 +88,7 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
                       Text(
                           _changing
                               ? '修改成功后，所有设备需要重新登录。'
-                              : '生日不能单独证明身份，还需要你保存的恢复码。',
+                              : '核对注册手机号、用户昵称和生日后，即可设置新密码。',
                           style: const TextStyle(color: Color(0xFF7D918A))),
                       const SizedBox(height: 24),
                       if (!_changing) ...[
@@ -141,7 +111,8 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
                                   }),
                         const SizedBox(height: 14),
                       ],
-                      _field(_code, _changing ? '当前密码' : '恢复码', secret: true),
+                      if (_changing)
+                        _field(_code, '当前密码', secret: true, minLength: 8),
                       _field(_password, '新密码（至少 8 位）',
                           secret: true, minLength: 8),
                       _field(_confirm, '再次输入新密码', secret: true, confirm: true),

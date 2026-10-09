@@ -378,9 +378,8 @@ abstract interface class RoleGateway {
 }
 
 class UserDetailsResult {
-  const UserDetailsResult(this.user, this.recoveryCode);
+  const UserDetailsResult(this.user);
   final UserProfile user;
-  final String? recoveryCode;
 }
 
 abstract interface class UserDetailsGateway {
@@ -393,12 +392,11 @@ abstract interface class UserDetailsGateway {
 }
 
 abstract interface class AccountGateway {
-  Future<String> setupRecovery(DateTime birthday);
-  Future<String> resetPassword(
+  Future<void> setupRecovery(DateTime birthday);
+  Future<void> resetPassword(
       {required String phone,
       required String username,
       required DateTime birthday,
-      required String recoveryCode,
       required String newPassword});
   Future<void> changePassword(String oldPassword, String newPassword);
 }
@@ -978,12 +976,9 @@ class HttpApiGateway
   }
 
   @override
-  Future<String> setupRecovery(DateTime birthday) async {
-    final result = await _request(
-            'POST', config.endpoint('/me/recovery-profile'),
-            body: {'birthday': birthday.toIso8601String().substring(0, 10)})
-        as Map<String, dynamic>;
-    return result['recovery_code'] as String;
+  Future<void> setupRecovery(DateTime birthday) async {
+    await _request('POST', config.endpoint('/me/recovery-profile'),
+        body: {'birthday': birthday.toIso8601String().substring(0, 10)});
   }
 
   @override
@@ -1001,26 +996,21 @@ class HttpApiGateway
       'user_avatar_data': avatarData,
     }) as Map<String, dynamic>;
     return UserDetailsResult(
-        UserProfile.fromJson(result['user'] as Map<String, dynamic>),
-        result['recovery_code'] as String?);
+        UserProfile.fromJson(result['user'] as Map<String, dynamic>));
   }
 
   @override
-  Future<String> resetPassword(
+  Future<void> resetPassword(
       {required String phone,
       required String username,
       required DateTime birthday,
-      required String recoveryCode,
       required String newPassword}) async {
-    final result =
-        await _request('POST', config.endpoint('/auth/reset-password'), body: {
+    await _request('POST', config.endpoint('/auth/reset-password'), body: {
       'phone': phone,
       'username': username,
       'birthday': birthday.toIso8601String().substring(0, 10),
-      'recovery_code': recoveryCode,
       'new_password': newPassword,
-    }) as Map<String, dynamic>;
-    return result['recovery_code'] as String;
+    });
   }
 
   @override

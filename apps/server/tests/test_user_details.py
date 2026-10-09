@@ -39,11 +39,10 @@ def test_user_only_onboarding_and_recovery(client):
     assert profile["onboarding_complete"] is True
     assert profile["role"] is None
     assert "recovery_hash" not in profile
-    code = api_payload(result)["recovery_code"]
-    assert len(code) >= 20
+    assert "recovery_code" not in api_payload(result)
 
     retry = client.put("/api/v1/me/user-profile", json=payload())
-    assert api_payload(retry)["recovery_code"] is None
+    assert "recovery_code" not in api_payload(retry)
     assert (
         client.put("/api/v1/me/user-profile", json=payload(birthday="2001-01-01")).status_code
         == 409
@@ -55,7 +54,6 @@ def test_user_only_onboarding_and_recovery(client):
                 "phone": "13800002222",
                 "username": "小雨",
                 "birthday": "2000-05-01",
-                "recovery_code": code,
                 "new_password": "newpassword123",
             },
         ).status_code

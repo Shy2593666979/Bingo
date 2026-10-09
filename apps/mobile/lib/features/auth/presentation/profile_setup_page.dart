@@ -2,7 +2,6 @@ import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/core/widgets/center_toast.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/auth/presentation/role_editor_page.dart';
-import 'package:bingo/features/auth/presentation/password_recovery_page.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/shared/widgets/assistant_avatar.dart';
 import 'package:flutter/material.dart';
@@ -107,10 +106,8 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       if (widget.profile.birthday == null &&
           _birthday != null &&
           widget.gateway is AccountGateway) {
-        final code =
-            await (widget.gateway as AccountGateway).setupRecovery(_birthday!);
+        await (widget.gateway as AccountGateway).setupRecovery(_birthday!);
         if (!mounted) return;
-        await showRecoveryCode(context, code);
         profile = await widget.gateway.getProfile();
       }
       if (mounted) widget.onSaved(profile);

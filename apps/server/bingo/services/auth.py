@@ -1,6 +1,4 @@
-import hmac
 import logging
-import secrets
 import time
 
 from sqlalchemy import delete, update
@@ -50,20 +48,19 @@ async def change_password(payload: ChangePassword, user: User, session: AsyncSes
 
 
 async def recovery_profile(payload: RecoveryProfile, user: User, session: AsyncSession) -> dict:
-    if user.recovery_hash:
-        raise ServiceError(409, "已设置找回信息，不能覆盖恢复码")
+    if user.birthday:
+        raise ServiceError(409, "已设置找回生日，不能重复设置")
     if not user.username:
         raise ServiceError(422, "请先设置用户名")
-    code = secrets.token_urlsafe(24)
     changed = await session.exec(
         update(User)
-        .where(User.id == user.id, User.recovery_hash.is_(None))
-        .values(birthday=payload.birthday.isoformat(), recovery_hash=hash_token(code))
+        .where(User.id == user.id, User.birthday.is_(None))
+        .values(birthday=payload.birthday.isoformat(), recovery_hash=None)
     )
     if changed.rowcount != 1:
-        raise ServiceError(409, "已设置找回信息，不能覆盖恢复码")
+        raise ServiceError(409, "已设置找回生日，不能重复设置")
     await session.commit()
-    return {"recovery_code": code}
+    return {}
 
 
 async def reset_password(
@@ -82,28 +79,27 @@ async def reset_password(
             raise ServiceError(429, "尝试过于频繁，请稍后再试")
         attempts[key] = (started, count + 1)
     user = await UserRepository(session).get_by_phone(payload.phone)
-    supplied_hash = hash_token(payload.recovery_code)
-    valid_code = hmac.compare_digest(
-        supplied_hash, user.recovery_hash or "0" * 64 if user else "0" * 64
-    )
     if (
         not user
-        or not valid_code
         or user.username != payload.username.strip()
         or (user.birthday != payload.birthday.isoformat())
     ):
         raise ServiceError(400, "找回信息验证失败，请检查后重试")
-    code = secrets.token_urlsafe(24)
     changed = await session.exec(
         update(User)
-        .where(User.id == user.id, User.recovery_hash == supplied_hash)
-        .values(password_hash=hash_password(payload.new_password), recovery_hash=hash_token(code))
+        .where(
+            User.id == user.id,
+            User.username == payload.username.strip(),
+            User.birthday == payload.birthday.isoformat(),
+            User.password_hash == user.password_hash,
+        )
+        .values(password_hash=hash_password(payload.new_password), recovery_hash=None)
     )
     if changed.rowcount != 1:
         raise ServiceError(400, "找回信息验证失败，请检查后重试")
     await session.exec(delete(AuthSession).where(AuthSession.user_id == user.id))
     await session.commit()
-    return {"recovery_code": code}
+    return {}
 
 
 async def user_response(user: User, session) -> UserProfileResponse:
@@ -164,21 +160,18 @@ async def update_profile(
 async def update_user_details(
     payload: UserDetailsUpdate, user: User, session: AsyncSession
 ) -> dict:
-    if user.recovery_hash and user.birthday != payload.birthday.isoformat():
+    if user.birthday and user.birthday != payload.birthday.isoformat():
         raise ServiceError(409, "生日已用于账号找回，不能在首次资料页面修改")
-    code = None if user.recovery_hash else secrets.token_urlsafe(24)
     values = {
         "username": payload.username,
         "gender": payload.gender,
         "user_avatar_data": payload.user_avatar_data,
         "birthday": payload.birthday.isoformat(),
         "onboarding_complete": True,
+        "recovery_hash": None,
     }
-    if code:
-        values["recovery_hash"] = hash_token(code)
     statement = update(User).where(User.id == user.id)
-    if code:
-        statement = statement.where(User.recovery_hash.is_(None))
+    statement = statement.where(User.birthday == user.birthday)
     changed = await session.exec(statement.values(**values))
     if changed.rowcount != 1:
         raise ServiceError(409, "资料已更新，请重新加载后再试")
@@ -186,7 +179,6 @@ async def update_user_details(
     await session.refresh(user)
     return {
         "user": (await user_response(user, session)).model_dump(mode="json"),
-        "recovery_code": code,
     }
 
 

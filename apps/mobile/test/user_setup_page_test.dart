@@ -32,7 +32,7 @@ class DetailsGateway implements UserDetailsGateway {
     this.gender = gender;
     this.birthday = birthday;
     avatar = avatarData;
-    return const UserDetailsResult(profile, null);
+    return const UserDetailsResult(profile);
   }
 }
 

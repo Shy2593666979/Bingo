@@ -4,7 +4,6 @@ import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/core/widgets/center_toast.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/auth/presentation/avatar_crop_page.dart';
-import 'package:bingo/features/auth/presentation/password_recovery_page.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/shared/widgets/user_avatar.dart';
 import 'package:bingo/shared/widgets/birthday_picker_sheet.dart';
@@ -94,9 +93,6 @@ class _UserSetupPageState extends State<UserSetupPage> {
           birthday: _birthday!,
           avatarData: _avatarData);
       if (!mounted) return;
-      if (result.recoveryCode != null) {
-        await showRecoveryCode(context, result.recoveryCode!);
-      }
       if (mounted) widget.onSaved(result.user);
     } on ApiException catch (error) {
       if (mounted) setState(() => _error = error.message);

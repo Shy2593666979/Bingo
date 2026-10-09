@@ -36,6 +36,10 @@ void main() {
     await tester.tap(find.text('忘记密码？'));
     await tester.pumpAndSettle();
     expect(find.byType(PasswordRecoveryPage), findsOneWidget);
+    expect(find.text('恢复码'), findsNothing);
+    expect(find.text('注册手机号'), findsOneWidget);
+    expect(find.text('用户昵称'), findsOneWidget);
+    expect(find.text('选择生日'), findsOneWidget);
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
 
