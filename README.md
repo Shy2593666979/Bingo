@@ -5,21 +5,18 @@
 <h1 align="center">Bingo</h1>
 
 <p align="center">
-  <strong>在这里，慢慢聊。让陪伴有名字、有性格，也有熟悉的声音。</strong>
+  <strong>在这里，慢慢聊。</strong>
 </p>
 
 <p align="center">
-  Bingo 是基于 Flutter + Python / FastAPI 的 Android AI 陪伴应用。<br />
-  六位不同性格的伙伴，独立的聊天记忆；文字、声音与日常小事，都可以慢慢分享。<br />
-  也可以亲手创建伙伴，为 TA 选择头像、设定性格，复刻经授权的声音。
+  六位伙伴，各有性格，也记得与你聊过的小事。<br />
+  创造专属伙伴，让陪伴拥有你喜欢的声音。
 </p>
 
 <p align="center">
-  <img alt="Flutter" src="https://img.shields.io/badge/Flutter-Android-02569B?logo=flutter&logoColor=white" />
-  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-Python_3.12-009688?logo=fastapi&logoColor=white" />
-  <img alt="Redis" src="https://img.shields.io/badge/Redis-Background_Jobs-DC382D?logo=redis&logoColor=white" />
-  <img alt="Status" src="https://img.shields.io/badge/Status-Active_Prototype-24B47E" />
-  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-009688" /></a>
+  <img alt="Android" src="https://img.shields.io/badge/Android-168F7A?style=flat" />
+  <a href="https://github.com/Shy2593666979/Bingo"><img alt="开源" src="https://img.shields.io/badge/开源-168F7A?style=flat" /></a>
+  <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/MIT-168F7A?style=flat" /></a>
 </p>
 
 > [!NOTE]
@@ -114,6 +111,8 @@
 > 声音复刻、实时通话与联网工具需要配置对应服务。只使用本人或取得明确授权的声音；删除自定义伙伴后，其复刻声音不能再被选择使用。推送送达受 Android 厂商通道和后台限制影响，不能保证被强行停止后仍收到通知。Bingo 不是医疗、心理治疗或紧急援助服务。
 
 ## 系统架构
+
+Flutter Android · Python / FastAPI · SQLite · Redis
 
 <p align="center">
   <img src="docs/media/bingo-architecture-v2.webp" width="1000" alt="Bingo 技术架构：Flutter Android、安全接入、业务层、外部服务、SQLite、Redis 和后台陪伴调度" />
