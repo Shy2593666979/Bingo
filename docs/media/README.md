@@ -2,7 +2,7 @@
 
 ## 技术架构图
 
-`bingo-architecture.webp` 为 2026 年 10 月 11 日按当前代码核对后生成的技术架构图，采用内置 image_gen 生成、无损 WebP 编码。它不是应用截图；[生成与校对提示词](bingo-architecture-prompt.md)保留供后续更新。
+`bingo-architecture-v2.webp` 为用户确认的新版技术架构图：安全接入、业务层与外部服务各展示四项。采用内置 image_gen 生成、无损 WebP 编码。它不是应用截图；[生成与校对提示词](bingo-architecture-v2-prompt.md)保留供后续更新。
 
 ## 当前截图与 GIF
 

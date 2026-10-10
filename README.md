@@ -116,7 +116,7 @@
 ## 系统架构
 
 <p align="center">
-  <img src="docs/media/bingo-architecture.webp" width="1000" alt="Bingo 技术架构：Flutter Android、安全接入、Services 与 Agent、外部服务、SQLite、Redis 和后台陪伴调度" />
+  <img src="docs/media/bingo-architecture-v2.webp" width="1000" alt="Bingo 技术架构：Flutter Android、安全接入、业务层、外部服务、SQLite、Redis 和后台陪伴调度" />
 </p>
 
 客户端负责交互与设备操作，服务端负责智能体、语音和陪伴调度。详见[系统架构](docs/architecture.md)。

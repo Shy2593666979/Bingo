@@ -1,6 +1,6 @@
 # 系统架构
 
-![Bingo 技术架构](media/bingo-architecture.webp)
+![Bingo 技术架构](media/bingo-architecture-v2.webp)
 
 ## 客户端与接入
 
@@ -46,4 +46,4 @@
 - 模型可以提出设备操作请求，执行仍需用户在 Android 端确认。
 - 生产部署使用 HTTPS；明文 HTTP 仅用于本地开发。
 
-架构图是当前代码的概览，不代表每个方框之间都有直接调用。生成提示词见[架构图素材说明](media/bingo-architecture-prompt.md)。
+架构图是当前代码的概览，不代表每个方框之间都有直接调用。生成提示词见[架构图素材说明](media/bingo-architecture-v2-prompt.md)。
