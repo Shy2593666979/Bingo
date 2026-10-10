@@ -5,6 +5,19 @@ from bingo.db.models import Memory, Message
 from bingo.prompts import SYSTEM_PROMPT
 
 
+def test_context_explicitly_labels_dynamic_user_nickname() -> None:
+    context = build_context(
+        [],
+        [],
+        username="小田",
+        assistant_name="甜甜",
+        personality="温柔",
+        role="女朋友",
+        timezone="Asia/Shanghai",
+    )
+    assert context[0].content.startswith("你是 甜甜，用户的个人 AI 陪伴伙伴。\n用户昵称：小田\n")
+
+
 def test_context_cleans_only_assistant_text_and_keeps_user_and_memory_unchanged():
     messages = [
         Message(conversation_id="chat", role="user", content="我说的是————这个"),

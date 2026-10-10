@@ -150,7 +150,8 @@ async def test_followup_uses_shared_system_context_at_generation_time(
         context, instruction = captured[0]
         assert context.role == "system"
         for expected in (
-            "甜甜，小明 的个人 AI 助理",
+            "你是 甜甜，用户的个人 AI 陪伴伙伴。",
+            "用户昵称：小明",
             "关系角色：女朋友",
             role_prompt,
             "性格与说话风格：温柔俏皮",
