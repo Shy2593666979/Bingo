@@ -14,11 +14,11 @@
 </p>
 
 <p align="center">
-  <img alt="Flutter" src="https://img.shields.io/badge/Flutter-Android-02569B?logo=flutter&logoColor=white" />
-  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-Python_3.12-009688?logo=fastapi&logoColor=white" />
-  <img alt="Redis" src="https://img.shields.io/badge/Redis-Background_Jobs-DC382D?logo=redis&logoColor=white" />
-  <img alt="Status" src="https://img.shields.io/badge/Status-Active_Prototype-24B47E" />
-  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-009688" /></a>
+  <img alt="Flutter · Android" src="https://img.shields.io/badge/Flutter-Android-3B82A5?labelColor=37474F&amp;logo=flutter&amp;logoColor=white" />
+  <img alt="FastAPI · Python 3.12" src="https://img.shields.io/badge/FastAPI-Python_3.12-2E927F?labelColor=37474F&amp;logo=fastapi&amp;logoColor=white" />
+  <img alt="AI Agent · 智能体" src="https://img.shields.io/badge/AI_Agent-%E6%99%BA%E8%83%BD%E4%BD%93-7D6AB0?labelColor=37474F&amp;logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPHBhdGggZD0iTTEyIDN2M001IDEySDNtMTggMGgtMiIvPjxyZWN0IHg9IjUiIHk9IjYiIHdpZHRoPSIxNCIgaGVpZ2h0PSIxNCIgcng9IjQiLz48cGF0aCBkPSJNOSAxNmg2Ii8%2BPC9nPjxjaXJjbGUgY3g9IjkiIGN5PSIxMSIgcj0iMS41IiBmaWxsPSIjZmZmIi8%2BPGNpcmNsZSBjeD0iMTUiIGN5PSIxMSIgcj0iMS41IiBmaWxsPSIjZmZmIi8%2BPC9zdmc%2B" />
+  <img alt="Voice · 声音复刻" src="https://img.shields.io/badge/Voice-%E5%A3%B0%E9%9F%B3%E5%A4%8D%E5%88%BB-C48668?labelColor=37474F&amp;logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIj48cGF0aCBkPSJNNCAxMHY0bTQtOHYxMm00LTE1djE4bTQtMTV2MTJtNC04djQiLz48L2c%2BPC9zdmc%2B" />
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-5A9378?labelColor=37474F" /></a>
 </p>
 
 > [!NOTE]
