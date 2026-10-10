@@ -291,6 +291,18 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DEVICE_CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "openProjectRepository" -> runCatching {
+                        startActivity(Intent(Intent.ACTION_VIEW,
+                            android.net.Uri.parse("https://github.com/Shy2593666979/Bingo")))
+                    }.fold({ result.success(null) }, { result.error("browser_unavailable", "无法打开浏览器", null) })
+                    "openPrivacyEmail" -> runCatching {
+                        val deletion = call.argument<Boolean>("deletion") == true
+                        val subject = if (deletion) "Bingo 账号注销申请" else "Bingo 隐私反馈"
+                        val body = if (deletion) "我希望申请注销 Bingo 账号。请告知账号归属核验方式及处理步骤。\n请勿在邮件中发送登录密码。" else ""
+                        val uri = android.net.Uri.parse("mailto:bingo202610@126.com?subject=" +
+                            android.net.Uri.encode(subject) + "&body=" + android.net.Uri.encode(body))
+                        startActivity(Intent(Intent.ACTION_SENDTO, uri))
+                    }.fold({ result.success(null) }, { result.error("email_unavailable", "无法打开邮件应用", null) })
                     "createAlarm" -> createAlarm(call.arguments, result)
                     "scheduleCompanionReminder" -> runCatching {
                         CompanionReminderScheduler.schedule(this, requireNotNull(call.argument<String>("id")),
@@ -460,6 +472,10 @@ class MainActivity : FlutterActivity() {
                     val values = call.arguments as? Map<*, *> ?: emptyMap<String, Any?>()
                     val userId = values["user_id"] as? String
                     when (call.method) {
+                        "deleteAccountData" -> {
+                            localChatDatabase.deleteAccountData(requireNotNull(userId))
+                            result.success(null)
+                        }
                         "loadRoleOrder" -> result.success(
                             localChatDatabase.loadRoleOrder(requireNotNull(userId)),
                         )

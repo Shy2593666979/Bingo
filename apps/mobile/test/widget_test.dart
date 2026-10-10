@@ -1,6 +1,7 @@
 import 'package:bingo/app.dart';
 import 'package:bingo/features/auth/data/auth_token_store.dart';
 import 'package:bingo/features/auth/presentation/password_recovery_page.dart';
+import 'package:bingo/features/auth/presentation/user_agreement_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -31,6 +32,22 @@ void main() {
     expect(find.text('忘记密码？'), findsOneWidget);
     expect(find.text('验证码登录'), findsOneWidget);
     expect(find.text('注册'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('《用户协议》'));
+    await tester.tap(find.text('《用户协议》'));
+    await tester.pumpAndSettle();
+    expect(find.byType(UserAgreementPage), findsOneWidget);
+    await tester.tap(find.text('我已了解，返回'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isFalse);
+
+    await tester.ensureVisible(find.text('《隐私政策》'));
+    await tester.tap(find.text('《隐私政策》'));
+    await tester.pumpAndSettle();
+    expect(find.byType(PrivacyPolicyPage), findsOneWidget);
+    await tester.tap(find.text('我已了解，返回'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isFalse);
 
     await tester.ensureVisible(find.text('忘记密码？'));
     await tester.tap(find.text('忘记密码？'));

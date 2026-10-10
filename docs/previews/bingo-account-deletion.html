@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bingo · 账号注销流程预览</title>
+  <style>
+    :root{color-scheme:light;--ink:#273e35;--muted:#7d9186;--green:#418669;--line:#e5ede6;--red:#b86a60;--red-bg:#fbefeb}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 15% 0,#dfeee3,transparent 55%),#f3f6f2;font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;color:var(--ink)}button,input{font:inherit}button{cursor:pointer}button:disabled{cursor:default}a{color:var(--green);text-decoration:none}button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid #7eb79a;outline-offset:4px}svg{height:22px;width:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}[hidden]{display:none!important}
+    .layout{max-width:1020px;margin:55px auto;padding:0 28px;display:grid;grid-template-columns:300px minmax(0,1fr);gap:65px;align-items:start}.intro{position:sticky;top:60px;padding-top:38px}.eyebrow{font-size:11px;letter-spacing:3px;color:var(--green);font-weight:700}h1{font-size:34px;line-height:1.5;letter-spacing:1px;margin:19px 0}.intro p{font-size:13px;line-height:2;color:var(--muted)}.steps{display:grid;gap:8px;margin-top:26px}.step{border:1px solid transparent;border-radius:13px;padding:12px 14px;text-align:left;color:var(--muted);background:transparent;font-size:12px;display:flex;align-items:center;gap:13px}.step span{font-size:10px;color:#96aa9b}.step[aria-current="step"]{background:#f8fcf7;border-color:#d9e7da;color:var(--green)}.note{font-size:11px;line-height:1.9;color:var(--muted);padding-top:20px;margin-top:23px;border-top:1px solid #dde6dc}
+    .phone{width:100%;max-width:410px;margin:auto;border:1px solid white;border-radius:33px;background:#fafcf9;box-shadow:0 23px 70px #22463020;overflow:hidden;display:flex;flex-direction:column;height:810px;max-height:calc(100vh - 110px);min-height:550px}.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#fafcf9;min-height:62px}.topbar strong{font-size:16px;font-weight:650}.back{border:0;background:transparent;border-radius:10px;padding:6px;display:grid;place-items:center;color:var(--ink)}.spacer{width:34px}.content{flex:1;overflow:auto;scrollbar-width:thin;scrollbar-color:#c7d9ca transparent}.page{padding:16px 23px 24px}.page h2{font-size:25px;letter-spacing:.3px;margin:8px 0 10px}.subtitle{font-size:12px;line-height:1.9;color:var(--muted);margin:0 0 24px}.section-label{margin:23px 3px 10px;color:#84968a;font-size:11px}.card{background:white;border:1px solid var(--line);border-radius:19px;overflow:hidden}.row{width:100%;border:0;background:white;text-align:left;display:flex;align-items:center;gap:12px;padding:18px 16px;color:var(--ink)}.row+.row{border-top:1px solid #edf2ed}.row svg{color:#608a70}.row span{flex:1}.row strong{display:block;font-size:13px;font-weight:600}.row small{display:block;font-size:11px;color:var(--muted);margin-top:5px;line-height:1.7}.row .chevron{width:16px;color:#9aac9e}.row.danger strong,.row.danger>svg{color:var(--red)}.row.danger{background:#fffdfb}.account{display:flex;align-items:center;gap:12px;padding:17px}.account img{width:44px;height:44px;border-radius:13px}.account strong{font-size:14px;display:block}.account small{font-size:11px;color:var(--muted);display:block;margin-top:4px}.logout{width:100%;margin-top:23px;padding:15px;border-radius:16px;background:white;color:#758d7c;border:1px solid var(--line);font-size:13px}.helper{font-size:10px;color:#92a396;text-align:center;line-height:1.9;margin:15px 0}
+    .hero-symbol{height:58px;width:58px;border-radius:19px;background:#f4e8e0;color:#b47a60;display:grid;place-items:center;margin:8px 0 22px}.hero-symbol svg{width:28px;height:28px}.impact{display:flex;gap:12px;padding:17px 15px}.impact+.impact{border-top:1px solid var(--line)}.impact-icon{height:32px;width:32px;border-radius:11px;background:#eff5ee;display:grid;place-items:center;color:#73967d;flex-shrink:0}.impact-icon svg{height:18px;width:18px}.impact strong{font-size:12px;font-weight:600;display:block}.impact p{font-size:11px;line-height:1.9;color:var(--muted);margin:5px 0 0}.warning{margin:17px 0 0;background:#f7f0e5;color:#927953;padding:13px 14px;border-radius:13px;font-size:11px;line-height:1.9}.footer{border-top:1px solid var(--line);padding:16px 23px;background:#fafcf9}.button{width:100%;border:1px solid #c8deca;border-radius:15px;background:#dceedd;color:#437753;font-size:13px;font-weight:650;padding:14px}.button.secondary{margin-top:10px;background:white;border:1px solid var(--line);color:#728b79;font-weight:500}.button.destructive{background:#f6e3df;border-color:#e9c8c1;color:#a65e54}.button:disabled{background:#eff1ed;border-color:#e7eae3;color:#a8b0a7}.footer-note{font-size:10px;line-height:1.8;color:#96a493;text-align:center;margin:10px 0 0}
+    .progress{display:flex;gap:7px;margin:5px 0 23px}.progress span{width:27px;height:4px;border-radius:4px;background:#dce6db}.progress span.active{background:#9bc8a7}.form-label{font-size:12px;display:block;margin:24px 0 10px}.input-wrap{display:flex;background:white;border:1px solid #dfe8de;border-radius:15px;padding:3px 13px;align-items:center;gap:10px}.input-wrap svg{width:19px;color:#8ca08e}.input-wrap input{min-width:0;flex:1;padding:14px 0;border:0;background:transparent;color:var(--ink);font-size:13px;outline:none}.input-wrap input::placeholder{color:#a0afa0}.input-wrap:focus-within{border-color:#7fac88;box-shadow:0 0 0 3px #e7f0e5}.toggle{background:transparent;border:0;color:#95a594;font-size:11px;padding:8px}.check{display:flex;align-items:flex-start;gap:10px;margin-top:23px;font-size:11px;color:#768a79;line-height:1.9;cursor:pointer}.check input{margin:3px 0 0;width:16px;height:16px;accent-color:#7c9f80;flex-shrink:0}.error{font-size:11px;color:var(--red);min-height:17px;margin-top:10px}.success{padding:48px 25px 20px;text-align:center}.success-symbol{height:78px;width:78px;background:#e0efe0;color:#6b9b73;display:grid;place-items:center;border-radius:27px;margin:0 auto 28px}.success-symbol svg{width:36px;height:36px}.success h2{font-size:25px;margin:0 0 13px}.success p{font-size:12px;color:var(--muted);line-height:2}.success .card{margin-top:28px;padding:17px;text-align:left}.success .card strong{font-size:12px}.success .card p{font-size:11px;margin:7px 0 0}.success .brand{width:43px;height:43px;margin-top:37px;border-radius:12px;opacity:.85}
+    dialog{border:0;border-radius:23px;padding:25px;width:calc(100% - 44px);max-width:345px;box-shadow:0 20px 80px #243b302e;background:#fffdfb;color:var(--ink)}dialog::backdrop{background:#25392f55;backdrop-filter:blur(3px)}dialog h3{font-size:20px;margin:0 0 12px}dialog p{font-size:12px;line-height:1.95;color:var(--muted);margin:0 0 22px}.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#2a4233;color:white;border-radius:12px;padding:12px 18px;font-size:12px;max-width:90vw}
+    @media(max-width:760px){body{background:#fafcf9}.layout{margin:0;padding:0;display:block}.intro{position:static;padding:13px 16px;border-bottom:1px solid var(--line)}.intro h1,.intro p,.eyebrow,.note{display:none}.steps{margin:0;display:flex;gap:4px;justify-content:space-between}.step{padding:8px 6px;gap:5px;font-size:10px;border-radius:9px}.step span{font-size:9px}.phone{height:calc(100dvh - 63px);min-height:0;max-height:none;max-width:500px;border-radius:0;border:0;box-shadow:none}.footer{padding-bottom:max(17px,env(safe-area-inset-bottom))}}
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="intro"><div class="eyebrow">BINGO · ACCOUNT SAFETY</div><h1>给告别，<br>一个清晰的入口。</h1><p>注销不藏在退出登录里。<br>先说明影响，再验证本人，<br>最后确认，不让用户误触。</p><nav class="steps" aria-label="预览步骤"><button class="step" data-page="settings" aria-current="step"><span>01</span>设置入口</button><button class="step" data-page="impact"><span>02</span>影响说明</button><button class="step" data-page="verify"><span>03</span>身份确认</button><button class="step" data-page="success"><span>04</span>注销结果</button></nav><div class="note">完整交互预览，不调用后端、不执行真实注销。<br>使用虚构账号，请勿输入真实密码。<br>数据删除范围为待实现的目标，<br>不表示当前 APP 已支持注销。</div></aside>
+    <main class="phone">
+      <header class="topbar"><button class="back" id="back" aria-label="返回上一步"><svg viewBox="0 0 24 24"><path d="m14 5-7 7 7 7"/></svg></button><strong id="title">设置</strong><span class="spacer" aria-hidden="true"></span></header>
+      <div class="content" id="content">
+        <div class="page" id="settings">
+          <h2>设置</h2><p class="subtitle">资料与安全，安心管理。</p>
+          <div class="card account"><img src="../../apps/mobile/assets/images/bingo_logo.png" alt="Bingo Logo"><div><strong>演示用户</strong><small>138****0000 · 虚构账号</small></div></div>
+          <div class="section-label">账号安全</div>
+          <div class="card"><button class="row" data-toast="修改密码入口演示"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span><strong>修改密码</strong><small>验证当前密码后修改</small></span><svg class="chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg></button><button class="row danger" data-page="impact"><svg viewBox="0 0 24 24"><circle cx="9" cy="6.5" r="3.5"/><path d="M12 20H3v-1.5a6 6 0 0 1 10-4.5"/><circle cx="18" cy="18" r="4.5"/><path d="M16 18h4"/></svg><span><strong>注销账号</strong><small>永久关闭账号与相关资料</small></span><svg class="chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg></button></div>
+          <div class="section-label">关于 Bingo</div><div class="card"><a class="row" href="bingo-user-agreement.html"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6V3Zm8 0v5h4M9 12h6m-6 4h6"/></svg><span><strong>用户协议</strong></span><svg class="chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg></a><a class="row" href="bingo-privacy-policy.html"><svg viewBox="0 0 24 24"><path d="m12 3 8 3v5c0 6-8 10-8 10S4 17 4 11V6l8-3Z"/><path d="m8 12 3 3 5-6"/></svg><span><strong>隐私政策</strong></span><svg class="chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg></a></div>
+          <button class="logout" data-toast="退出登录会保留账号；与注销账号不同。">退出登录</button><p class="helper">退出登录 ≠ 注销账号</p>
+        </div>
+        <div class="page" id="impact" hidden>
+          <div class="hero-symbol"><svg viewBox="0 0 24 24"><circle cx="9" cy="6.5" r="3.5"/><path d="M12 20H3v-1.5a6 6 0 0 1 10-4.5"/><circle cx="18" cy="18" r="4.5"/><path d="M16 18h4"/></svg></div><h2>准备和 Bingo 告别吗？</h2><p class="subtitle">这不是退出登录。注销完成后，<br>原账号与以下内容将无法继续使用或恢复。</p>
+          <div class="card">
+            <div class="impact"><div class="impact-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg></div><div><strong>账号与个人资料</strong><p>关闭账号，清理手机号、昵称、生日、头像等账号资料，退出所有已登录设备。</p></div></div>
+            <div class="impact"><div class="impact-icon"><svg viewBox="0 0 24 24"><path d="M4 4h16v12H9l-5 4V4Z"/><path d="M8 8h8m-8 4h5"/></svg></div><div><strong>对话与长期记忆</strong><p>清理该账号的聊天记录、图片、位置消息及长期记忆，不能继续找回原有对话。</p></div></div>
+            <div class="impact"><div class="impact-icon"><svg viewBox="0 0 24 24"><path d="M8 7a4 4 0 0 1 8 0v5a4 4 0 0 1-8 0V7Zm-3 5a7 7 0 0 0 14 0m-7 7v3"/></svg></div><div><strong>自定义伙伴与声音</strong><p>删除自己创建的伙伴，停用关联的复刻音色，并发起第三方音色清理。</p></div></div>
+            <div class="impact"><div class="impact-icon"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="15" height="18" rx="3"/><path d="M3 7h4m-4 5h4m-4 5h4m4-9h5m-5 4h5"/></svg></div><div><strong>本机记录与提醒</strong><p>清理此账号的本地小记、约定与缓存，取消应用内定时任务与推送。不会删除你手机系统中的全部闹钟。</p></div></div>
+          </div>
+        </div>
+        <div class="page" id="verify" hidden>
+          <div class="progress" aria-hidden="true"><span class="active"></span><span class="active"></span><span></span></div><h2>确认是你本人</h2><p class="subtitle">为了避免误操作，请验证当前登录密码。<br>只有确认注销后，才会关闭这个账号。</p>
+          <div class="card account"><img src="../../apps/mobile/assets/images/bingo_logo.png" alt="Bingo Logo"><div><strong>演示用户</strong><small>138****0000 · 虚构账号</small></div></div>
+          <form id="verify-form" autocomplete="off"><label class="form-label" for="password">当前登录密码</label><div class="input-wrap"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><input id="password" type="password" placeholder="演示输入，任意 8 位即可" maxlength="128" autocomplete="off" aria-describedby="error"><button class="toggle" id="toggle" type="button" aria-label="显示密码" aria-pressed="false">显示</button></div><div class="error" id="error" role="alert"></div><label class="check"><input id="acknowledge" type="checkbox"><span>我已了解注销的影响，并确认账号注销后，原有资料和记录无法恢复。</span></label></form>
+          <div class="warning">本页只演示核验步骤，不发送密码。正式功能必须由服务端验证身份，而不是在手机上直接判断。</div><p class="helper">隐私问题可联系<br><a href="mailto:bingo202610@126.com">bingo202610@126.com</a></p>
+        </div>
+        <div class="success" id="success" hidden>
+          <div class="success-symbol"><svg viewBox="0 0 24 24"><path d="m5 12 5 5L20 7"/></svg></div><h2>账号已注销</h2><p>谢谢你曾经来到这里。<br>愿你在日常里，也能遇到温柔的陪伴。</p><div class="card"><strong>这段陪伴，就先放在这里</strong><p>原账号已退出，原有记录无法恢复。若再次注册，将从新的陪伴空间开始。</p></div><p class="helper">以上为注销完成后的目标页面。<br>当前仅演示，没有删除任何真实账号或数据。</p><img class="brand" src="../../apps/mobile/assets/images/bingo_logo.png" alt="Bingo Logo">
+        </div>
+      </div>
+      <footer class="footer" id="footer" hidden><button class="button" id="primary">我已了解，继续</button><button class="button secondary" id="secondary">暂不注销</button><p class="footer-note">交互预览 · 不执行真实注销</p></footer>
+    </main>
+  </div>
+  <dialog id="confirmation" aria-labelledby="dialog-title"><h3 id="dialog-title">最后确认一次</h3><p>你即将注销演示账号。<br>账号关闭后，原有资料与记录无法恢复。<br>确定继续吗？</p><button class="button destructive" id="confirm">确认注销</button><button class="button secondary" id="cancel">再想一想</button></dialog>
+  <div class="toast" id="toast" role="status" hidden></div>
+  <script>
+    const pageNames = ['settings', 'impact', 'verify', 'success'];
+    const titles = { settings:'设置', impact:'注销账号', verify:'注销账号', success:'注销完成' };
+    const password = document.querySelector('#password');
+    const acknowledge = document.querySelector('#acknowledge');
+    const primary = document.querySelector('#primary');
+    const secondary = document.querySelector('#secondary');
+    const confirmation = document.querySelector('#confirmation');
+    const error = document.querySelector('#error');
+    let currentPage = 'settings';
+    let toastTimer;
+    function resetVerification() {
+      password.value = '';
+      password.type = 'password';
+      acknowledge.checked = false;
+      error.textContent = '';
+      document.querySelector('#toggle').textContent = '显示';
+      document.querySelector('#toggle').setAttribute('aria-label','显示密码');
+      document.querySelector('#toggle').setAttribute('aria-pressed','false');
+    }
+    function showPage(pageName) {
+      if (!pageNames.includes(pageName)) return;
+      if (confirmation.open) confirmation.close();
+      if (pageName !== 'verify') resetVerification();
+      currentPage = pageName;
+      for (const name of pageNames) document.getElementById(name).hidden = name !== pageName;
+      document.querySelector('#title').textContent = titles[pageName];
+      document.querySelector('#content').scrollTop = 0;
+      document.querySelector('#footer').hidden = pageName === 'settings';
+      document.querySelectorAll('.step').forEach(button => {
+        if (button.dataset.page === pageName) button.setAttribute('aria-current','step');
+        else button.removeAttribute('aria-current');
+      });
+      primary.textContent = pageName === 'impact' ? '我已了解，继续' : pageName === 'verify' ? '确认注销账号' : '返回登录页';
+      primary.classList.toggle('destructive',pageName === 'verify');
+      primary.disabled = pageName === 'verify' && !acknowledge.checked;
+      secondary.hidden = pageName === 'success';
+      secondary.textContent = pageName === 'verify' ? '保留账号，返回' : '暂不注销';
+    }
+    function showToast(message) {
+      const toast = document.querySelector('#toast');
+      toast.textContent = message;
+      toast.hidden = false;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { toast.hidden = true; },3200);
+    }
+    function verifyForPreview() {
+      if (!acknowledge.checked) return;
+      if (password.value.length < 8) {
+        error.textContent = '请填写至少 8 位演示密码，不要使用真实密码。';
+        password.focus();
+        return;
+      }
+      error.textContent = '';
+      confirmation.showModal();
+      document.querySelector('#cancel').focus();
+    }
+    document.querySelectorAll('[data-page]').forEach(button => button.addEventListener('click',() => showPage(button.dataset.page)));
+    document.querySelectorAll('[data-toast]').forEach(button => button.addEventListener('click',() => showToast(button.dataset.toast)));
+    document.querySelector('#back').addEventListener('click',() => {
+      if (currentPage === 'settings') showToast('返回“我的”页面（演示）');
+      else showPage(currentPage === 'verify' ? 'impact' : 'settings');
+    });
+    primary.addEventListener('click',() => {
+      if (currentPage === 'impact') showPage('verify');
+      else if (currentPage === 'verify') verifyForPreview();
+      else { showPage('settings'); showToast('正式 APP 此处返回登录页；预览已重置。'); }
+    });
+    secondary.addEventListener('click',() => showPage('settings'));
+    acknowledge.addEventListener('change',() => { primary.disabled = !acknowledge.checked; });
+    password.addEventListener('input',() => { error.textContent = ''; });
+    document.querySelector('#toggle').addEventListener('click',event => {
+      const showing = password.type === 'password';
+      password.type = showing ? 'text' : 'password';
+      event.target.textContent = showing ? '隐藏' : '显示';
+      event.target.setAttribute('aria-label',showing ? '隐藏密码' : '显示密码');
+      event.target.setAttribute('aria-pressed',String(showing));
+    });
+    document.querySelector('#verify-form').addEventListener('submit',event => { event.preventDefault(); verifyForPreview(); });
+    document.querySelector('#cancel').addEventListener('click',() => confirmation.close());
+    document.querySelector('#confirm').addEventListener('click',() => { confirmation.close(); showPage('success'); });
+    showPage('settings');
+  </script>
+</body>
+</html>

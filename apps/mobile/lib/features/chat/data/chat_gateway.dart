@@ -401,6 +401,10 @@ abstract interface class AccountGateway {
   Future<void> changePassword(String oldPassword, String newPassword);
 }
 
+abstract interface class AccountDeletionGateway {
+  Future<void> deleteAccount();
+}
+
 abstract interface class RoleConversationGateway {
   Future<ConversationSummary> openRoleConversation(String roleId);
   Future<void> markConversationRead(String conversationId);
@@ -427,6 +431,7 @@ class HttpApiGateway
         AuthGateway,
         UserDetailsGateway,
         AccountGateway,
+        AccountDeletionGateway,
         RoleGateway,
         RoleConversationGateway,
         ChatGateway,
@@ -1017,6 +1022,12 @@ class HttpApiGateway
   Future<void> changePassword(String oldPassword, String newPassword) async {
     await _request('POST', config.endpoint('/me/password'),
         body: {'old_password': oldPassword, 'new_password': newPassword});
+  }
+
+  @override
+  Future<void> deleteAccount() async {
+    await _request('DELETE', config.endpoint('/me/account'),
+        body: {'confirmed': true});
   }
 
   @override

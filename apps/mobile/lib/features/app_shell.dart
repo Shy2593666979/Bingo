@@ -28,6 +28,7 @@ class AppShell extends StatefulWidget {
     required this.onCallCaptionsChanged,
     required this.onProfileSaved,
     required this.onLogout,
+    this.onAccountDeleted,
     super.key,
   });
 
@@ -38,6 +39,7 @@ class AppShell extends StatefulWidget {
   final Future<void> Function(bool enabled) onCallCaptionsChanged;
   final ValueChanged<UserProfile> onProfileSaved;
   final VoidCallback onLogout;
+  final Future<void> Function()? onAccountDeleted;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -278,6 +280,13 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
             Navigator.of(settingsContext).popUntil((route) => route.isFirst);
             onLogout();
           },
+          onAccountDeleted: widget.onAccountDeleted == null
+              ? null
+              : () async {
+                  Navigator.of(settingsContext)
+                      .popUntil((route) => route.isFirst);
+                  await widget.onAccountDeleted!();
+                },
         ),
       ),
     );

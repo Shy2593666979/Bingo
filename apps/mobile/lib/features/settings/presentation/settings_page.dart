@@ -5,6 +5,9 @@ import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:flutter/material.dart';
 import 'package:bingo/features/auth/presentation/password_recovery_page.dart';
+import 'package:bingo/features/auth/presentation/user_agreement_page.dart';
+import 'package:bingo/features/settings/presentation/account_deletion_icon.dart';
+import 'package:bingo/features/settings/presentation/account_deletion_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({
@@ -15,6 +18,7 @@ class SettingsPage extends StatefulWidget {
     required this.onEditProfile,
     required this.onLogout,
     this.onBack,
+    this.onAccountDeleted,
     super.key,
   });
 
@@ -25,6 +29,7 @@ class SettingsPage extends StatefulWidget {
   final Future<UserProfile?> Function(UserProfile profile) onEditProfile;
   final VoidCallback onLogout;
   final VoidCallback? onBack;
+  final Future<void> Function()? onAccountDeleted;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -171,6 +176,20 @@ class _SettingsPageState extends State<SettingsPage> {
                   title: 'Bingo 版本',
                   subtitle: '0.1.0',
                 ),
+                const _SettingsDivider(),
+                _SettingsRow(
+                    icon: Icons.description_outlined,
+                    title: '用户协议',
+                    onTap: () => Navigator.of(context).push<void>(
+                        MaterialPageRoute(
+                            builder: (_) => const UserAgreementPage()))),
+                const _SettingsDivider(),
+                _SettingsRow(
+                    icon: Icons.shield_outlined,
+                    title: '隐私政策',
+                    onTap: () => Navigator.of(context).push<void>(
+                        MaterialPageRoute(
+                            builder: (_) => const PrivacyPolicyPage()))),
               ],
             ),
             const SizedBox(height: 28),
@@ -185,6 +204,23 @@ class _SettingsPageState extends State<SettingsPage> {
                             builder: (_) => PasswordRecoveryPage(
                                 gateway: widget.gateway as AccountGateway,
                                 onPasswordChanged: widget.onLogout)))),
+              ]),
+              const SizedBox(height: 16),
+            ],
+            if (widget.gateway is AccountDeletionGateway &&
+                widget.onAccountDeleted != null) ...[
+              _SettingsCard(children: [
+                _SettingsRow(
+                    icon: Icons.power_settings_new_rounded,
+                    leading: const AccountDeletionIcon(size: 23),
+                    title: '注销账号',
+                    titleColor: const Color(0xFFBE7870),
+                    onTap: () => Navigator.of(context).push<void>(
+                        MaterialPageRoute(
+                            builder: (_) => AccountDeletionPage(
+                                gateway:
+                                    widget.gateway as AccountDeletionGateway,
+                                onDeleted: widget.onAccountDeleted!)))),
               ]),
               const SizedBox(height: 16),
             ],
@@ -260,6 +296,7 @@ class _SettingsRow extends StatelessWidget {
     this.iconColor,
     this.titleColor,
     this.trailing,
+    this.leading,
     this.onTap,
   });
 
@@ -269,6 +306,7 @@ class _SettingsRow extends StatelessWidget {
   final Color? iconColor;
   final Color? titleColor;
   final Widget? trailing;
+  final Widget? leading;
   final VoidCallback? onTap;
 
   @override
@@ -277,7 +315,8 @@ class _SettingsRow extends StatelessWidget {
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 7),
         minLeadingWidth: 24,
         horizontalTitleGap: 14,
-        leading: Icon(icon, color: iconColor ?? BingoPalette.blue, size: 23),
+        leading: leading ??
+            Icon(icon, color: iconColor ?? BingoPalette.blue, size: 23),
         title: Text(
           title,
           style: TextStyle(

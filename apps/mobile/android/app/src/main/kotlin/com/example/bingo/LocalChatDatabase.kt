@@ -330,6 +330,25 @@ class LocalChatDatabase(context: Context) :
         db.execSQL("CREATE TABLE IF NOT EXISTS companion_data (user_id TEXT NOT NULL, data_key TEXT NOT NULL, data TEXT NOT NULL, PRIMARY KEY(user_id, data_key))")
     }
 
+    fun deleteAccountData(userId: String) {
+        require(userId.isNotBlank())
+        val prefix = "$userId:"
+        val selection = "user_id = ? OR substr(user_id, 1, ?) = ?"
+        val arguments = arrayOf(userId, prefix.length.toString(), prefix)
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            db.execSQL("DELETE FROM local_messages WHERE conversation_id IN " +
+                "(SELECT id FROM local_conversations WHERE $selection)", arguments)
+            for (table in listOf("local_conversations", "local_users", "local_role_order", "companion_data")) {
+                db.delete(table, selection, arguments)
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
     fun readCompanionData(userId: String, key: String): String? {
         readableDatabase.rawQuery("SELECT data FROM companion_data WHERE user_id=? AND data_key=?", arrayOf(userId, key)).use {
             return if (it.moveToFirst()) it.getString(0) else null

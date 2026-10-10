@@ -8,6 +8,7 @@ from bingo.api.dependencies import (
 )
 from bingo.api.response import EnvelopeRoute
 from bingo.schemas.auth import (
+    AccountDeletion,
     AuthResponse,
     ChangePassword,
     Credentials,
@@ -20,8 +21,20 @@ from bingo.schemas.auth import (
     UserProfileResponse,
 )
 from bingo.services import auth as auth_service
+from bingo.services.account_deletion import delete_account
 
 router = APIRouter(tags=["auth"], route_class=EnvelopeRoute)
+
+
+@router.delete("/me/account", status_code=204)
+async def remove_account(
+    payload: AccountDeletion,
+    user: CurrentUserDependency,
+    session: SessionDependency,
+    request: Request,
+) -> Response:
+    await delete_account(user, session, get_service_context(request))
+    return Response(status_code=204)
 
 
 @router.post("/me/password", status_code=204)

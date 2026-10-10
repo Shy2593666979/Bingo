@@ -16,6 +16,8 @@ import 'package:bingo/features/chat/data/companion_reminders.dart';
 import 'package:bingo/features/chat/presentation/chat_controller.dart';
 import 'package:bingo/features/splash/presentation/splash_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:bingo/core/role_avatar_store.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 class BingoApp extends StatefulWidget {
@@ -156,6 +158,24 @@ class _BingoAppState extends State<BingoApp> with WidgetsBindingObserver {
     await _pushRegistration.activate();
   }
 
+  Future<void> _accountDeleted() async {
+    final userId = _profile?.id;
+    _controller.unbindUser();
+    try {
+      if (userId != null) {
+        await const MethodChannel('bingo/local_chat')
+            .invokeMethod<void>('deleteAccountData', {'user_id': userId});
+      }
+    } on PlatformException {
+      debugPrint('账号已注销，本机缓存清理失败，请清除应用数据');
+    } finally {
+      RoleAvatarStore.clear();
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
+      await _logout();
+    }
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -222,6 +242,7 @@ class _BingoAppState extends State<BingoApp> with WidgetsBindingObserver {
       onCallCaptionsChanged: _setCallCaptionsEnabled,
       onProfileSaved: _onProfileSaved,
       onLogout: _logout,
+      onAccountDeleted: _accountDeleted,
     );
   }
 }

@@ -37,7 +37,6 @@ class MessageBubble extends StatelessWidget {
           bottomLeft: Radius.circular(isUser ? 26 : 8),
           bottomRight: Radius.circular(isUser ? 8 : 26),
         ),
-        border: isUser ? null : Border.all(color: Colors.white),
         boxShadow: const [
           BoxShadow(
             color: Color(0x08205F4F),
@@ -144,7 +143,6 @@ class CallRecordTile extends StatelessWidget {
           bottomLeft: Radius.circular(isUser ? 22 : 7),
           bottomRight: Radius.circular(isUser ? 7 : 22),
         ),
-        border: isUser ? null : Border.all(color: Colors.white),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -311,7 +309,6 @@ class AssistantTypingBubble extends StatelessWidget {
                   bottomLeft: Radius.circular(8),
                   bottomRight: Radius.circular(26),
                 ),
-                border: Border.all(color: Colors.white),
                 boxShadow: const [
                   BoxShadow(
                     color: Color(0x08205F4F),

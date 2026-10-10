@@ -81,6 +81,10 @@ class ChangePassword(BaseModel):
     new_password: str = Field(min_length=8, max_length=128)
 
 
+class AccountDeletion(BaseModel):
+    confirmed: Literal[True]
+
+
 class ProfileUpdate(BaseModel):
     username: str = Field(min_length=1, max_length=30)
     assistant_name: str = Field(min_length=1, max_length=30)

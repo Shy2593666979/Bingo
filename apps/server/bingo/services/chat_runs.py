@@ -115,6 +115,17 @@ class ChatRunService:
         async with self._lock:
             state.subscribers.discard(subscriber)
 
+    async def cancel_user(self, user_id: str) -> None:
+        async with self._lock:
+            tasks = [
+                state.task
+                for state in self._runs.values()
+                if state.user_id == user_id and state.task is not None
+            ]
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+
     async def close(self) -> None:
         async with self._lock:
             tasks = [state.task for state in self._runs.values() if state.task is not None]

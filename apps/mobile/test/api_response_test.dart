@@ -26,7 +26,8 @@ void main() {
     server.listen((request) async {
       requests.add('${request.method} ${request.uri.path}');
       if (request.uri.path.contains('/device-actions/') ||
-          request.uri.path.endsWith('/auth/reset-password')) {
+          request.uri.path.endsWith('/auth/reset-password') ||
+          request.uri.path.endsWith('/me/account')) {
         actionBodies.add(Map<String, dynamic>.from(
             jsonDecode(await utf8.decoder.bind(request).join()) as Map));
       } else {
@@ -44,6 +45,16 @@ void main() {
   tearDown(() async {
     gateway.close();
     await server.close(force: true);
+  });
+
+  test('account deletion sends explicit confirmation to authenticated API',
+      () async {
+    statusCode = 204;
+    await gateway.deleteAccount();
+    expect(requests, ['DELETE /api/v1/me/account']);
+    expect(actionBodies, [
+      {'confirmed': true}
+    ]);
   });
 
   test('password reset sends phone nickname birthday without recovery code',

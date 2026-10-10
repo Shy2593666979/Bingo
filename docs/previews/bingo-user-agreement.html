@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bingo · 用户协议设计预览</title>
+  <style>
+    :root { color-scheme: light; --ink:#243c37; --muted:#7c918a; --accent:#368d77; --mint:#e0f3eb; --line:#e6eee9; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif; color:var(--ink); background:radial-gradient(ellipse at 15% 0,#def2e9,transparent 55%),#f2f6f3; }
+    button,a { -webkit-tap-highlight-color:transparent; }
+    button { font:inherit; cursor:pointer; }
+    a { color:var(--accent); text-decoration:none; }
+    a:focus-visible,button:focus-visible { outline:3px solid #68bfa4; outline-offset:4px; }
+    svg { width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+    .layout { max-width:1040px; margin:60px auto; display:grid; grid-template-columns:300px minmax(0,1fr); gap:56px; padding:0 28px; align-items:start; }
+    .intro { position:sticky; top:50px; padding-top:55px; }
+    .eyebrow { font-size:12px; letter-spacing:3px; color:var(--accent); font-weight:700; }
+    h1 { font-size:34px; line-height:1.5; font-weight:700; letter-spacing:1px; margin:18px 0 14px; }
+    .intro p { color:var(--muted); font-size:14px; line-height:1.9; }
+    .notes { margin-top:30px; border-top:1px solid #dbe6df; padding-top:18px; font-size:12px; color:var(--muted); line-height:2; }
+    .phone { width:100%; max-width:430px; margin:auto; background:#fbfdfb; border:1px solid #fff; border-radius:35px; overflow:hidden; box-shadow:0 24px 75px #214b3820; }
+    .topbar { padding:21px 21px 12px; display:flex; align-items:center; justify-content:space-between; }
+    .topbar strong { font-size:16px; font-weight:650; }
+    .icon-button { border:0; background:transparent; color:var(--ink); display:grid; place-items:center; padding:7px; border-radius:10px; }
+    .draft { font-size:11px; color:var(--muted); padding:5px 9px; border:1px solid var(--line); border-radius:8px; }
+    .scroll { height:720px; max-height:calc(100vh - 220px); min-height:390px; overflow:auto; scrollbar-width:thin; scrollbar-color:#ccded4 transparent; scroll-behavior:smooth; }
+    .hero { padding:25px 25px 23px; background:linear-gradient(145deg,#e6f5ed,#f7fbf7 85%); }
+    .brand { display:flex; gap:13px; align-items:center; }
+    .brand img { width:55px; height:55px; border-radius:15px; object-fit:cover; }
+    .brand-name { font-size:23px; letter-spacing:.4px; font-weight:750; }
+    .brand-caption { font-size:12px; margin-top:5px; color:var(--muted); }
+    .hero h2 { margin:25px 0 8px; font-size:26px; letter-spacing:.5px; }
+    .hero p { margin:0; font-size:13px; line-height:1.9; color:#6d857c; }
+    .meta { display:flex; gap:15px; font-size:10px; color:#81938c; margin-top:16px; }
+    .content { padding:20px 24px 28px; }
+    .notice { font-size:12px; line-height:1.9; padding:13px 15px; background:#f4f1e8; color:#8d7b59; border-radius:13px; }
+    .toc { display:grid; grid-template-columns:1fr 1fr; gap:10px 16px; margin:21px 0 25px; padding:0 3px; }
+    .toc a { font-size:12px; display:flex; align-items:center; gap:8px; padding:3px 0; }
+    .toc span { font-size:10px; color:#8baba0; }
+    section { scroll-margin-top:14px; }
+    section + section { margin-top:27px; }
+    h3 { font-size:16px; margin:0 0 11px; display:flex; align-items:center; gap:10px; }
+    h3 .number { width:27px; height:27px; display:grid; place-items:center; border-radius:9px; background:#e9f3ed; font-size:11px; color:var(--accent); font-weight:600; }
+    section p { font-size:13px; line-height:1.95; margin:8px 0; color:#63766e; text-align:justify; }
+    .author { margin-top:28px; padding:17px; border:1px solid #e1ece5; border-radius:18px; background:linear-gradient(140deg,#f0f7f2,#fff); }
+    .author-header { display:flex; align-items:center; gap:11px; }
+    .author-icon { width:38px; height:38px; background:#dff0e6; border-radius:12px; display:grid; place-items:center; color:var(--accent); }
+    .author small { font-size:10px; color:var(--muted); display:block; margin-bottom:3px; }
+    .author strong { font-size:14px; }
+    .author p { font-size:12px; line-height:1.8; color:#7c9087; margin:12px 0; }
+    .repo { display:flex; align-items:center; gap:9px; padding-top:13px; border-top:1px solid var(--line); font-size:12px; }
+    .repo span { flex:1; overflow-wrap:anywhere; }
+    .repo svg:last-child { width:15px; }
+    .end { text-align:center; margin:24px 0 0; font-size:11px; color:#93a59b; line-height:1.8; }
+    .footer { padding:15px 22px 19px; border-top:1px solid var(--line); background:#fbfdfb; }
+    .done { width:100%; border:1px solid #c2e3d1; border-radius:16px; padding:13px; background:linear-gradient(120deg,#d5eee0,#e7f4e9); color:#347b63; font-size:14px; font-weight:650; }
+    .footer p { font-size:10px; text-align:center; color:var(--muted); margin:10px 0 0; }
+    .toast { position:fixed; bottom:30px; left:50%; transform:translateX(-50%); border-radius:12px; padding:12px 18px; background:#253e35; color:#fff; font-size:13px; box-shadow:0 8px 25px #233d3522; max-width:90vw; }
+    [hidden] { display:none !important; }
+    @media(max-width:760px) {
+      body { background:#fbfdfb; }
+      .layout { display:block; padding:0; margin:0; }
+      .intro { display:none; }
+      .phone { max-width:500px; border:0; border-radius:0; box-shadow:none; height:100dvh; display:flex; flex-direction:column; }
+      .scroll { flex:1; min-height:0; max-height:none; height:auto; }
+      .footer { padding-bottom:max(17px,env(safe-area-inset-bottom)); }
+    }
+    @media(prefers-reduced-motion:reduce) { .scroll { scroll-behavior:auto; } }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="intro">
+      <div class="eyebrow">BINGO · DESIGN PREVIEW</div>
+      <h1>让约定，<br>也有一点温度。</h1>
+      <p>一页认真、清爽的用户协议。<br>薄荷色开场，留白阅读，清晰的章节；<br>最后，让用户认识创作者和这个项目。</p>
+      <div class="notes">可点击目录跳转 · 可滚动阅读全文<br>作者：田明广 / Mingguang.Tian<br>仅 HTML 预览，不改 APP</div>
+    </aside>
+    <main class="phone" aria-label="用户协议手机页面预览">
+      <header class="topbar">
+        <button class="icon-button" id="back" aria-label="返回（预览）"><svg viewBox="0 0 24 24"><path d="m14 5-7 7 7 7"/></svg></button>
+        <strong>用户协议</strong><span aria-hidden="true" style="width:35px"></span>
+      </header>
+      <div class="scroll" id="reader">
+        <div class="hero">
+          <div class="brand"><img src="../../apps/mobile/assets/images/bingo_logo.png" alt="Bingo Logo"><div><div class="brand-name">Bingo</div><div class="brand-caption">在这里，慢慢聊～</div></div></div>
+          <h2>遇见之前的小约定</h2>
+          <p>感谢你来到 Bingo。开始陪伴之前，<br>请花一点时间了解我们的服务与使用边界。</p>
+        </div>
+        <div class="content">
+          <nav class="toc" aria-label="协议目录">
+            <a href="#service"><span>01</span>关于我们的陪伴</a><a href="#account"><span>02</span>你的账号</a>
+            <a href="#ai"><span>03</span>关于 AI 回应</a><a href="#voice"><span>04</span>头像与声音</a>
+            <a href="#usage"><span>05</span>使用的小约定</a><a href="#changes"><span>06</span>变更与反馈</a>
+          </nav>
+          <section id="service"><h3><span class="number">01</span>关于我们的陪伴</h3><p>Bingo 是一个 AI 陪伴项目。你可以创建不同的伙伴，与他们进行文字聊天、语音交流，并使用应用内提供的陪伴功能。</p><p>伙伴由人工智能驱动，并不是真实的人。项目仍在持续迭代，功能和可用性可能因版本、网络或第三方服务状态有所不同。</p></section>
+          <section id="account"><h3><span class="number">02</span>你的账号</h3><p>请填写准确的账号资料，并妥善保管登录密码。找回密码时，目前需要核对注册手机号、当前用户昵称和生日。</p><p>这些资料不属于独立的安全凭证，请勿随意公开或向他人透露。重置密码后，原有登录会话将失效，需要重新登录。</p></section>
+          <section id="ai"><h3><span class="number">03</span>关于 AI 回应</h3><p>AI 的回答可能不准确，也可能误解时间、情绪或你的表达。请对重要信息进行核实，不要将回答作为医疗、法律或其他重大决定的唯一依据。</p><p>陪伴不能替代现实中的人际支持或专业帮助。遇到紧急危险时，请联系当地紧急服务或身边能够提供帮助的人。</p></section>
+          <section id="voice"><h3><span class="number">04</span>头像与声音</h3><p>请仅使用你本人或已取得合法授权的图片和声音。录制、复刻与使用他人的声音前，应取得其明确许可，不得用于冒充身份、欺骗或侵害他人权益。</p><p>你提交的图片、录音、位置与对话可能涉及个人信息。具体处理方式、第三方服务、保存期限和删除途径，应在正式隐私政策中单独说明。</p></section>
+          <section id="usage"><h3><span class="number">05</span>使用的小约定</h3><p>请尊重他人的隐私与权益，不利用本服务进行违法活动、骚扰、诈骗或未经授权的身份冒用，也不要破坏系统或干扰其他用户使用。</p><p>项目代码的使用、修改和分发规则，以仓库实际提供的许可文件为准。用户协议不替代开源许可，也不授予第三方素材或服务的使用权。</p></section>
+          <section id="changes"><h3><span class="number">06</span>变更与反馈</h3><p>功能调整和问题反馈可以通过项目仓库了解或提交。公开反馈时，请勿附上手机号、密码、录音或私人聊天记录；安全问题不宜直接公开披露。</p><p>个人信息处理说明请参阅<a href="bingo-privacy-policy.html">隐私政策</a>。隐私相关问题可通过 <a href="mailto:bingo202610@126.com">bingo202610@126.com</a> 联系。账号注销可在应用设置中直接操作。</p></section>
+          <div class="author">
+            <div class="author-header"><div class="author-icon"><svg viewBox="0 0 24 24"><path d="m8 7-5 5 5 5m8-10 5 5-5 5m-3-12-2 14"/></svg></div><div><small>项目创作者</small><strong>田明广</strong><small style="margin-top:5px">Mingguang.Tian</small></div></div>
+            <p>把陪伴变成一个名字、一种性格、一个熟悉的声音。感谢每一个愿意体验和提出建议的人。</p>
+            <a class="repo" href="https://github.com/Shy2593666979/Bingo" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24"><path d="M8 19c-4 1-4-2-6-2m12 5v-4c0-1-.2-1.7-.7-2.2 3.3-.4 6.7-1.6 6.7-7.3a5.7 5.7 0 0 0-1.5-4c.1-.4.6-1.9-.1-3.5 0 0-1.2-.4-4 1.5a14 14 0 0 0-7.2 0C4.4.6 3.2 1 3.2 1c-.7 1.6-.2 3.1-.1 3.5a5.7 5.7 0 0 0-1.5 4c0 5.7 3.4 6.9 6.7 7.3-.5.5-.7 1.2-.7 2.2v4" transform="translate(1 0) scale(.9)"/></svg><span>Shy2593666979 / Bingo</span><svg viewBox="0 0 24 24"><path d="M7 17 17 7M7 7h10v10"/></svg></a>
+          </div>
+          <p class="end">认真对待你的每一次表达。<br>Bingo · 在这里，慢慢聊</p>
+        </div>
+      </div>
+      <footer class="footer"><button class="done" id="done">我已了解，返回</button></footer>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" hidden></div>
+  <script>
+    const toast = document.querySelector('#toast');
+    let toastTimer;
+    function previewReturn() {
+      toast.textContent = '返回操作演示。';
+      toast.hidden = false;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { toast.hidden = true; }, 3200);
+    }
+    document.querySelector('#back').addEventListener('click', previewReturn);
+    document.querySelector('#done').addEventListener('click', previewReturn);
+  </script>
+</body>
+</html>

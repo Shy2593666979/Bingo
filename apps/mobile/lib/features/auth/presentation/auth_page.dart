@@ -2,6 +2,7 @@ import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/core/widgets/center_toast.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/auth/presentation/password_recovery_page.dart';
+import 'package:bingo/features/auth/presentation/user_agreement_page.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:flutter/material.dart';
 
@@ -416,7 +417,11 @@ class _AuthPageState extends State<AuthPage> {
       );
 
   Widget _agreementLink(String label) => InkWell(
-        onTap: _comingSoon,
+        onTap: label == '《用户协议》'
+            ? () => Navigator.of(context).push<void>(
+                MaterialPageRoute(builder: (_) => const UserAgreementPage()))
+            : () => Navigator.of(context).push<void>(
+                MaterialPageRoute(builder: (_) => const PrivacyPolicyPage())),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Text(

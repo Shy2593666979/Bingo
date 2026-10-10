@@ -18,6 +18,7 @@
   <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-Python_3.12-009688?logo=fastapi&logoColor=white" />
   <img alt="Redis" src="https://img.shields.io/badge/Redis-Background_Jobs-DC382D?logo=redis&logoColor=white" />
   <img alt="Status" src="https://img.shields.io/badge/Status-Active_Prototype-24B47E" />
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-009688" /></a>
 </p>
 
 > [!NOTE]
@@ -195,3 +196,7 @@ flutter test
 - [推送通知](docs/push.md)
 - [工具扩展](docs/tools.md)
 - [Qwen-Audio-Realtime 声音复刻指南](docs/voice-cloning.md)
+
+## 许可证
+
+本项目采用 [MIT License](LICENSE)，版权所有 © 2024 MingGuang Tian。第三方依赖与素材遵循各自的许可证。

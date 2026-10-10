@@ -75,6 +75,7 @@ class VoiceCloningService:
         self.settings = settings
         self.tasks: set[asyncio.Task] = set()
         self.running_ids: set[str] = set()
+        self.job_tasks: dict[str, asyncio.Task] = {}
         self.cleanup_worker: asyncio.Task | None = None
         self.preview_cache: OrderedDict[str, tuple[float, bytes]] = OrderedDict()
         self.preview_tasks: dict[str, asyncio.Task] = {}
@@ -126,9 +127,17 @@ class VoiceCloningService:
             return
         self.running_ids.add(job_id)
         task = asyncio.create_task(self.process(job_id))
+        self.job_tasks[job_id] = task
         self.tasks.add(task)
         task.add_done_callback(self.tasks.discard)
         task.add_done_callback(lambda _: self.running_ids.discard(job_id))
+        task.add_done_callback(lambda _: self.job_tasks.pop(job_id, None))
+
+    async def cancel_jobs(self, job_ids: list[str]) -> None:
+        tasks = [self.job_tasks[job_id] for job_id in job_ids if job_id in self.job_tasks]
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
 
     async def close(self) -> None:
         if self.cleanup_worker:

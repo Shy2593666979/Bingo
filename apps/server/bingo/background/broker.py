@@ -25,7 +25,10 @@ def recommendation_job(key: str, version: str, payload: dict[str, Any]) -> Backg
 class TaskBroker(Protocol):
     async def close(self) -> None: ...
     async def record_activity(
-        self, user_id: str, *, recommendation_payload: dict[str, Any] | None = None,
+        self,
+        user_id: str,
+        *,
+        recommendation_payload: dict[str, Any] | None = None,
         recommendation_delay: int = 0,
     ) -> str: ...
     async def current_version(self, user_id: str) -> str | None: ...
@@ -36,6 +39,7 @@ class TaskBroker(Protocol):
     ) -> None: ...
     async def get_recommendations(self, user_id: str) -> list[str]: ...
     async def clear_recommendations(self, user_id: str) -> None: ...
+    async def forget_user(self, user_id: str, conversation_ids: list[str]) -> None: ...
 
 
 class InMemoryTaskBroker:
@@ -49,7 +53,10 @@ class InMemoryTaskBroker:
         return None
 
     async def record_activity(
-        self, user_id: str, *, recommendation_payload: dict[str, Any] | None = None,
+        self,
+        user_id: str,
+        *,
+        recommendation_payload: dict[str, Any] | None = None,
         recommendation_delay: int = 0,
     ) -> str:
         version = str(uuid4())
@@ -87,13 +94,21 @@ class InMemoryTaskBroker:
     async def get_recommendations(self, user_id: str) -> list[str]:
         return self._recommendations.get(user_id, [])
 
+    async def forget_user(self, user_id: str, conversation_ids: list[str]) -> None:
+        async with self._lock:
+            for key in [user_id, *(f"{user_id}:{value}" for value in conversation_ids)]:
+                self._recommendations.pop(key, None)
+                self._versions.pop(key, None)
+            self._jobs = [
+                entry for entry in self._jobs if entry[2].payload.get("user_id") != user_id
+            ]
+            heapq.heapify(self._jobs)
+
     async def clear_recommendations(self, user_id: str) -> None:
         async with self._lock:
             self._recommendations.pop(user_id, None)
             self._versions.pop(user_id, None)
-            self._jobs = [
-                entry for entry in self._jobs if entry[1] != f"recommendations:{user_id}"
-            ]
+            self._jobs = [entry for entry in self._jobs if entry[1] != f"recommendations:{user_id}"]
             heapq.heapify(self._jobs)
 
 
@@ -124,7 +139,10 @@ return 1
         await self._redis.aclose()
 
     async def record_activity(
-        self, user_id: str, *, recommendation_payload: dict[str, Any] | None = None,
+        self,
+        user_id: str,
+        *,
+        recommendation_payload: dict[str, Any] | None = None,
         recommendation_delay: int = 0,
     ) -> str:
         version = str(uuid4())
@@ -176,6 +194,20 @@ return 1
     async def get_recommendations(self, user_id: str) -> list[str]:
         raw = await self._redis.get(f"bingo:user:{user_id}:recommendations")
         return [] if raw is None else list(json.loads(raw))
+
+    async def forget_user(self, user_id: str, conversation_ids: list[str]) -> None:
+        for key in [user_id, *(f"{user_id}:{value}" for value in conversation_ids)]:
+            await self.clear_recommendations(key)
+        async for key in self._redis.scan_iter(match="bingo:job:*", count=100):
+            raw = await self._redis.get(key)
+            if raw is None:
+                continue
+            data = json.loads(raw)
+            if data.get("payload", {}).get("user_id") == user_id:
+                async with self._redis.pipeline(transaction=True) as pipeline:
+                    pipeline.delete(key)
+                    pipeline.zrem(self.SCHEDULED_KEY, data["id"])
+                    await pipeline.execute()
 
     async def clear_recommendations(self, user_id: str) -> None:
         async with self._redis.pipeline(transaction=True) as pipeline:

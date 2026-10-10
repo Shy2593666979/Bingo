@@ -67,6 +67,7 @@ class EngagementService:
         self._timezone = timezone
         self._location = location
         self._worker: asyncio.Task[None] | None = None
+        self._active_jobs: dict[str, asyncio.Task] = {}
         self._morning = MorningGreetingService(
             session_factory, llm, location=location, push_service=push_service, timezone=timezone
         )
@@ -160,6 +161,13 @@ class EngagementService:
         key, _ = await self._recommendation_target(user_id, conversation_id)
         await self._broker.clear_recommendations(key)
 
+    async def forget_user(self, user_id: str, conversation_ids: list[str]) -> None:
+        await self._broker.forget_user(user_id, conversation_ids)
+        task = self._active_jobs.get(user_id)
+        if task is not None:
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+
     async def _run_worker(self) -> None:
         while True:
             try:
@@ -167,7 +175,16 @@ class EngagementService:
                 if job is None:
                     await asyncio.sleep(self._poll_seconds)
                     continue
-                await self._execute(job)
+                user_id = job.payload.get("user_id", "")
+                task = asyncio.create_task(self._execute(job))
+                self._active_jobs[user_id] = task
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    if asyncio.current_task().cancelling():
+                        raise
+                finally:
+                    self._active_jobs.pop(user_id, None)
             except asyncio.CancelledError:
                 raise
             except Exception as error:
