@@ -1,5 +1,9 @@
 # 展示素材
 
+## 技术架构图
+
+`bingo-architecture.webp` 为 2026 年 10 月 11 日按当前代码核对后生成的技术架构图，采用内置 image_gen 生成、无损 WebP 编码。它不是应用截图；[生成与校对提示词](bingo-architecture-prompt.md)保留供后续更新。
+
 ## 当前截图与 GIF
 
 2026 年 10 月 10 日更新。`login.png`、`companion-space.png`、`chat-starters.png`、`companion-detail.png`、`create-companion.png` 和 `my-profile.png` 来自当前 release APP 的真实运行界面。

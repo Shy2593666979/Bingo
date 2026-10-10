@@ -115,26 +115,11 @@
 
 ## 系统架构
 
-```mermaid
-flowchart LR
-    A[Flutter Android] -->|HTTPS / WebSocket| B[FastAPI API]
-    A -->|Local cache| C[(Android SQLite)]
-    B --> S[Services]
-    S --> D[Agent Runtime]
-    D --> E[LLM Provider]
-    D --> F[Tool Registry]
-    F --> F1[Web Search]
-    F --> F2[Weather]
-    F --> F3[Device Actions]
-    S --> G[(SQLite)]
-    S --> H[(Redis)]
-    S --> I[Realtime Audio Provider]
-```
+<p align="center">
+  <img src="docs/media/bingo-architecture.webp" width="1000" alt="Bingo 技术架构：Flutter Android、安全接入、Services 与 Agent、外部服务、SQLite、Redis 和后台陪伴调度" />
+</p>
 
-- Flutter 负责交互、本地会话恢复、音频采集播放与 Android 设备操作。
-- FastAPI API 层负责鉴权、参数校验和响应；Services 层负责业务流程、数据库访问、模型与第三方服务调用。
-- 普通 HTTP 接口采用统一响应封装；WebSocket 保留事件协议，不套用 HTTP 响应格式。
-- Redis 保存延迟任务、推荐队列和有有效期的地区信息；SQL 保存会话、伙伴与早安调度记录。
+客户端负责交互与设备操作，服务端负责智能体、语音和陪伴调度。详见[系统架构](docs/architecture.md)。
 
 ## 仓库结构
 
