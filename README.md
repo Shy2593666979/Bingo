@@ -42,23 +42,13 @@
 
 <p align="center"><sub>新版界面来自独立演示账号的真实 Android 截图，仅保留 APP 内容。</sub></p>
 
-## 有声音的 MP4
+## 听见陪伴
 
-直接点击下方播放器观看，无需打开文件页面。以下流程录制于 OPPO 真机，操作与处理等待部分采用 2～3 倍速；朗读、中文试听与通话保留正常语速，音画同步，仅展示 APP 内容。
+| 为伙伴赋予声音 | 甜甜的来电 |
+| :---: | :---: |
+| https://github.com/user-attachments/assets/c9ae5d3a-cd0b-4840-9008-ed53483a692f | https://github.com/user-attachments/assets/67c8b42a-919f-4d24-955d-a84316d45b52 |
 
-### 亲手创建伙伴 · 复刻声音 · 开口聊天
-
-填写昵称与设定 → 按引导录音 → 复刻完成 → 中文试听 → 保存伙伴 → 进入聊天、开启朗读 → 听到新伙伴的回复
-
-https://github.com/user-attachments/assets/c9ae5d3a-cd0b-4840-9008-ed53483a692f
-
-### 甜甜的来电 · 接听邀请
-
-按住说话、语音转文字 → AI 发起来电 → 等待约八秒 → 接听 → 听到开场问候 → 双方交流两轮 → 挂断
-
-https://github.com/user-attachments/assets/67c8b42a-919f-4d24-955d-a84316d45b52
-
-<sub>演示朗读与用户一侧发言使用合成音源，通过手机麦克风实际录入，不公开个人声音。复刻、试听、语音识别与 AI 回复均为真实服务结果；录入音源按实际播放时刻同步，AI 声音采集于实际播放过程。详见<a href="docs/media/README.md">素材说明</a>。</sub>
+<sub>真实 APP 演示，用户发言使用合成音源。<a href="docs/media/README.md">素材说明</a></sub>
 
 ## 动态预览
 
