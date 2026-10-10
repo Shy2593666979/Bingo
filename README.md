@@ -56,8 +56,8 @@
 
 <table>
   <tr>
-    <td align="center" width="50%"><img src="docs/media/girlfriend-chat.gif" height="600" alt="当前 APP 中甜甜的分气泡日常回复" /><br /><sub><b>自然地聊</b> · 回复逐个气泡展开</sub></td>
-    <td align="center" width="50%"><img src="docs/media/companion-moments.gif" height="600" alt="展开八项聊天菜单并进入一起专注" /><br /><sub><b>一起做点小事</b> · 菜单与一起专注</sub></td>
+    <td align="center" width="50%"><img src="docs/media/girlfriend-chat.gif" width="280" alt="当前 APP 中甜甜的分气泡日常回复" /><br /><sub><b>自然地聊</b> · 回复逐个气泡展开</sub></td>
+    <td align="center" width="50%"><img src="docs/media/companion-moments.gif" width="280" alt="展开八项聊天菜单并进入一起专注" /><br /><sub><b>一起做点小事</b> · 菜单与一起专注</sub></td>
   </tr>
 </table>
 
