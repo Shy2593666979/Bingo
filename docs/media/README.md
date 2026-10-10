@@ -11,7 +11,7 @@
 - `quick-menu.png`、`focus.png`：八项菜单与一起专注。
 - `girlfriend-call.png`：已接通的语音通话界面。
 - `girlfriend-chat.gif`：当前 APP 的分气泡回复。
-- `companion-moments.gif`：展开菜单并进入一起专注。
+- `companion-moments-preview.gif`：展开菜单并进入一起专注，与聊天动图采用相同画布比例。
 
 ## 保留的 GIF
 
