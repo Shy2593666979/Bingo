@@ -30,7 +30,8 @@ void main() {
     expect(find.text('欢迎回来'), findsOneWidget);
     expect(find.text('请输入手机号'), findsOneWidget);
     expect(find.text('忘记密码？'), findsOneWidget);
-    expect(find.text('验证码登录'), findsOneWidget);
+    expect(find.text('验证码登录'), findsNothing);
+    expect(find.text('或使用其他方式登录'), findsNothing);
     expect(find.text('注册'), findsOneWidget);
 
     await tester.ensureVisible(find.text('《用户协议》'));
@@ -60,10 +61,11 @@ void main() {
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('验证码登录'));
-    await tester.tap(find.text('验证码登录'));
-    await tester.pump();
-    expect(find.text('敬请期待'), findsOneWidget);
-    await tester.pump(const Duration(seconds: 2));
+    await tester.ensureVisible(find.text('注册'));
+    await tester.tap(find.text('注册'));
+    await tester.pumpAndSettle();
+    expect(find.text('注册并继续'), findsOneWidget);
+    expect(find.text('验证码登录'), findsNothing);
+    expect(find.text('或使用其他方式登录'), findsNothing);
   });
 }
