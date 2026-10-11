@@ -10,6 +10,21 @@ BUILTIN_NICKNAMES = {
     "parent": "文清",
 }
 
+BUILTIN_PERSONALITIES = {
+    "girlfriend": "温柔体贴",
+    "boyfriend": "幽默风趣",
+    "teacher": "理性严谨",
+    "child": "积极活泼",
+    "parent": "沉稳克制",
+    "colleague": "幽默风趣",
+}
+
+
+def default_personality(role, fallback: str | None) -> str | None:
+    if role.owner_id is None:
+        return BUILTIN_PERSONALITIES.get(role.code, fallback)
+    return fallback
+
 
 @dataclass(frozen=True, slots=True)
 class RoleDefinition:

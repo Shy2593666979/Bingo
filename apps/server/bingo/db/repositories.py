@@ -20,6 +20,7 @@ from bingo.db.models import (
     User,
 )
 from bingo.db.time import beijing_now
+from bingo.roles.catalog import default_personality
 from bingo.services.exceptions import ServiceError
 from bingo.services.security import hash_token, new_access_token
 
@@ -81,7 +82,9 @@ class ConversationRepository:
                 "role_id": role.id,
                 "role": role.visible_name,
                 "assistant_name": role.nickname,
-                "personality": preference.personality if preference else user.personality,
+                "personality": preference.personality
+                if preference
+                else default_personality(role, user.personality),
             }
         )
 

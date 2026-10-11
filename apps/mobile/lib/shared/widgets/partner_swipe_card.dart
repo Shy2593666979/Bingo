@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bingo/shared/widgets/partner_action_icon.dart';
 
 class PartnerSwipeCard extends StatefulWidget {
   const PartnerSwipeCard(
@@ -36,8 +37,8 @@ class _PartnerSwipeCardState extends State<PartnerSwipeCard> {
     });
   }
 
-  Widget _action(String label, IconData icon, Color background,
-          Color foreground, VoidCallback callback) =>
+  Widget _action(String label, Widget icon, Color background, Color foreground,
+          VoidCallback callback) =>
       SizedBox(
           width: 72,
           child: Material(
@@ -52,7 +53,7 @@ class _PartnerSwipeCardState extends State<PartnerSwipeCard> {
                   child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(icon, size: 21, color: foreground),
+                        icon,
                         const SizedBox(height: 8),
                         Text(label,
                             style: TextStyle(color: foreground, fontSize: 12)),
@@ -87,14 +88,18 @@ class _PartnerSwipeCardState extends State<PartnerSwipeCard> {
                               children: [
                                 _action(
                                     '编辑',
-                                    Icons.edit_outlined,
+                                    const PartnerActionIcon(
+                                        symbol: PartnerActionSymbol.edit,
+                                        size: 21,
+                                        color: Color(0xFF438064)),
                                     const Color(0xFFD6ECDF),
                                     const Color(0xFF438064),
                                     widget.onEdit),
                                 if (widget.onDelete != null)
                                   _action(
                                       '删除',
-                                      Icons.delete_outline_rounded,
+                                      const Icon(Icons.delete_outline_rounded,
+                                          size: 21, color: Color(0xFFC3676D)),
                                       const Color(0xFFF7DFE0),
                                       const Color(0xFFC3676D),
                                       widget.onDelete!),

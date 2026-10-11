@@ -58,6 +58,32 @@ def create_role(client, name="知心姐姐", **values):
     return api_payload(response)
 
 
+def test_builtin_default_personalities_apply_to_chat_context(client):
+    expected = {
+        "女朋友": "温柔体贴",
+        "男朋友": "幽默风趣",
+        "老师": "理性严谨",
+        "小朋友": "积极活泼",
+        "家长": "沉稳克制",
+        "同事": "幽默风趣",
+    }
+    roles = api_payload(client.get("/api/v1/roles"))
+    user_id = api_payload(client.get("/api/v1/me"))["id"]
+    for role in roles:
+        assert role["personality"] == expected[role["role_type"]]
+        conversation = api_payload(client.post(f"/api/v1/roles/{role['id']}/conversation"))
+
+        async def context_personality(conversation_id=conversation["id"]):
+            async with client.app.state.database.session_factory() as session:
+                user = await session.get(User, user_id)
+                context = await ConversationRepository(session, user.id).context_user(
+                    user, conversation_id
+                )
+                return context.personality
+
+        assert client.portal.call(context_personality) == expected[role["role_type"]]
+
+
 def test_builtin_nicknames_preserve_role_identity(client):
     expected = {
         "女朋友": "甜甜",
@@ -173,9 +199,9 @@ def test_builtin_personalities_are_private_and_used_in_chat_context(client):
         )
     )
     client.headers["Authorization"] = f"Bearer {other['access_token']}"
-    assert all(
-        role["personality"] != "幽默风趣" for role in api_payload(client.get("/api/v1/roles"))
-    )
+    assert {
+        role["id"]: role["personality"] for role in api_payload(client.get("/api/v1/roles"))
+    } == {role["id"]: role["personality"] for role in roles}
 
 
 def test_custom_personality_is_independent_of_other_partners(client):

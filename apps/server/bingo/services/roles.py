@@ -21,6 +21,7 @@ from bingo.db.models import (
 from bingo.db.repositories import ConversationRepository, RoleRepository
 from bingo.db.time import beijing_now
 from bingo.roles import role_id
+from bingo.roles.catalog import default_personality
 from bingo.schemas.chat import ConversationResponse
 from bingo.schemas.roles import ClonePayload, RolePayload
 from bingo.services.context import BinaryAsset, ServiceContext
@@ -107,7 +108,9 @@ async def save_personality(session, user, role, personality):
 
 async def response_for_user(session, user, role):
     preference = await session.get(RolePreference, (user.id, role.id))
-    return role_response(role, preference.personality if preference else user.personality)
+    return role_response(
+        role, preference.personality if preference else default_personality(role, user.personality)
+    )
 
 
 async def list_roles(user: User, session: AsyncSession) -> list[dict]:

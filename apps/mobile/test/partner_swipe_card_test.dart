@@ -1,5 +1,6 @@
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/shared/widgets/partner_swipe_card.dart';
+import 'package:bingo/shared/widgets/partner_action_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -47,6 +48,11 @@ void main() {
       await tester.drag(find.text('伙伴'), const Offset(-160, 0));
       await tester.pumpAndSettle();
       expect(find.text('编辑'), findsOneWidget);
+      expect(
+          tester
+              .widget<PartnerActionIcon>(find.byType(PartnerActionIcon))
+              .symbol,
+          PartnerActionSymbol.edit);
       expect(find.text('删除'), builtin ? findsNothing : findsOneWidget);
       await tester.tap(find.text('编辑'));
       await tester.pumpAndSettle();

@@ -39,8 +39,6 @@ class _AuthPageState extends State<AuthPage> {
     super.dispose();
   }
 
-  void _comingSoon() => showCenterToast(context, '敬请期待');
-
   Future<void> _submit() async {
     if (_submitting) return;
     if (!_agreed) {
@@ -272,56 +270,6 @@ class _AuthPageState extends State<AuthPage> {
                                   ),
                           ),
                         ),
-                        if (isLogin) ...[
-                          const SizedBox(height: 26),
-                          const Row(
-                            children: [
-                              Expanded(child: Divider()),
-                              Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 14),
-                                child: Text(
-                                  '或使用其他方式登录',
-                                  style: TextStyle(color: Color(0xFF788390)),
-                                ),
-                              ),
-                              Expanded(child: Divider()),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Center(
-                            child: InkWell(
-                              onTap: _comingSoon,
-                              borderRadius: BorderRadius.circular(18),
-                              child: Padding(
-                                padding: const EdgeInsets.all(5),
-                                child: Column(
-                                  children: [
-                                    Container(
-                                      width: 54,
-                                      height: 54,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                            color: BingoPalette.line),
-                                      ),
-                                      child: const Icon(
-                                        Icons.sms_outlined,
-                                        color: Color(0xFF687783),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    const Text(
-                                      '验证码登录',
-                                      style:
-                                          TextStyle(color: Color(0xFF788390)),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
                         const SizedBox(height: 28),
                         _agreement(),
                       ],
