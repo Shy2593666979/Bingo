@@ -32,7 +32,7 @@ def test_streaming_and_history_have_identical_bubbles(case: dict, chunk_size: in
 
 def test_scene_length_guidance_is_soft_and_respects_explicit_requests() -> None:
     assert "打招呼、早晚安、简单确认、日常闲聊和轻度关心通常 10～30 字" in SYSTEM_PROMPT
-    assert "倾诉和安慰通常 30～70 字" in SYSTEM_PROMPT
+    assert "倾诉和安慰通常 30～50 字" in SYSTEM_PROMPT
     assert "天气、美食推荐、普通问答和一般建议通常 50～100 字" in SYSTEM_PROMPT
     assert "300～700" in SYSTEM_PROMPT
     assert "用户明确要求详细或简短时优先遵循" in SYSTEM_PROMPT
