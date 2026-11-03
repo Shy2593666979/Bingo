@@ -8,6 +8,8 @@ import 'package:bingo/features/app_shell.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/chat/presentation/chat_controller.dart';
+import 'package:bingo/features/chat/presentation/chat_page.dart';
+import 'package:bingo/features/roles/presentation/role_detail_page.dart';
 import 'package:bingo/features/community/data/community_gateway.dart';
 import 'package:bingo/features/community/presentation/community_page.dart';
 import 'package:bingo/features/community/presentation/community_detail_page.dart';
@@ -69,6 +71,17 @@ class _Gateway extends HttpApiGateway {
   Future<List<ChatGroup>> listGroups() async => [];
   @override
   Future<List<RoleOption>> listRoles() async => [_role];
+  @override
+  Future<UserProfile> getProfile() async => _profile;
+  @override
+  Future<ConversationSummary> openRoleConversation(String roleId) async =>
+      ConversationSummary(
+          id: 'private-chat',
+          title: '星野',
+          roleId: roleId,
+          createdAt: DateTime.utc(2026, 11, 3));
+  @override
+  Future<void> markConversationRead(String id) async {}
   @override
   Future<CommunityPageResult> listCommunity(
       {String query = '',
@@ -154,6 +167,7 @@ void main() {
                   onPartners: () {}))));
       await tester.pumpAndSettle();
       expect(find.text('我的搭子'), findsOneWidget);
+      expect(find.text('属于你的陪伴空间'), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
       gateway.close();
@@ -225,6 +239,7 @@ void main() {
     expect(find.text('加入群聊'), findsNothing);
     expect(find.byTooltip('分享搭子'), findsOneWidget);
     expect(find.text('我的分享'), findsOneWidget);
+    expect(find.text('Bingo 搭子'), findsNothing);
     expect(find.text('分享我的搭子 · 星野'), findsWidgets);
     expect(find.text('小林'), findsWidgets);
     expect(find.text('+ 添加搭子'), findsWidgets);
@@ -288,6 +303,43 @@ void main() {
         2);
     expect(find.byType(CommunityPage), findsOneWidget);
     expect(tester.takeException(), isNull);
+    await close(tester);
+    controller.dispose();
+    gateway.close();
+  });
+
+  testWidgets(
+      'chat avatar opens own detail and its chat action returns to the same page',
+      (tester) async {
+    await size(tester);
+    final gateway = _Gateway();
+    final controller = ChatController(gateway: _ChatGateway());
+    await tester.pumpWidget(MaterialApp(
+        theme: buildBingoTheme(),
+        home: AppShell(
+            chatController: controller,
+            gateway: gateway,
+            profile: _profile,
+            callCaptionsEnabled: true,
+            onCallCaptionsChanged: (_) async {},
+            onProfileSaved: (_) {},
+            onLogout: () {})));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('星野').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('进入聊天'));
+    await tester.pumpAndSettle();
+    final chat = tester.state(find.byType(ChatPage));
+    await tester.tap(find.byKey(const ValueKey('chat-header-avatar')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<RoleDetailPage>(find.byType(RoleDetailPage)).role.id,
+        _role.id);
+    await tester.tap(find.text('进入聊天'));
+    await tester.pumpAndSettle();
+    expect(find.byType(RoleDetailPage), findsNothing);
+    expect(tester.state(find.byType(ChatPage)), same(chat));
+    await tester.tap(find.byTooltip('返回角色'));
+    await tester.pumpAndSettle();
     await close(tester);
     controller.dispose();
     gateway.close();

@@ -28,25 +28,17 @@ class ReleasePlainHeader extends StatelessWidget {
 }
 
 class ReleasePageHeader extends StatelessWidget {
-  const ReleasePageHeader(this.title,
-      {this.eyebrow = 'Bingo 搭子', this.actions = const [], super.key});
-  final String title, eyebrow;
+  const ReleasePageHeader(this.title, {this.actions = const [], super.key});
+  final String title;
   final List<Widget> actions;
   @override
   Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.fromLTRB(2, 17, 0, 16),
       child: Row(children: [
         Expanded(
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(eyebrow,
-              style: const TextStyle(
-                  fontSize: 11, height: 1.5, color: BingoPalette.muted)),
-          const SizedBox(height: 3),
-          Text(title,
-              style: const TextStyle(
-                  fontSize: 24, height: 1.3, fontWeight: FontWeight.w600)),
-        ])),
+            child: Text(title,
+                style: const TextStyle(
+                    fontSize: 24, height: 1.3, fontWeight: FontWeight.w600))),
         for (final action in actions)
           SizedBox(width: 38, height: 40, child: action),
       ]));

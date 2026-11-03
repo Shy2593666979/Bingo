@@ -1,12 +1,19 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:bingo/shared/widgets/assistant_avatar.dart';
+import 'package:bingo/shared/widgets/avatar_frame.dart';
 
 /// A: a temporary row after the latest message, with text beside the AI avatar.
 class ChatTypingHint extends StatefulWidget {
-  const ChatTypingHint({required this.name, required this.role, super.key});
+  const ChatTypingHint(
+      {required this.name,
+      required this.role,
+      this.onAvatarTap,
+      this.onAvatarLongPress,
+      super.key});
   final String name;
   final String? role;
+  final VoidCallback? onAvatarTap, onAvatarLongPress;
   @override
   State<ChatTypingHint> createState() => _ChatTypingHintState();
 }
@@ -41,7 +48,11 @@ class _ChatTypingHintState extends State<ChatTypingHint>
                   key: const ValueKey('chat-typing-hint'),
                   padding: const EdgeInsets.only(top: 5, bottom: 4),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    AssistantAvatar(role: widget.role, size: 36),
+                    ChatPortrait(
+                        size: 36,
+                        onTap: widget.onAvatarTap,
+                        onLongPress: widget.onAvatarLongPress,
+                        child: AssistantAvatar(role: widget.role, size: 36)),
                     const SizedBox(width: 6),
                     Flexible(
                         child: Text('正在输入',

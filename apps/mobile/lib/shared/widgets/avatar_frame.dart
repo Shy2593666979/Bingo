@@ -35,10 +35,23 @@ String squareAvatarAsset(String asset) {
 }
 
 class ChatPortrait extends StatelessWidget {
-  const ChatPortrait({required this.size, required this.child, super.key});
+  const ChatPortrait(
+      {required this.size,
+      required this.child,
+      this.onTap,
+      this.onLongPress,
+      super.key});
   final double size;
   final Widget child;
+  final VoidCallback? onTap, onLongPress;
   @override
-  Widget build(BuildContext context) =>
-      SizedBox.square(dimension: size, child: child);
+  Widget build(BuildContext context) {
+    final portrait = SizedBox.square(dimension: size, child: child);
+    if (onTap == null && onLongPress == null) return portrait;
+    return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        onLongPress: onLongPress,
+        child: portrait);
+  }
 }

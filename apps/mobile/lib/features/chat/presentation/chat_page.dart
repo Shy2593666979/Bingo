@@ -41,6 +41,7 @@ class ChatPage extends StatefulWidget {
     required this.onOpenSettings,
     this.onBack,
     this.infoGateway,
+    this.onOpenRoleDetails,
     super.key,
   });
 
@@ -63,6 +64,7 @@ class ChatPage extends StatefulWidget {
   final VoidCallback onOpenSettings;
   final VoidCallback? onBack;
   final ChatInfoGateway? infoGateway;
+  final VoidCallback? onOpenRoleDetails;
 
   @override
   State<ChatPage> createState() => _ChatPageState();
@@ -70,6 +72,7 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   final _scrollController = ScrollController();
+  final _inputKey = GlobalKey<MessageInputState>();
   int _lastTimelineLength = 0;
   int _lastRecommendationsLength = 0;
   String? _lastMessageContent;
@@ -169,6 +172,9 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     widget.onStartCall();
   }
 
+  void _insertPartnerName() =>
+      _inputKey.currentState?.insertText('${widget.assistantName} ');
+
   void _onChanged() {
     if (!mounted) return;
     final controller = widget.controller;
@@ -242,6 +248,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                 child: Column(
                   children: [
                     _ChatHeader(
+                      onAvatarTap: widget.onOpenRoleDetails,
+                      onAvatarLongPress: _insertPartnerName,
                       assistantName: widget.assistantName,
                       onBack: widget.onBack,
                       assistantRole: widget.assistantRole,
@@ -282,6 +290,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                             child: controller.timelineItems.isEmpty &&
                                     !controller.isWaitingForReply
                                 ? _EmptyChat(
+                                    onAvatarTap: widget.onOpenRoleDetails,
+                                    onAvatarLongPress: _insertPartnerName,
                                     openingLine: widget.openingLine,
                                     assistantRole: widget.assistantRole)
                                 : ListView.builder(
@@ -294,6 +304,10 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                       if (index ==
                                           controller.timelineItems.length) {
                                         return ChatTypingHint(
+                                            onAvatarTap:
+                                                widget.onOpenRoleDetails,
+                                            onAvatarLongPress:
+                                                _insertPartnerName,
                                             name: widget.assistantName,
                                             role: widget.assistantRole);
                                       }
@@ -314,6 +328,10 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                             if (message.type ==
                                                 ChatMessageType.call)
                                               CallRecordTile(
+                                                onAvatarTap:
+                                                    widget.onOpenRoleDetails,
+                                                onAvatarLongPress:
+                                                    _insertPartnerName,
                                                 message: message,
                                                 assistantRole:
                                                     widget.assistantRole,
@@ -336,10 +354,18 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                                       children: [
                                                         if (message.role !=
                                                             ChatRole.user) ...[
-                                                          AssistantAvatar(
-                                                              role: widget
-                                                                  .assistantRole,
-                                                              size: 34),
+                                                          ChatPortrait(
+                                                              key: ValueKey(
+                                                                  'chat-message-avatar-${message.id}'),
+                                                              size: 34,
+                                                              onTap: widget
+                                                                  .onOpenRoleDetails,
+                                                              onLongPress:
+                                                                  _insertPartnerName,
+                                                              child: AssistantAvatar(
+                                                                  role: widget
+                                                                      .assistantRole,
+                                                                  size: 34)),
                                                           const SizedBox(
                                                               width: 9),
                                                         ],
@@ -364,6 +390,10 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                                       ]))
                                             else
                                               MessageBubble(
+                                                onAvatarTap:
+                                                    widget.onOpenRoleDetails,
+                                                onAvatarLongPress:
+                                                    _insertPartnerName,
                                                 message: message,
                                                 showAvatar:
                                                     !_continuesAssistant(
@@ -382,6 +412,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                       }
                                       if (item case final DeviceAction action) {
                                         return DeviceActionCard(
+                                          onAvatarTap: widget.onOpenRoleDetails,
+                                          onAvatarLongPress: _insertPartnerName,
                                           key: ValueKey(
                                               'device-action-${action.id}'),
                                           action: action,
@@ -407,6 +439,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                   ? controller.sendRecommendation
                                   : controller.send)),
                     MessageInput(
+                      key: _inputKey,
                       initialVoiceMode: false,
                       referenceStyle: true,
                       hintText: '和${widget.assistantName}说点什么…',
@@ -503,12 +536,15 @@ class _ChatHeader extends StatelessWidget {
       {required this.assistantName,
       required this.assistantRole,
       this.onBack,
+      this.onAvatarTap,
+      this.onAvatarLongPress,
       required this.onInfo,
       required this.onSearch});
   final String assistantName;
   final String? assistantRole;
   final VoidCallback? onBack;
   final VoidCallback onInfo, onSearch;
+  final VoidCallback? onAvatarTap, onAvatarLongPress;
 
   @override
   Widget build(BuildContext context) => ChatGlass(
@@ -522,6 +558,9 @@ class _ChatHeader extends StatelessWidget {
                 icon: const Icon(Icons.chevron_left_rounded,
                     size: 25, color: ChatScene.ink)),
             ChatPortrait(
+                key: const ValueKey('chat-header-avatar'),
+                onTap: onAvatarTap,
+                onLongPress: onAvatarLongPress,
                 size: 36,
                 child: AssistantAvatar(role: assistantRole, size: 36)),
             const SizedBox(width: 9),
@@ -607,7 +646,12 @@ class _RecommendationRows extends StatelessWidget {
 }
 
 class _EmptyChat extends StatelessWidget {
-  const _EmptyChat({this.assistantRole, this.openingLine = ''});
+  const _EmptyChat(
+      {this.assistantRole,
+      this.openingLine = '',
+      this.onAvatarTap,
+      this.onAvatarLongPress});
+  final VoidCallback? onAvatarTap, onAvatarLongPress;
   final String openingLine;
 
   final String? assistantRole;
@@ -625,7 +669,11 @@ class _EmptyChat extends StatelessWidget {
               key: const ValueKey('empty-chat-avatar'),
               dimension: 104,
               child: Center(
-                child: AssistantAvatar(role: assistantRole, size: 88),
+                child: ChatPortrait(
+                    size: 88,
+                    onTap: onAvatarTap,
+                    onLongPress: onAvatarLongPress,
+                    child: AssistantAvatar(role: assistantRole, size: 88)),
               ),
             ),
             const SizedBox(height: 22),

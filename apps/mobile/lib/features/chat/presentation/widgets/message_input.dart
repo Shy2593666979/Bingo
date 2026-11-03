@@ -47,10 +47,10 @@ class MessageInput extends StatefulWidget {
   final bool referenceStyle, initialVoiceMode;
 
   @override
-  State<MessageInput> createState() => _MessageInputState();
+  State<MessageInput> createState() => MessageInputState();
 }
 
-class _MessageInputState extends State<MessageInput> {
+class MessageInputState extends State<MessageInput> {
   static const _deviceChannel = MethodChannel('bingo/device_tools');
   static const _audioChannel = EventChannel('bingo/audio_stream');
   static const _bytesPerSecond = 16000 * 2;
@@ -93,6 +93,29 @@ class _MessageInputState extends State<MessageInput> {
       if (_controller.text.trim().isNotEmpty) {
         _showMore = false;
       }
+    });
+  }
+
+  /// Insert without sending or discarding the existing draft.
+  void insertText(String text) {
+    final selection = _controller.selection;
+    final start = selection.isValid ? selection.start : _controller.text.length;
+    final end = selection.isValid ? selection.end : _controller.text.length;
+    _controller.value = TextEditingValue(
+        text: _controller.text.replaceRange(start, end, text),
+        selection: TextSelection.collapsed(offset: start + text.length));
+    focusTextInput();
+  }
+
+  /// Avatar mentions can switch back from voice, emoji or the expanded menu.
+  void focusTextInput() {
+    setState(() {
+      _voiceMode = false;
+      _showMore = false;
+      _showStickers = false;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusNode.requestFocus();
     });
   }
 

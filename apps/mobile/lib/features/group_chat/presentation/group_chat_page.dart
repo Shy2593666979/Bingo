@@ -35,6 +35,7 @@ class GroupChatPage extends StatefulWidget {
       required this.speech,
       this.userAvatarData,
       this.appearanceStore,
+      this.onOpenRoleDetails,
       super.key});
   final String groupId;
   final GroupGateway gateway;
@@ -42,6 +43,7 @@ class GroupChatPage extends StatefulWidget {
   final SpeechGateway speech;
   final String? userAvatarData;
   final AppearanceStore? appearanceStore;
+  final ValueChanged<String>? onOpenRoleDetails;
   @override
   State<GroupChatPage> createState() => _GroupChatPageState();
 }
@@ -51,6 +53,7 @@ class _GroupChatPageState extends State<GroupChatPage>
   late final _chat = GroupController(widget.gateway, widget.groupId);
   final _scroll = ScrollController();
   final _input = MentionEditingController();
+  final _inputKey = GlobalKey<MessageInputState>();
   final _messageKeys = <String, GlobalKey>{};
   GroupChatMessage? _replyDraft;
   String? _spotlight;
@@ -198,6 +201,16 @@ class _GroupChatPageState extends State<GroupChatPage>
     _input.insertMention(
         start, end, person?.id ?? 'all', person?.name ?? '全部搭子',
         all: person == null);
+  }
+
+  void _mentionSender(GroupChatMessage message) {
+    final member = _chat.group?.members
+        .where((person) => person.id == message.roleId && person.active)
+        .firstOrNull;
+    if (member == null || _chat.group?.mentionsEnabled != true) return;
+    final offset = _input.text.length;
+    _input.insertMention(offset, offset, member.id, member.name);
+    _inputKey.currentState?.focusTextInput();
   }
 
   void _send(String text) {
@@ -794,6 +807,7 @@ class _GroupChatPageState extends State<GroupChatPage>
                               onCamera: () => _image('takePhoto'),
                               onLocation: _location,
                               textController: _input,
+                              key: _inputKey,
                               groupMenu: true,
                               hintText: '发消息到群聊…',
                               referenceStyle: true,
@@ -843,6 +857,12 @@ class _GroupChatPageState extends State<GroupChatPage>
           .clamp(0, colors.length - 1),
     };
     final avatar = ChatPortrait(
+        key: ValueKey('group-message-avatar-${message.id}'),
+        onTap:
+            !user && message.roleId != null && widget.onOpenRoleDetails != null
+                ? () => widget.onOpenRoleDetails!(message.roleId!)
+                : null,
+        onLongPress: !user ? () => _mentionSender(message) : null,
         size: 36,
         child: user
             ? UserAvatar(

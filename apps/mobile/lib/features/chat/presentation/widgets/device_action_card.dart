@@ -1,6 +1,7 @@
 import 'package:bingo/core/appearance/chat_appearance.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/shared/widgets/assistant_avatar.dart';
+import 'package:bingo/shared/widgets/avatar_frame.dart';
 import 'package:flutter/material.dart';
 
 class DeviceActionCard extends StatelessWidget {
@@ -9,6 +10,8 @@ class DeviceActionCard extends StatelessWidget {
     required this.onApprove,
     required this.onReject,
     this.assistantRole,
+    this.onAvatarTap,
+    this.onAvatarLongPress,
     super.key,
   });
 
@@ -16,6 +19,7 @@ class DeviceActionCard extends StatelessWidget {
   final VoidCallback onApprove;
   final VoidCallback onReject;
   final String? assistantRole;
+  final VoidCallback? onAvatarTap, onAvatarLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -61,8 +65,10 @@ class DeviceActionCard extends StatelessWidget {
     final buttonShape =
         RoundedRectangleBorder(borderRadius: BorderRadius.circular(11));
     final confirmStyle = FilledButton.styleFrom(
-        backgroundColor: skin.id == 'mint' ? const Color(0xFFBFE5D4) : skin.user,
-        foregroundColor: skin.id == 'mint' ? const Color(0xFF365E49) : skin.accent,
+        backgroundColor:
+            skin.id == 'mint' ? const Color(0xFFBFE5D4) : skin.user,
+        foregroundColor:
+            skin.id == 'mint' ? const Color(0xFF365E49) : skin.accent,
         minimumSize: const Size(0, 38),
         padding: const EdgeInsets.symmetric(horizontal: 12),
         textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
@@ -74,7 +80,11 @@ class DeviceActionCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          AssistantAvatar(role: assistantRole, size: 34),
+          ChatPortrait(
+              size: 34,
+              onTap: onAvatarTap,
+              onLongPress: onAvatarLongPress,
+              child: AssistantAvatar(role: assistantRole, size: 34)),
           const SizedBox(width: 9),
           Flexible(
             child: Container(

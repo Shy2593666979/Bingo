@@ -19,6 +19,8 @@ class MessageBubble extends StatelessWidget {
     this.imageUrlBuilder,
     this.showAvatar = true,
     this.imageAccessToken,
+    this.onAvatarTap,
+    this.onAvatarLongPress,
     super.key,
   });
 
@@ -27,6 +29,7 @@ class MessageBubble extends StatelessWidget {
   final String? assistantRole;
   final String Function(String imageId)? imageUrlBuilder;
   final String? imageAccessToken;
+  final VoidCallback? onAvatarTap, onAvatarLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +46,9 @@ class MessageBubble extends StatelessWidget {
                   children: [
                     if (!isUser) ...[
                       ChatPortrait(
+                          key: ValueKey('chat-message-avatar-${message.id}'),
+                          onTap: onAvatarTap,
+                          onLongPress: onAvatarLongPress,
                           size: 36,
                           child: AssistantAvatar(
                               role: message.assistantRole ?? assistantRole,
@@ -112,6 +118,9 @@ class MessageBubble extends StatelessWidget {
                     padding: const EdgeInsets.only(right: 6, top: 0),
                     child: showAvatar
                         ? ChatPortrait(
+                            key: ValueKey('chat-message-avatar-${message.id}'),
+                            onTap: onAvatarTap,
+                            onLongPress: onAvatarLongPress,
                             size: 36,
                             child: AssistantAvatar(
                                 role: message.assistantRole ?? assistantRole,
@@ -130,11 +139,14 @@ class CallRecordTile extends StatelessWidget {
   const CallRecordTile({
     required this.message,
     this.assistantRole,
+    this.onAvatarTap,
+    this.onAvatarLongPress,
     super.key,
   });
 
   final ChatMessage message;
   final String? assistantRole;
+  final VoidCallback? onAvatarTap, onAvatarLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -206,6 +218,9 @@ class CallRecordTile extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(right: 6, bottom: 0),
                     child: ChatPortrait(
+                        key: ValueKey('chat-message-avatar-${message.id}'),
+                        onTap: onAvatarTap,
+                        onLongPress: onAvatarLongPress,
                         size: 36,
                         child: AssistantAvatar(
                             role: message.assistantRole ?? assistantRole,

@@ -250,6 +250,45 @@ void main() {
       .setMockMethodCallHandler(
           const MethodChannel('bingo/device_tools'), null));
   testWidgets(
+      'AI avatar taps use role ID and long presses insert selected mentions',
+      (tester) async {
+    final gateway = _RenamedGateway();
+    final opened = <String>[];
+    await tester.pumpWidget(MaterialApp(
+        home: GroupChatPage(
+            groupId: 'group-one',
+            gateway: gateway,
+            roles: gateway,
+            speech: gateway,
+            onOpenRoleDetails: opened.add)));
+    await tester.pumpAndSettle();
+    final first = find.byKey(const ValueKey('group-message-avatar-one'));
+    final second = find.byKey(const ValueKey('group-message-avatar-three'));
+    await tester.tap(first);
+    await tester.tap(second);
+    expect(opened, ['ai-one', 'ai-two']);
+    await tester.enterText(find.byType(TextField), '先聊聊 ');
+    await tester.longPress(first);
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        '先聊聊 @陈叔 ');
+    await tester.longPress(second);
+    await tester.pumpAndSettle();
+    final input = tester.widget<TextField>(find.byType(TextField));
+    expect(input.controller!.text, '先聊聊 @陈叔 @暖暖 ');
+    expect(input.focusNode!.hasFocus, isTrue);
+    expect(find.text('复制'), findsNothing);
+    expect(opened, ['ai-one', 'ai-two']);
+    expect(gateway.sentIds, isEmpty);
+    await tester.tap(find.byTooltip('发送消息'));
+    await tester.pumpAndSettle();
+    expect(gateway.sentV2!['mentions'], ['ai-one', 'ai-two']);
+    expect(gateway.sentV2!['text'], '先聊聊 @陈叔 @暖暖');
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets(
       'renamed companion updates sender and quote without rewriting history',
       (tester) async {
     final gateway = _RenamedGateway();

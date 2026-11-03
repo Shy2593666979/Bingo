@@ -139,7 +139,7 @@ class ReferenceMyPageState extends State<ReferenceMyPage> {
               child: ListView(
                   padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
                   children: [
-                    ReleasePageHeader('我的', eyebrow: '属于你的陪伴空间', actions: [
+                    ReleasePageHeader('我的', actions: [
                       IconButton(
                           tooltip: '设置',
                           onPressed: widget.onSettings,

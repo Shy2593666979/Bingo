@@ -104,6 +104,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   final _pages = PageController();
   int _unreadChats = 0;
   bool _showingIncoming = false;
+  bool _loadingRoleDetails = false;
   Timer? _welcomeTimer;
   bool _welcomePolling = false, _welcomeErrorShown = false;
   bool _welcomeForeground = true;
@@ -394,12 +395,22 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _openCopy(String id) async {
-    final roles = await gateway.listRoles();
+  Future<void> _openCopy(String id, {bool returnToChat = false}) async {
+    if (_loadingRoleDetails) return;
+    _loadingRoleDetails = true;
+    late final List<RoleOption> roles;
+    try {
+      roles = await gateway.listRoles();
+    } on Exception {
+      if (mounted) showCenterToast(context, '搭子详情暂时无法打开，请稍后重试');
+      return;
+    } finally {
+      _loadingRoleDetails = false;
+    }
     final role = roles.where((role) => role.id == id).firstOrNull;
     if (!mounted) return;
     if (role == null) {
-      showCenterToast(context, '这个副本已被删除');
+      showCenterToast(context, '搭子暂时不可用');
       return;
     }
     await Navigator.of(context).push<void>(MaterialPageRoute(
@@ -408,7 +419,9 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
             gateway: gateway,
             userAvatarData: profile.userAvatarData,
             userName: profile.username ?? '',
-            onChat: _openRole,
+            onChat: returnToChat
+                ? (_) async => Navigator.of(context).pop()
+                : _openRole,
             onShare: (role) => _publish(role),
             onEdit: () async {
               final current = await gateway.listRoles();
@@ -468,6 +481,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
             gateway: gateway,
             roles: gateway,
             speech: gateway,
+            onOpenRoleDetails: _openCopy,
             userAvatarData: profile.userAvatarData,
             appearanceStore: _appearance)));
     if (mounted) await _refreshPartners();
@@ -520,6 +534,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   Widget _chatPage(BuildContext context, RoleOption role) {
     return ChatPage(
       infoGateway: gateway,
+      onOpenRoleDetails: () => _openCopy(role.id, returnToChat: true),
       appearanceStore: _appearance,
       appearanceRoleId: role.id,
       controller: chatController,

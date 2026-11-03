@@ -112,6 +112,7 @@ void main() {
                 onCommunity: () => community++,
                 onUnreadChanged: (n) => unread = n))));
     await tester.pumpAndSettle();
+    expect(find.text('Bingo 搭子'), findsNothing);
     expect(find.text('全部'), findsOneWidget);
     expect(find.text('单聊'), findsOneWidget);
     expect(find.text('群聊'), findsOneWidget);

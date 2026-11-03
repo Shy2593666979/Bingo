@@ -121,7 +121,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('未能保存，请重试；已选搭子会保留'), findsOneWidget);
     expect(find.text('已添加 1 位', findRichText: true), findsOneWidget);
-    await tester.tap(find.text('✓ 已添加，再点取消').hitTestable());
+    await tester.tap(find.textContaining('已添加，再点取消').hitTestable());
     await tester.pumpAndSettle();
     expect(find.text('至少添加一位搭子'), findsOneWidget);
   });
