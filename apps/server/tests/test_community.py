@@ -7,13 +7,13 @@ from fastapi.testclient import TestClient
 from sqlmodel import select
 
 from bingo.config import Settings
+from bingo.db.models import Memory, Role
 from bingo.db.models.community import (
     CharacterFavorite,
     CharacterInstall,
     CharacterShare,
     CommunityReport,
 )
-from bingo.db.models import Memory, Role
 from bingo.main import create_app
 from tests.api_support import api_payload
 
@@ -23,38 +23,67 @@ AVATAR = base64.b64encode(b"\x89PNG\r\n\x1a\n" + b"\x00" * 8 + b"\x00\x00\x00\x0
 
 def test_search_finds_another_users_shares_by_author_name(community):
     client, ((alice, _), (bob, _), (charlie, _)) = community
-    assert client.put(PREFIX + '/me/user-profile', headers=alice,
-                      json={'username': '小林', 'gender': '女', 'birthday': '2000-01-01'}).status_code == 200
+    assert (
+        client.put(
+            PREFIX + "/me/user-profile",
+            headers=alice,
+            json={"username": "小林", "gender": "女", "birthday": "2000-01-01"},
+        ).status_code
+        == 200
+    )
     first = publish(client, alice, create_role(client, alice, "夜谈伙伴"), "author-search-0001")
     publish(client, charlie, create_role(client, charlie, "生活伙伴"), "author-search-0002")
-    result = api_payload(client.get(PREFIX + "/community/characters", headers=bob,
-                                    params={"q": "小林"}))
+    result = api_payload(
+        client.get(PREFIX + "/community/characters", headers=bob, params={"q": "小林"})
+    )
     assert [row["id"] for row in result["items"]] == [first["id"]]
 
 
 def test_share_title_tags_and_opening_survive_copy_without_changing_traits(community):
     client, ((alice, _), (bob, _), _) = community
-    role = api_payload(client.post(PREFIX + "/roles", headers=alice, json={
-        "name": "新的陪伴搭子", "prompt": "温柔倾听生活里的小事。",
-        "description": "你的日常陪伴", "opening_line": "很高兴遇见你，今天想聊点什么？",
-        "traits": ["善于倾听", "陪伴聊天"],
-    }))
+    role = api_payload(
+        client.post(
+            PREFIX + "/roles",
+            headers=alice,
+            json={
+                "name": "新的陪伴搭子",
+                "prompt": "温柔倾听生活里的小事。",
+                "description": "你的日常陪伴",
+                "opening_line": "很高兴遇见你，今天想聊点什么？",
+                "traits": ["善于倾听", "陪伴聊天"],
+            },
+        )
+    )
     assert role["description"] == "你的日常陪伴"
     assert role["opening_line"] == "很高兴遇见你，今天想聊点什么？"
-    payload = {"role_id": role["id"], "introduction": "把这份温柔分享给你",
-               "request_id": "h2-title-tags-request", "title": "  遇见温柔  ",
-               "share_tags": ["治愈陪伴", "日常聊天"]}
+    payload = {
+        "role_id": role["id"],
+        "introduction": "把这份温柔分享给你",
+        "request_id": "h2-title-tags-request",
+        "title": "  遇见温柔  ",
+        "share_tags": ["治愈陪伴", "日常聊天"],
+    }
     response = client.post(PREFIX + "/community/characters", headers=alice, json=payload)
     assert response.status_code == 201
     share = api_payload(response)
     assert share["title"] == "遇见温柔"
     assert share["share_tags"] == payload["share_tags"]
     assert share["traits"] == role["traits"]
-    assert api_payload(client.post(PREFIX + "/community/characters", headers=alice,
-                                   json=payload))["id"] == share["id"]
-    assert client.post(PREFIX + "/community/characters", headers=alice,
-                       json={**payload, "title": "换了标题"}).status_code == 409
-    copied = api_payload(client.post(PREFIX + f"/community/characters/{share['id']}/install", headers=bob))
+    assert (
+        api_payload(client.post(PREFIX + "/community/characters", headers=alice, json=payload))[
+            "id"
+        ]
+        == share["id"]
+    )
+    assert (
+        client.post(
+            PREFIX + "/community/characters", headers=alice, json={**payload, "title": "换了标题"}
+        ).status_code
+        == 409
+    )
+    copied = api_payload(
+        client.post(PREFIX + f"/community/characters/{share['id']}/install", headers=bob)
+    )
     assert copied["id"] != role["id"]
     assert copied["opening_line"] == role["opening_line"]
     assert copied["description"] == role["description"]
@@ -64,11 +93,20 @@ def test_share_title_tags_and_opening_survive_copy_without_changing_traits(commu
 def test_share_metadata_rejects_too_many_or_oversize_tags(community):
     client, ((alice, _), _, _) = community
     role = create_role(client, alice)
-    payload = {"role_id": role["id"], "introduction": "一份分享",
-               "request_id": "h2-invalid-tags-request"}
+    payload = {
+        "role_id": role["id"],
+        "introduction": "一份分享",
+        "request_id": "h2-invalid-tags-request",
+    }
     for tags in [["a", "b", "c", "d"], ["x" * 21], [" "]]:
-        assert client.post(PREFIX + "/community/characters", headers=alice,
-                           json={**payload, "share_tags": tags}).status_code == 422
+        assert (
+            client.post(
+                PREFIX + "/community/characters",
+                headers=alice,
+                json={**payload, "share_tags": tags},
+            ).status_code
+            == 422
+        )
 
 
 @pytest.fixture
@@ -122,8 +160,10 @@ def create_role(client, headers, name="星野"):
 
 def test_home_recommendations_filter_before_pagination_and_advance_after_install(community):
     client, ((alice, _), (bob, _), (charlie, _)) = community
-    shares = [publish(client, alice, create_role(client, alice, f"推荐{i}"), f"recommend-{i:04}")
-              for i in range(5)]
+    shares = [
+        publish(client, alice, create_role(client, alice, f"推荐{i}"), f"recommend-{i:04}")
+        for i in range(5)
+    ]
     publish(client, bob, create_role(client, bob), "recommend-own-001")
     path = PREFIX + "/community/characters"
     client.delete(path + f"/{shares[4]['id']}", headers=alice)

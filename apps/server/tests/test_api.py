@@ -174,7 +174,20 @@ def test_profile_options_use_personality_and_role(client: TestClient) -> None:
     assert response.status_code == 200
     assert "tones" not in api_payload(response)
     assert "温柔体贴" in api_payload(response)["personalities"]
-    assert api_payload(response)["roles"] == ["女朋友", "男朋友", "同事", "老师", "邻家大叔", "弟弟", "闺蜜", "好兄弟", "学姐", "学长", "树洞搭子", "运动搭子"]
+    assert api_payload(response)["roles"] == [
+        "女朋友",
+        "男朋友",
+        "同事",
+        "老师",
+        "邻家大叔",
+        "弟弟",
+        "闺蜜",
+        "好兄弟",
+        "学姐",
+        "学长",
+        "树洞搭子",
+        "运动搭子",
+    ]
 
 
 def test_registration_profile_and_persistent_login(client: TestClient) -> None:

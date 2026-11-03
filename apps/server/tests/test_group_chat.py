@@ -7,8 +7,8 @@ from sqlmodel import select
 
 from bingo.agent.model_client import ModelTextDelta
 from bingo.config import Settings
-from bingo.db.models.groups import ChatGroup, GroupMemory, GroupMessage, GroupRun
 from bingo.db.models import Memory
+from bingo.db.models.groups import ChatGroup, GroupMemory, GroupMessage, GroupRun
 from bingo.main import create_app
 from tests.api_support import api_payload
 
@@ -94,10 +94,17 @@ def test_creation_defaults_enable_all_features_and_respect_explicit_values(group
     group = create(client, alice, roles[:2])
     for field in ("allow_ai_to_ai", "mentions_enabled", "proactive_enabled"):
         assert group[field] is True
-    result = client.post(P + "/groups", headers=alice, json={
-        "name": "自主设置", "role_ids": [role["id"] for role in roles[:2]],
-        "allow_ai_to_ai": False, "mentions_enabled": False, "proactive_enabled": False,
-    })
+    result = client.post(
+        P + "/groups",
+        headers=alice,
+        json={
+            "name": "自主设置",
+            "role_ids": [role["id"] for role in roles[:2]],
+            "allow_ai_to_ai": False,
+            "mentions_enabled": False,
+            "proactive_enabled": False,
+        },
+    )
     assert result.status_code == 201, result.text
     for field in ("allow_ai_to_ai", "mentions_enabled", "proactive_enabled"):
         assert api_payload(result)[field] is False

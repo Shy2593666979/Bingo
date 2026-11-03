@@ -8,11 +8,14 @@ from bingo.db.session import Database
 from bingo.roles import BUILTIN_ROLES, role_id
 
 
-@pytest.mark.parametrize("code,old_label,new_label,old_nickname,new_nickname", [
-    ("confidant", "知己", "树洞搭子", "木木", "木木"),
-    ("parent", "家长", "邻家大叔", "文清", "陈叔"),
-    ("child", "小朋友", "弟弟", "星星", "星星"),
-])
+@pytest.mark.parametrize(
+    "code,old_label,new_label,old_nickname,new_nickname",
+    [
+        ("confidant", "知己", "树洞搭子", "木木", "木木"),
+        ("parent", "家长", "邻家大叔", "文清", "陈叔"),
+        ("child", "小朋友", "弟弟", "星星", "星星"),
+    ],
+)
 @pytest.mark.asyncio
 async def test_relationship_update_preserves_existing_companion_and_chat(
     tmp_path, code, old_label, new_label, old_nickname, new_nickname
@@ -23,8 +26,15 @@ async def test_relationship_update_preserves_existing_companion_and_chat(
     await database.initialize()
     builtin_id = role_id(code)
     async with database.session_factory() as session:
-        user = User(phone="19900118888", password_hash="existing", role_id=builtin_id, role=old_label, assistant_name=old_nickname,
-                    selective_companions=True, companion_selection_complete=True)
+        user = User(
+            phone="19900118888",
+            password_hash="existing",
+            role_id=builtin_id,
+            role=old_label,
+            assistant_name=old_nickname,
+            selective_companions=True,
+            companion_selection_complete=True,
+        )
         session.add(user)
         await session.flush()
         session.add(UserCompanion(user_id=user.id, role_id=builtin_id))
@@ -32,19 +42,42 @@ async def test_relationship_update_preserves_existing_companion_and_chat(
         conversation = Conversation(user_id=user.id, role_id=builtin_id)
         session.add(conversation)
         await session.flush()
-        message = Message(conversation_id=conversation.id, role="assistant", content="我在这里听。",
-                          role_id=builtin_id, assistant_role=old_label)
+        message = Message(
+            conversation_id=conversation.id,
+            role="assistant",
+            content="我在这里听。",
+            role_id=builtin_id,
+            assistant_role=old_label,
+        )
         session.add(message)
-        custom = Role(code="my-copy", name="my-copy", display_name="自己的搭子", role_type=old_label,
-                      owner_id=user.id, avatar="confidant.png", voice="my-original-voice")
+        custom = Role(
+            code="my-copy",
+            name="my-copy",
+            display_name="自己的搭子",
+            role_type=old_label,
+            owner_id=user.id,
+            avatar="confidant.png",
+            voice="my-original-voice",
+        )
         session.add(custom)
         old = await session.get(Role, builtin_id)
         old.name = old_label
-        legacy = User(phone="19900117777", password_hash="legacy", role=old_label, assistant_name=old_nickname, onboarding_complete=True)
+        legacy = User(
+            phone="19900117777",
+            password_hash="legacy",
+            role=old_label,
+            assistant_name=old_nickname,
+            onboarding_complete=True,
+        )
         session.add(legacy)
         await session.commit()
         legacy_id = legacy.id
-        user_id, conversation_id, message_id, custom_id = user.id, conversation.id, message.id, custom.id
+        user_id, conversation_id, message_id, custom_id = (
+            user.id,
+            conversation.id,
+            message.id,
+            custom.id,
+        )
     await database.dispose()
     await database.initialize()
     try:
@@ -57,10 +90,14 @@ async def test_relationship_update_preserves_existing_companion_and_chat(
             assert legacy.role_id == builtin_id and legacy.role == new_label
             assert legacy.assistant_name == new_nickname
             assert await session.get(UserCompanion, (user_id, builtin_id))
-            assert (await session.get(RolePreference, (user_id, builtin_id))).personality == "幽默风趣"
+            assert (
+                await session.get(RolePreference, (user_id, builtin_id))
+            ).personality == "幽默风趣"
             assert (await session.get(Conversation, conversation_id)).role_id == builtin_id
             assert (await session.get(Message, message_id)).content == "我在这里听。"
-            assert (await session.get(Role, builtin_id)).voice == next(role.voice for role in BUILTIN_ROLES if role.code == code)
+            assert (await session.get(Role, builtin_id)).voice == next(
+                role.voice for role in BUILTIN_ROLES if role.code == code
+            )
             assert (await RoleRepository(session).get_by_name(old_label)).id == builtin_id
             custom = await session.get(Role, custom_id)
             assert custom.role_type == old_label and custom.voice == "my-original-voice"
@@ -96,15 +133,22 @@ async def test_existing_role_table_is_upgraded_and_seeded_with_voices(tmp_path: 
             roles = await RoleRepository(session).list_enabled()
             voices = {role.code: role.voice for role in roles}
             assert len(roles) == len(BUILTIN_ROLES) == 12
-            added = {role.code: role for role in roles if role.code in {
-                "bestie", "bro", "senior_sister", "senior_brother", "confidant", "fitness"
-            }}
+            added = {
+                role.code: role
+                for role in roles
+                if role.code
+                in {"bestie", "bro", "senior_sister", "senior_brother", "confidant", "fitness"}
+            }
             assert len(added) == 6
             for code, role in added.items():
                 assert role.id == role_id(code)
                 assert role.opening_line
                 assert role.avatar == f"{code}.png"
-                assert role.voice not in {voices["girlfriend"], voices["boyfriend"], voices["parent"]}
+                assert role.voice not in {
+                    voices["girlfriend"],
+                    voices["boyfriend"],
+                    voices["parent"],
+                }
         assert voices["boyfriend"] == (
             "qwen-audio-3.1-realtime-plus-selfvoice2-d25f4b945c284a3385381230a2bb2052"
         )

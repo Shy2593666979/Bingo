@@ -1,4 +1,3 @@
-from bingo.roles import BUILTIN_ROLES
 import base64
 from datetime import timedelta
 
@@ -10,6 +9,7 @@ from bingo.db.models import User, VoiceJob
 from bingo.db.repositories import ConversationRepository
 from bingo.db.time import beijing_now
 from bingo.main import create_app
+from bingo.roles import BUILTIN_ROLES
 from bingo.services.voice_cloning import VoiceCloningService
 from tests.api_support import api_payload
 
@@ -67,8 +67,12 @@ def test_builtin_default_personalities_apply_to_chat_context(client):
         "弟弟": "积极活泼",
         "邻家大叔": "沉稳克制",
         "同事": "幽默风趣",
-        "闺蜜": "积极活泼", "好兄弟": "幽默风趣", "学姐": "理性严谨",
-        "学长": "沉稳克制", "树洞搭子": "温柔体贴", "运动搭子": "积极活泼",
+        "闺蜜": "积极活泼",
+        "好兄弟": "幽默风趣",
+        "学姐": "理性严谨",
+        "学长": "沉稳克制",
+        "树洞搭子": "温柔体贴",
+        "运动搭子": "积极活泼",
     }
     roles = api_payload(client.get("/api/v1/roles"))
     user_id = api_payload(client.get("/api/v1/me"))["id"]
@@ -95,8 +99,12 @@ def test_builtin_nicknames_preserve_role_identity(client):
         "老师": "小田老师",
         "弟弟": "星星",
         "邻家大叔": "陈叔",
-        "闺蜜": "小晴", "好兄弟": "阿野", "学姐": "知夏",
-        "学长": "景川", "树洞搭子": "木木", "运动搭子": "乐乐",
+        "闺蜜": "小晴",
+        "好兄弟": "阿野",
+        "学姐": "知夏",
+        "学长": "景川",
+        "树洞搭子": "木木",
+        "运动搭子": "乐乐",
     }
     roles = api_payload(client.get("/api/v1/roles"))
     assert [role["name"] for role in roles] == [
@@ -106,7 +114,12 @@ def test_builtin_nicknames_preserve_role_identity(client):
         "老师",
         "邻家大叔",
         "弟弟",
-        "闺蜜", "好兄弟", "学姐", "学长", "树洞搭子", "运动搭子",
+        "闺蜜",
+        "好兄弟",
+        "学姐",
+        "学长",
+        "树洞搭子",
+        "运动搭子",
     ]
     assert {role["name"]: role["nickname"] for role in roles} == expected
     for role in roles:
