@@ -1,0 +1,86 @@
+[
+  {
+    "code": "girlfriend",
+    "voice_fingerprint": "4025ea51f67766fbac6d110e86e6eaeba66581998ba7c586dde8215c35b7ceb6",
+    "text_sha256": "998990c49700522fbd6cb28e89201df3ed1161006049a13d68a2536146e18133",
+    "wav_sha256": "c6537be0af742e9917f18c3c81e49c13e8ea909d1773d58186fb913cedb1b934",
+    "seconds": 8.88
+  },
+  {
+    "code": "boyfriend",
+    "voice_fingerprint": "fc4804ad1e1526c952cacede91b677cf2eecd49d3168384e28b31620ca7bc095",
+    "text_sha256": "5600f11f4c48a0ff13987a3bde180a0f5aed9bef3cde697db52d90b17a618f65",
+    "wav_sha256": "39faeb97a4286d11fae0f0fd5c63c8a8933d4fb5b133dfe67f131804ad3b0e75",
+    "seconds": 10.0
+  },
+  {
+    "code": "colleague",
+    "voice_fingerprint": "13df743a249dcd23c8c47a0f077e89733e37e649b4f3b111944947ac68ce3a0f",
+    "text_sha256": "50801266a879e84a4442f4650109c439cd3d7f833db9d584e8c6003e8fa6141a",
+    "wav_sha256": "2b423da3b671f0e3c2befcff376718dfd6f42fb0ed95d22831035f878a9b95b3",
+    "seconds": 8.64
+  },
+  {
+    "code": "teacher",
+    "voice_fingerprint": "5a5d875f317bf9ff24383d5ae76ca5ad184d3e91c4474904ba9f5c8beaa23bc0",
+    "text_sha256": "4dd0b3abba3cf6ff62ae36dacfb2b2e2587870882eac5637ec9d0ca7115725d5",
+    "wav_sha256": "ac655447de0e4d051512712e02b56cc0d2cb3e05d58c9e481b9ebb9297a28002",
+    "seconds": 8.8
+  },
+  {
+    "code": "bestie",
+    "voice_fingerprint": "af7d8d5a91dcfbc94adfb537ba9eb7401ab7984cf0350ea9d1b33b0e7aaecbe3",
+    "text_sha256": "b990897001de0437cd7b23253fc94e1f9efb4aecc818de18c934352f36e0c529",
+    "wav_sha256": "3a2ff782261d5b11026a3abadbbf1822e16f91750ef8c04b41effffbc1eeeaaa",
+    "seconds": 7.52
+  },
+  {
+    "code": "bro",
+    "voice_fingerprint": "fc25808700f353bf982aba402b1fc77ba11dbbb859b2fb92350173eb67d8a474",
+    "text_sha256": "3ae10d8da635694051f8d85ee7b2b2944cbbb995a3380f45dcaf4833a45a7edf",
+    "wav_sha256": "bac9a937e3af3f39307d8026be505d202f11beba79302a6009269a32c4c10f72",
+    "seconds": 9.12
+  },
+  {
+    "code": "senior_sister",
+    "voice_fingerprint": "6cff37626a369ac8d90ef1c0939558d7162921db7cefea42820a0a389f191af4",
+    "text_sha256": "f15fe191501831784607a50d764f5e11071ec582fbaf4f3698f623840ff02760",
+    "wav_sha256": "dac58f8a8dd6a5ac386a08cb7e7782162585b2044045417b16681e76170172c4",
+    "seconds": 8.0
+  },
+  {
+    "code": "senior_brother",
+    "voice_fingerprint": "b28543f751244b1581f632ba67474934fbe33a388d601114abe0439faea232b1",
+    "text_sha256": "c0e7cd5fb60d446660a8e09edbe5302497b7b0bdcb209b51465fbd8851d77cd5",
+    "wav_sha256": "24724af792eb481ca56cb84d45db8951f2273257fe03171cd2f5a2c4c8364220",
+    "seconds": 6.64
+  },
+  {
+    "code": "confidant",
+    "voice_fingerprint": "61f7d4e463a7a0d45d379939942ea986f8391ec0ef9840a5fc9a8f9479a6d61f",
+    "text_sha256": "63adf4c6ebd4ffdaa68fa9d18d2ffc237edaf52dcb7312e5ca587b60104184c6",
+    "wav_sha256": "03afe770e9bc8d6e35f1e230930e595f34bd864529f229da3a9e28041bf16731",
+    "seconds": 8.4
+  },
+  {
+    "code": "fitness",
+    "voice_fingerprint": "cb3a0cc78beb4a2c542be3139dee3766a94ff0a12a572be5a94d65a9bb25d102",
+    "text_sha256": "97565b262f8bb43b33d0d71ef75faea9c6c18a654782ea0363b3fa24cbd940d9",
+    "wav_sha256": "5f8dabc7856a0ae464f2122e7c5c32c838c39de01ab07f93bbf9db379a2cd6ab",
+    "seconds": 8.88
+  },
+  {
+    "code": "parent",
+    "voice_fingerprint": "2e6d5f0c205a085298adb97858ca3ea3e0be0f30cb9aa38d07bc18dd066c9762",
+    "text_sha256": "4f167e7418b096a8b43beae9c8344bb27ceab709b8a0c9d03503ef1935f81202",
+    "wav_sha256": "6ec3d519140b8dcf4495067b0a2a239d27e3be7efc8808ac5e6069917bf21d6f",
+    "seconds": 11.84
+  },
+  {
+    "code": "child",
+    "voice_fingerprint": "5e071daab7b2c686197a8fca832e4b767f1491b6ab37b7bb8e4f0068e995f2f9",
+    "text_sha256": "f64d0ec32a2737e1cc824ef8aa3789dbc00bebeb709c8a6a3ec20395105e9cc5",
+    "wav_sha256": "b58c7a4c398be26bb1e8136d8134a7a2ed1f0195c8cab8f35fe01824e9cb54d1",
+    "seconds": 9.44
+  }
+]
