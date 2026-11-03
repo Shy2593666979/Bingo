@@ -33,3 +33,24 @@ apps/mobile/android/.gradle/
 .DS_Store
 Thumbs.db
 .tmp/
+
+# Local UI prototypes, device captures and generated design/optimization reports
+/docs/previews/
+/docs/promo/
+/docs/designs/*
+!/docs/designs/README.md
+!/docs/designs/file-storage-current.md
+!/docs/designs/group-chat-v2-implementation.md
+!/docs/designs/product-standard.png
+!/docs/designs/community-detail-v2.png
+/docs/mobile-asset-optimization*.json
+/docs/chat-bubble-image-prompts.json
+
+# Local APK deliveries and unused raster masters (runtime assets use WebP)
+/dist/
+/apps/mobile/assets/avatars_sage/
+/apps/mobile/assets/chat_scenes/
+/apps/mobile/assets/avatars_square/*.png
+/apps/mobile/assets/chat_bubbles/*.png
+/apps/mobile/assets/reference/*.png
+/apps/mobile/assets/stickers/*.png
