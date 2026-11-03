@@ -27,6 +27,7 @@ from bingo.schemas.roles import ClonePayload, RolePayload
 from bingo.services.context import BinaryAsset, ServiceContext
 from bingo.services.exceptions import ServiceError
 from bingo.services.voice_cloning import pcm_has_signal, pcm_wav
+from bingo.utils.stickers.content import preview_content
 
 
 def role_response(role: Role, personality: str | None = None) -> dict:
@@ -41,8 +42,10 @@ def role_response(role: Role, personality: str | None = None) -> dict:
         else "自定义角色",
         "personality": personality,
         "description": role.description,
+        "opening_line": role.opening_line,
         "prompt": role.prompt,
         "avatar_data": role.avatar_data,
+        "avatar_asset": role.avatar,
         "builtin": role.owner_id is None,
         "enabled": role.enabled,
         "has_voice": bool(role.voice),
@@ -50,6 +53,7 @@ def role_response(role: Role, personality: str | None = None) -> dict:
         "voice_source_id": role.voice_source_id,
         "categories": json.loads(role.categories_json),
         "traits": json.loads(role.traits_json),
+        "source_publication_id": role.source_publication_id,
     }
 
 
@@ -82,7 +86,11 @@ async def apply_payload(session, user, role: Role, payload: RolePayload) -> None
     else:
         raise ServiceError(422, "所选音色已失效，请重新选择")
     role.display_name = payload.name
-    role.description = payload.prompt[:200]
+    role.description = (
+        payload.description if payload.description is not None else payload.prompt[:200]
+    )
+    if payload.opening_line is not None:
+        role.opening_line = payload.opening_line
     role.prompt = payload.prompt
     if payload.role_type is not None:
         role.role_type = payload.role_type
@@ -127,7 +135,11 @@ async def list_roles(user: User, session: AsyncSession) -> list[dict]:
         ).first()
         response["unread_count"] = 0
         response["last_message"] = None
+        response["last_message_at"] = None
         response["message_count"] = 0
+        response["pinned"] = bool(conversation and conversation.pinned)
+        response["archived"] = bool(conversation and conversation.archived)
+        response["muted"] = bool(conversation and conversation.muted)
         if conversation:
             response["message_count"] = (
                 await session.exec(
@@ -146,7 +158,8 @@ async def list_roles(user: User, session: AsyncSession) -> list[dict]:
             ).first()
             response["conversation_id"] = conversation.id
             if last_message:
-                response["last_message"] = last_message.content[:80]
+                response["last_message"] = preview_content(last_message.content)[:80]
+                response["last_message_at"] = last_message.created_at.isoformat()
             statement = select(func.count(Message.id)).where(
                 Message.conversation_id == conversation.id,
                 Message.role == "assistant",
@@ -163,15 +176,22 @@ async def open_role_conversation(
     identifier: str, user: User, session: AsyncSession
 ) -> ConversationResponse:
     role = await session.get(Role, identifier)
-    if not role or role.deleted or (not role.enabled) or (role.owner_id not in {None, user.id}):
+    if not await RoleRepository(session).can_access(user, role):
         raise ServiceError(404, "角色不存在")
     conversation = await ConversationRepository(session, user.id).get_or_create(None, role.id)
+    welcome = (await session.exec(select(Message).where(
+        Message.conversation_id == conversation.id,
+        Message.run_id.startswith("welcome-"))
+        .order_by(Message.created_at.desc()).limit(1))).first()
+    welcome_unread = bool(welcome and (welcome.status == "streaming" or
+        conversation.last_read_at is None or welcome.created_at > conversation.last_read_at))
     conversation.last_read_at = beijing_now()
     user.role_id = role.id
     user.role = role.visible_name
     user.assistant_name = role.nickname
     await session.commit()
-    return ConversationResponse.model_validate(conversation, from_attributes=True)
+    return ConversationResponse.model_validate(conversation, from_attributes=True).model_copy(
+        update={"welcome_unread": welcome_unread})
 
 
 async def create_role(payload: RolePayload, user: User, session: AsyncSession) -> dict:
@@ -195,7 +215,10 @@ async def update_role(
     identifier: str, payload: RolePayload, user: User, session: AsyncSession
 ) -> dict:
     role = await session.get(Role, identifier)
-    if not role or role.deleted or role.owner_id not in {None, user.id}:
+    if (
+        not role or role.deleted or role.owner_id not in {None, user.id}
+        or (role.owner_id is None and not await RoleRepository(session).can_access(user, role))
+    ):
         raise ServiceError(404, "角色不存在")
     if role.owner_id is None:
         if not role.enabled:

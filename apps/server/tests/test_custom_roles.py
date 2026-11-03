@@ -1,3 +1,4 @@
+from bingo.roles import BUILTIN_ROLES
 import base64
 from datetime import timedelta
 
@@ -63,9 +64,11 @@ def test_builtin_default_personalities_apply_to_chat_context(client):
         "女朋友": "温柔体贴",
         "男朋友": "幽默风趣",
         "老师": "理性严谨",
-        "小朋友": "积极活泼",
-        "家长": "沉稳克制",
+        "弟弟": "积极活泼",
+        "邻家大叔": "沉稳克制",
         "同事": "幽默风趣",
+        "闺蜜": "积极活泼", "好兄弟": "幽默风趣", "学姐": "理性严谨",
+        "学长": "沉稳克制", "树洞搭子": "温柔体贴", "运动搭子": "积极活泼",
     }
     roles = api_payload(client.get("/api/v1/roles"))
     user_id = api_payload(client.get("/api/v1/me"))["id"]
@@ -90,8 +93,10 @@ def test_builtin_nicknames_preserve_role_identity(client):
         "男朋友": "暖暖",
         "同事": "小周",
         "老师": "小田老师",
-        "小朋友": "星星",
-        "家长": "文清",
+        "弟弟": "星星",
+        "邻家大叔": "陈叔",
+        "闺蜜": "小晴", "好兄弟": "阿野", "学姐": "知夏",
+        "学长": "景川", "树洞搭子": "木木", "运动搭子": "乐乐",
     }
     roles = api_payload(client.get("/api/v1/roles"))
     assert [role["name"] for role in roles] == [
@@ -99,8 +104,9 @@ def test_builtin_nicknames_preserve_role_identity(client):
         "男朋友",
         "同事",
         "老师",
-        "家长",
-        "小朋友",
+        "邻家大叔",
+        "弟弟",
+        "闺蜜", "好兄弟", "学姐", "学长", "树洞搭子", "运动搭子",
     ]
     assert {role["name"]: role["nickname"] for role in roles} == expected
     for role in roles:
@@ -224,7 +230,7 @@ def test_custom_personality_is_independent_of_other_partners(client):
 
 def test_custom_role_selection_and_builtin_compatibility(client):
     before = api_payload(client.get("/api/v1/profile/options"))
-    assert len(before["roles"]) == 6
+    assert len(before["roles"]) == len(BUILTIN_ROLES)
     role = create_role(client)
     assert role["avatar_data"] is None
     assert role["builtin"] is False
@@ -284,7 +290,7 @@ def test_legacy_child_name_still_selects_the_same_builtin_role(client):
         },
     )
     assert response.status_code == 200
-    assert api_payload(response)["role"] == "小朋友"
+    assert api_payload(response)["role"] == "弟弟"
 
 
 def test_private_roles_cannot_be_read_selected_or_mutated_by_another_user(client):

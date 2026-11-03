@@ -15,6 +15,13 @@ class RolePayload(BaseModel):
     traits: list[str] | None = Field(default=None, min_length=2, max_length=3)
     role_type: str | None = Field(default=None, max_length=30)
     personality: str | None = Field(default=None, max_length=30)
+    description: str | None = Field(default=None, max_length=200)
+    opening_line: str | None = Field(default=None, max_length=300)
+
+    @field_validator("description", "opening_line")
+    @classmethod
+    def trim_presentation(cls, value):
+        return value.strip() if value is not None else None
 
     @field_validator("role_type")
     @classmethod
