@@ -6,6 +6,8 @@ import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/group_chat/data/group_gateway.dart';
 import 'package:bingo/features/roles/presentation/companion_space_page.dart';
+import 'package:bingo/features/roles/presentation/discovery_companion_card.dart';
+import 'package:bingo/features/community/presentation/community_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -65,6 +67,65 @@ void main() {
   tearDown(() => TestDefaultBinaryMessengerBinding
       .instance.defaultBinaryMessenger
       .setMockMethodCallHandler(const MethodChannel('bingo/local_chat'), null));
+  for (final width in [320.0, 390.0]) {
+    testWidgets(
+        'recommendation fits long user content and preserves image at $width',
+        (tester) async {
+      tester.view.physicalSize = Size(width, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final gateway = _Recommendations();
+      var details = 0, adds = 0;
+      final share = CommunityShare(
+          id: 'object',
+          name: '一朵愿意听你说话的小云朵',
+          roleType: '树洞搭子',
+          introduction: '无论今天发生了什么，都可以慢慢告诉我。',
+          traits: const ['耐心倾听', '很长很长的自定义性格特征'],
+          authorName: '一个很长很长的分享者名字',
+          createdAt: DateTime.utc(2026));
+      Widget card({bool adding = false}) => MaterialApp(
+          theme: buildBingoTheme(),
+          builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: const TextScaler.linear(1.3)),
+              child: child!),
+          home: Scaffold(
+              body: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Align(
+                      alignment: Alignment.topCenter,
+                      child: DiscoveryCompanionCard(
+                          share: share,
+                          gateway: gateway,
+                          onDetail: () => details++,
+                          onAdd: adding ? null : () => adds++,
+                          adding: adding)))));
+      await tester.pumpWidget(card());
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(
+          tester.widget<CompanionPortrait>(find.byType(CompanionPortrait)).fit,
+          BoxFit.contain);
+      await tester.tap(find.byType(CompanionPortrait));
+      expect(details, 1);
+      await tester.tap(find.byKey(const ValueKey('recommend-add-object')));
+      expect(adds, 1);
+      await tester.pumpWidget(card(adding: true));
+      await tester.pumpAndSettle();
+      expect(
+          tester
+              .widget<TextButton>(
+                  find.byKey(const ValueKey('recommend-add-object')))
+              .onPressed,
+          isNull);
+      expect(find.text('添加中'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      gateway.close();
+    });
+  }
   testWidgets(
       'discovery keeps failed recommendation and advances only after successful install',
       (tester) async {
