@@ -458,8 +458,11 @@ class AgentRuntime:
         run_id: str | None = None,
     ) -> tuple[Conversation, str | None, Message]:
         conversation = await repository.get_or_create(conversation_id)
+        conversation.archived = False
         if conversation.title == "New conversation":
-            conversation.title = content[:80]
+            from bingo.utils.stickers.content import preview_content
+
+            conversation.title = preview_content(content)[:80]
         user_message = await repository.add_message(
             conversation.id,
             "user",

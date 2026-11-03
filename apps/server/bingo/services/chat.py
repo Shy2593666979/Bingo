@@ -13,6 +13,7 @@ from bingo.schemas.chat import ChatImageInput, ChatRequest, ChatResponse
 from bingo.services.chat_runs import ChatRunService
 from bingo.services.context import ServiceContext
 from bingo.services.exceptions import ServiceError
+from bingo.services.stickers import normalize_sticker
 
 IMAGE_DIRECTORY = Path(__file__).resolve().parents[2] / "data" / "images"
 
@@ -21,6 +22,9 @@ async def create_chat(
     payload: ChatRequest, context: ServiceContext, session: AsyncSession, user: User
 ) -> ChatResponse:
     _require_completed_profile(user.onboarding_complete)
+    payload = payload.model_copy(
+        update={"content": await normalize_sticker(session, user.id, payload.content)}
+    )
     image_data_urls, image_id, image_mime_type = _save_images(payload.images)
     runtime: AgentRuntime = context.runtime
     result = await runtime.run(
@@ -56,6 +60,10 @@ async def get_chat_image(image_id: str, session: AsyncSession, user: User):
 
 async def subscribe_chat(payload: ChatRequest, context: ServiceContext, user: User):
     _require_completed_profile(user.onboarding_complete)
+    async with context.database.session_factory() as session:
+        payload = payload.model_copy(
+            update={"content": await normalize_sticker(session, user.id, payload.content)}
+        )
     image_data_urls, image_id, image_mime_type = _save_images(payload.images)
     run_id = payload.run_id or uuid4().hex
     voice = context.settings.realtime_call.voice

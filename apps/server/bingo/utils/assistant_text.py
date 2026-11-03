@@ -4,6 +4,19 @@ SEPARATOR_LINE = re.compile(r"^[ \t]*(?:[—―]{2,}|-{3,})[ \t]*(?:\r?\n|\Z)", 
 DASH_OR_URL = re.compile(r"(?:https?://|www\.)[^\s<>“”]+|[—―]{2,}", re.IGNORECASE)
 PENDING_SUFFIX = re.compile(r"(?:[-—―][-—― \t\r]*|[ \t\r]+)\Z")
 PUNCTUATION = "，,。.!！?？；;：:、\n\r"
+MENTION_BOUNDARY = r"(?=$|[\s，,。.!！？?：:、~～…])"
+
+
+def strip_mentions_for_speech(text: str, names: list[str]) -> str:
+    """Remove @name tokens so text-to-speech reads only the spoken content."""
+    for name in sorted(set(names), key=len, reverse=True):
+        if name:
+            text = re.sub(r"\s*@" + re.escape(name) + MENTION_BOUNDARY, "", text)
+    text = re.sub(r"\s*@(?:全部|全体)搭子", "", text)
+    text = re.sub(r" +([，,。.!！?？；;：:、])", r"\1", text)
+    text = re.sub(r"([，,。.!！?？；;：:、])(?=[，,。.!！?？；;：:、])", "", text)
+    text = re.sub(r" {2,}", " ", text)
+    return text.strip()
 
 
 def clean_assistant_text(text: str) -> str:
