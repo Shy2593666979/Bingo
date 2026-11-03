@@ -10,10 +10,13 @@ class MyPage extends StatefulWidget {
       {required this.profile,
       required this.onEditUser,
       required this.onOpenSettings,
+      this.onOpenShares,
+      this.onOpenFavorites,
       super.key});
   final UserProfile profile;
   final Future<UserProfile?> Function(UserProfile) onEditUser;
   final Future<void> Function() onOpenSettings;
+  final VoidCallback? onOpenShares, onOpenFavorites;
 
   @override
   State<MyPage> createState() => _MyPageState();
@@ -41,8 +44,10 @@ class _MyPageState extends State<MyPage> {
           child: ListView(padding: const EdgeInsets.all(22), children: [
             const SizedBox(height: 12),
             Center(
-                child:
-                    UserAvatar(avatarData: _profile.userAvatarData, size: 88)),
+                child: UserAvatar(
+                    avatarData: _profile.userAvatarData,
+                    username: _profile.username ?? '',
+                    size: 88)),
             const SizedBox(height: 16),
             Text(_profile.username ?? 'Bingo 用户',
                 textAlign: TextAlign.center,
@@ -59,6 +64,12 @@ class _MyPageState extends State<MyPage> {
                 borderRadius: BorderRadius.circular(24),
                 clipBehavior: Clip.antiAlias,
                 child: Column(children: [
+                  if (widget.onOpenShares != null)
+                    _row(Icons.ios_share_rounded, '我的分享', '管理分享到社区的搭子',
+                        widget.onOpenShares),
+                  if (widget.onOpenFavorites != null)
+                    _row(Icons.favorite_border_rounded, '我的收藏', '找到收藏过的社区搭子',
+                        widget.onOpenFavorites),
                   _row(Icons.person_outline, '个人资料', '头像、昵称、性别和生日', _edit),
                   const Divider(height: 1, indent: 56, endIndent: 16),
                   _row(

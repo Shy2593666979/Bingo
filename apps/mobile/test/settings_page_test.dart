@@ -41,11 +41,12 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('昵称：小明'), findsOneWidget);
+    expect(find.text('个人资料'), findsOneWidget);
     expect(gateway.healthChecks, 1);
+    await tester.scrollUntilVisible(find.text('服务在线'), 250);
     expect(find.text('服务在线'), findsOneWidget);
     expect(find.byIcon(Icons.refresh_rounded), findsNothing);
-    expect(find.text('手机号：13800138000'), findsOneWidget);
+    expect(find.text('账号与安全'), findsOneWidget);
     expect(find.text('服务端地址'), findsNothing);
     expect(find.text('本地网络传输'), findsNothing);
 
@@ -61,7 +62,7 @@ void main() {
 
     await tester.tap(find.text('退出登录'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(TextButton, '退出登录'));
+    await tester.tap(find.widgetWithText(FilledButton, '退出登录'));
     await tester.pumpAndSettle();
     expect(logoutCount, 1);
   });

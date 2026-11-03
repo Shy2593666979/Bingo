@@ -1,4 +1,6 @@
+import 'package:bingo/core/widgets/bingo_confirm_dialog.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
+import 'package:bingo/core/design/bingo_icon.dart';
 import 'package:flutter/material.dart';
 
 import 'package:bingo/features/settings/presentation/account_deletion_icon.dart';
@@ -19,20 +21,13 @@ class _AccountDeletionPageState extends State<AccountDeletionPage> {
   String? _error;
 
   Future<void> _delete() async {
-    final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-                title: const Text('确认注销账号？'),
-                content: const Text('账号、对话与自定义伙伴将被删除，注销后无法恢复。'),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.of(dialogContext).pop(false),
-                      child: const Text('暂不注销')),
-                  TextButton(
-                      onPressed: () => Navigator.of(dialogContext).pop(true),
-                      child: const Text('确认注销',
-                          style: TextStyle(color: Color(0xFFBE7870)))),
-                ]));
+    final confirmed = await showBingoConfirmDialog(context,
+        title: '确认注销账号？',
+        message: '账号、对话与自定义搭子将被删除，注销后无法恢复。',
+        cancelLabel: '暂不注销',
+        confirmLabel: '确认注销',
+        icon: Icons.person_off_outlined,
+        destructive: true);
     if (confirmed != true || !mounted) return;
     setState(() {
       _deleting = true;
@@ -59,7 +54,7 @@ class _AccountDeletionPageState extends State<AccountDeletionPage> {
       '对话与长期记忆',
       '账号下的聊天、图片、位置消息及长期记忆将被删除，不再用于后续陪伴。'
     ),
-    (Icons.graphic_eq_rounded, '伙伴与声音', '自定义伙伴将被删除，复刻音色停止使用，并提交声音服务清理。'),
+    (Icons.graphic_eq_rounded, '搭子与声音', '自定义搭子将被删除，复刻音色停止使用，并提交声音服务清理。'),
     (
       Icons.favorite_border_rounded,
       '陪伴记录与提醒',
@@ -108,7 +103,11 @@ class _AccountDeletionPageState extends State<AccountDeletionPage> {
                   borderRadius: BorderRadius.circular(18)),
               child:
                   Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Icon(impact.$1, size: 22, color: const Color(0xFF78A68F)),
+                if (impact.$1 == Icons.chat_bubble_outline_rounded)
+                  const BingoIcon(BingoSymbol.chat,
+                      size: 22, color: Color(0xFF78A68F))
+                else
+                  Icon(impact.$1, size: 22, color: const Color(0xFF78A68F)),
                 const SizedBox(width: 13),
                 Expanded(
                     child: Column(

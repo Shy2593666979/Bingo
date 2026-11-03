@@ -65,7 +65,7 @@ class _PersonalityPageState extends State<PersonalityPage> {
               const Text('你喜欢怎样的回应？',
                   style: TextStyle(fontSize: 25, fontWeight: FontWeight.w800)),
               const SizedBox(height: 12),
-              const Text('这是默认性格。每位伙伴也可以拥有自己的性格。',
+              const Text('这是默认性格。每位搭子也可以拥有自己的性格。',
                   style: TextStyle(color: Color(0xFF7D918A), height: 1.7)),
               const SizedBox(height: 24),
               Container(
