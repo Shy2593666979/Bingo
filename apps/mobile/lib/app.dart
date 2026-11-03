@@ -1,3 +1,4 @@
+import 'package:bingo/features/stickers/sticker_widgets.dart';
 import 'dart:async';
 
 import 'package:bingo/core/config/app_config.dart';
@@ -10,6 +11,7 @@ import 'package:bingo/features/auth/data/auth_token_store.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/auth/presentation/auth_page.dart';
 import 'package:bingo/features/auth/presentation/user_setup_page.dart';
+import 'package:bingo/features/auth/presentation/companion_selection_page.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/chat/data/local_chat_store.dart';
 import 'package:bingo/features/chat/data/companion_reminders.dart';
@@ -104,7 +106,9 @@ class _BingoAppState extends State<BingoApp> with WidgetsBindingObserver {
         _profile = await _gateway.getProfile();
         _controller.setAssistantRole(_profile!.role);
         await _controller.bindAccount(_profile!.id);
-        if (_profile!.onboardingComplete && _profile!.birthday != null) {
+        if (_profile!.onboardingComplete &&
+            _profile!.birthday != null &&
+            _profile!.companionSelectionComplete) {
           await _pushRegistration.activate();
         }
       }
@@ -121,7 +125,9 @@ class _BingoAppState extends State<BingoApp> with WidgetsBindingObserver {
     await _tokenStore.write(result.accessToken);
     _controller.setAssistantRole(result.user.role);
     await _controller.bindAccount(result.user.id);
-    if (result.user.onboardingComplete && result.user.birthday != null) {
+    if (result.user.onboardingComplete &&
+        result.user.birthday != null &&
+        result.user.companionSelectionComplete) {
       await _pushRegistration.activate();
     }
     if (mounted) setState(() => _profile = result.user);
@@ -155,7 +161,7 @@ class _BingoAppState extends State<BingoApp> with WidgetsBindingObserver {
     setState(() {
       _profile = updated;
     });
-    await _pushRegistration.activate();
+    if (updated.companionSelectionComplete) await _pushRegistration.activate();
   }
 
   Future<void> _accountDeleted() async {
@@ -190,6 +196,8 @@ class _BingoAppState extends State<BingoApp> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Bingo',
+      builder: (context, child) => StickerScope(
+          gateway: _gateway, child: child ?? const SizedBox.shrink()),
       locale: const Locale('zh', 'CN'),
       supportedLocales: const [Locale('zh', 'CN')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
@@ -231,6 +239,13 @@ class _BingoAppState extends State<BingoApp> with WidgetsBindingObserver {
         gateway: _gateway,
         profile: profile,
         onSaved: _onProfileSaved,
+      );
+    }
+    if (!profile.companionSelectionComplete) {
+      return CompanionSelectionPage(
+        key: ValueKey("companion-selection-${profile.id}"),
+        gateway: _gateway,
+        onComplete: _onProfileSaved,
       );
     }
     return AppShell(

@@ -57,7 +57,7 @@ class _SplashPageState extends State<SplashPage>
                 label: 'Bingo',
                 image: true,
                 child: Image.asset(
-                  'assets/images/bingo_logo.png',
+                  'assets/images/bingo_logo.webp',
                   width: 200,
                   height: 200,
                   fit: BoxFit.contain,
