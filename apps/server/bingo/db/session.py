@@ -3,6 +3,7 @@ from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from uuid import uuid4
 
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     async_sessionmaker,
@@ -11,16 +12,25 @@ from sqlalchemy.ext.asyncio import (
 from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from bingo.db.models import MorningGreeting, Role
+from bingo.db.models import MorningGreeting, Role, User
 from bingo.db.time import BEIJING_TIMEZONE
 from bingo.roles import BUILTIN_ROLES, role_id
-from bingo.roles.catalog import BUILTIN_NICKNAMES
+from bingo.roles.catalog import BUILTIN_NICKNAMES, BUILTIN_RELATION_ALIASES
 from bingo.roles.traits import BUILTIN_TRAITS
 
 
 class Database:
     def __init__(self, url: str) -> None:
         self.engine: AsyncEngine = create_async_engine(url)
+        if self.engine.dialect.name == "sqlite":
+
+            @event.listens_for(self.engine.sync_engine, "connect")
+            def sqlite_on_connect(connection, _):
+                cursor = connection.cursor()
+                cursor.execute("PRAGMA busy_timeout=5000")
+                cursor.execute("PRAGMA journal_mode=WAL")
+                cursor.close()
+
         self.session_factory = async_sessionmaker(
             self.engine, class_=AsyncSession, expire_on_commit=False
         )
@@ -29,9 +39,14 @@ class Database:
         async with self.engine.begin() as connection:
             await connection.run_sync(SQLModel.metadata.create_all)
             await connection.run_sync(_upgrade_role_schema)
+            await connection.run_sync(_upgrade_community_source)
+            await connection.run_sync(_upgrade_community_images)
             await connection.run_sync(_seed_builtin_roles)
             await connection.run_sync(_upgrade_local_sqlite_schema)
             await connection.run_sync(_upgrade_role_conversations)
+            await connection.run_sync(_sync_companion_relationship)
+            await connection.run_sync(_upgrade_chat_settings)
+            await connection.run_sync(_upgrade_group_v2)
             await connection.run_sync(_upgrade_morning_greetings)
             await connection.run_sync(_upgrade_device_actions)
 
@@ -41,6 +56,92 @@ class Database:
     async def session(self) -> AsyncIterator[AsyncSession]:
         async with self.session_factory() as session:
             yield session
+
+
+def _upgrade_group_v2(connection) -> None:
+    if connection.dialect.name != "sqlite":
+        return
+    additions = {
+        "chat_group_messages": {
+            "attachment_json": "TEXT",
+            "mention_targets_json": "TEXT NOT NULL DEFAULT '[]'",
+            "mention_all": "BOOLEAN NOT NULL DEFAULT 0",
+            "reply_to_message_id": "TEXT",
+            "reply_sender_name": "TEXT",
+            "reply_content_preview": "TEXT",
+            "reply_created_at": "DATETIME",
+        },
+        "chat_group_runs": {
+            "runtime_mode": "TEXT NOT NULL DEFAULT 'legacy_dispatcher'",
+            "force_targets_json": "TEXT NOT NULL DEFAULT '[]'",
+            "max_ai_messages": "INTEGER NOT NULL DEFAULT 10",
+            "emitted_ai_messages": "INTEGER NOT NULL DEFAULT 0",
+            "generation_calls": "INTEGER NOT NULL DEFAULT 0",
+            "decision_calls": "INTEGER NOT NULL DEFAULT 0",
+        },
+    }
+    for table, fields in additions.items():
+        columns = {row[1] for row in connection.exec_driver_sql(f'PRAGMA table_info("{table}")')}
+        for name, definition in fields.items():
+            if name not in columns:
+                connection.exec_driver_sql(
+                    f'ALTER TABLE "{table}" ADD COLUMN "{name}" {definition}'
+                )
+                if name == "reply_created_at" and "created_at" in columns:
+                    connection.exec_driver_sql(
+                        "UPDATE chat_group_messages SET reply_created_at = "
+                        "(SELECT source.created_at FROM chat_group_messages AS source "
+                        "WHERE source.id = chat_group_messages.reply_to_message_id) "
+                        "WHERE reply_to_message_id IS NOT NULL"
+                    )
+    connection.exec_driver_sql(
+        "CREATE INDEX IF NOT EXISTS ix_chat_group_messages_reply_to_message_id "
+        "ON chat_group_messages(reply_to_message_id)"
+    )
+
+
+def _upgrade_chat_settings(connection) -> None:
+    if connection.dialect.name != "sqlite":
+        return
+    columns = {row[1] for row in connection.exec_driver_sql("PRAGMA table_info(conversations)")}
+    for name in ("muted", "pinned", "archived"):
+        if name not in columns:
+            connection.exec_driver_sql(
+                f"ALTER TABLE conversations ADD COLUMN {name} BOOLEAN NOT NULL DEFAULT 0"
+            )
+    group_columns = {row[1] for row in connection.exec_driver_sql("PRAGMA table_info(chat_groups)")}
+    for name in ("archived", "read_aloud"):
+        if group_columns and name not in group_columns:
+            default = 1 if name == "read_aloud" else 0
+            connection.exec_driver_sql(
+                f"ALTER TABLE chat_groups ADD COLUMN {name} BOOLEAN NOT NULL DEFAULT {default}"
+            )
+
+
+def _upgrade_community_source(connection) -> None:
+    if connection.dialect.name != "sqlite":
+        return
+    columns = {row[1] for row in connection.exec_driver_sql("PRAGMA table_info(roles)")}
+    if "opening_line" not in columns:
+        connection.exec_driver_sql(
+            "ALTER TABLE roles ADD COLUMN opening_line TEXT NOT NULL DEFAULT ''"
+        )
+    if "source_publication_id" not in columns:
+        connection.exec_driver_sql("ALTER TABLE roles ADD COLUMN source_publication_id VARCHAR(36)")
+
+
+def _upgrade_community_images(connection) -> None:
+    if connection.dialect.name != "sqlite":
+        return
+    columns = {row[1] for row in connection.exec_driver_sql("PRAGMA table_info(character_shares)")}
+    if not columns:
+        return
+    if "images_json" not in columns:
+        connection.exec_driver_sql("ALTER TABLE character_shares ADD COLUMN images_json TEXT")
+    if "has_images" not in columns:
+        connection.exec_driver_sql(
+            "ALTER TABLE character_shares ADD COLUMN has_images BOOLEAN NOT NULL DEFAULT 0"
+        )
 
 
 def _upgrade_device_actions(connection) -> None:
@@ -94,6 +195,8 @@ def _upgrade_local_sqlite_schema(connection) -> None:
         "recovery_hash": "VARCHAR(64)",
         "gender": "VARCHAR(10)",
         "user_avatar_data": "TEXT",
+        "selective_companions": "BOOLEAN NOT NULL DEFAULT 0",
+        "companion_selection_complete": "BOOLEAN NOT NULL DEFAULT 1",
     }.items():
         if column not in user_columns:
             connection.exec_driver_sql(f"ALTER TABLE users ADD COLUMN {column} {definition}")
@@ -128,6 +231,11 @@ def _upgrade_local_sqlite_schema(connection) -> None:
         WHERE role IN ('朋友', '导师', '儿子', '女儿', '小孩', '生活助理')
         """
     )
+    for old_label, code in BUILTIN_RELATION_ALIASES.items():
+        connection.exec_driver_sql(
+            "UPDATE users SET role_id = (SELECT id FROM roles WHERE code = ? AND owner_id IS NULL) "
+            "WHERE role_id IS NULL AND role = ?", (code, old_label),
+        )
     connection.exec_driver_sql(
         """
         UPDATE users
@@ -314,7 +422,11 @@ def _upgrade_role_conversations(connection) -> None:
         connection.exec_driver_sql("ALTER TABLE conversations ADD COLUMN last_read_at DATETIME")
     now = datetime.now(BEIJING_TIMEZONE).replace(tzinfo=None).isoformat(sep=" ")
     names = dict(connection.exec_driver_sql("SELECT name, id FROM roles").all())
-    names["小孩"] = role_id("child")
+    builtin_ids = dict(connection.exec_driver_sql(
+        "SELECT code, id FROM roles WHERE owner_id IS NULL"
+    ).all())
+    for old_label, code in BUILTIN_RELATION_ALIASES.items():
+        names[old_label] = builtin_ids.get(code, role_id(code))
     conversations = connection.exec_driver_sql(
         "SELECT c.id, c.user_id, c.title, c.created_at, u.role_id "
         "FROM conversations c JOIN users u ON u.id = c.user_id WHERE c.role_id IS NULL"
@@ -376,6 +488,22 @@ def _upgrade_role_conversations(connection) -> None:
             )
 
 
+def _sync_companion_relationship(connection) -> None:
+    """Rename the default relationship while retaining ownership and history IDs."""
+    for old_label, code in BUILTIN_RELATION_ALIASES.items():
+        relationship = next(role.name for role in BUILTIN_ROLES if role.code == code)
+        connection.execute(
+            User.__table__.update().where(
+                User.role_id.in_(select(Role.id).where(Role.code == code, Role.owner_id.is_(None))),
+                User.role == old_label,
+            ).values(role=relationship)
+        )
+    connection.execute(User.__table__.update().where(
+        User.role_id.in_(select(Role.id).where(Role.code == "parent", Role.owner_id.is_(None))),
+        User.assistant_name == "文清",
+    ).values(assistant_name=BUILTIN_NICKNAMES["parent"]))
+
+
 def _seed_builtin_roles(connection) -> None:
     now = datetime.now(BEIJING_TIMEZONE)
     for sort_order, role in enumerate(BUILTIN_ROLES):
@@ -399,6 +527,7 @@ def _seed_builtin_roles(connection) -> None:
                     id=role_id(role.code),
                     code=role.code,
                     enabled=True,
+                    opening_line=role.opening_line,
                     created_at=now,
                     **values,
                 )
