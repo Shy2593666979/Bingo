@@ -31,6 +31,7 @@ class RealtimeAsrProxy:
         audio_format: str,
         sample_rate: int,
         timeout_seconds: float,
+        sentence_events: bool = False,
     ) -> None:
         self._api_key = api_key
         self._url = url
@@ -38,10 +39,12 @@ class RealtimeAsrProxy:
         self._audio_format = audio_format
         self._sample_rate = sample_rate
         self._timeout_seconds = timeout_seconds
+        self._sentence_events = sentence_events
 
     async def run(self, client: WebSocket, *, user_id: str | None = None) -> None:
         task_id = uuid.uuid4().hex
         started_at = time.perf_counter()
+        tasks = []
         try:
             async with connect(
                 self._url,
@@ -67,6 +70,7 @@ class RealtimeAsrProxy:
 
                 sender = asyncio.create_task(self._send_audio(client, upstream, task_id))
                 receiver = asyncio.create_task(self._receive_results(client, upstream, task_id))
+                tasks.extend([sender, receiver])
                 done, _ = await asyncio.wait(
                     {sender, receiver}, return_when=asyncio.FIRST_COMPLETED
                 )
@@ -121,6 +125,11 @@ class RealtimeAsrProxy:
                 error_type=type(error).__name__,
             )
             await _send_error(client, f"实时语音识别失败：{error}")
+        finally:
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
 
     async def _wait_until_started(
         self,
@@ -182,9 +191,19 @@ class RealtimeAsrProxy:
                     latest_partial = ""
                 else:
                     latest_partial = text
-                await client.send_json(
-                    {"type": "partial", "text": "".join(sentences) + latest_partial}
-                )
+                if not self._sentence_events:
+                    await client.send_json(
+                        {"type": "partial", "text": "".join(sentences) + latest_partial}
+                    )
+                if self._sentence_events:
+                    await client.send_json(
+                        {
+                            "type": "sentence"
+                            if sentence.get("end_time") is not None
+                            else "speech_partial",
+                            "text": text,
+                        }
+                    )
             elif event_type == "task-finished":
                 transcript = "".join(sentences) or latest_partial
                 await client.send_json({"type": "completed", "text": transcript})

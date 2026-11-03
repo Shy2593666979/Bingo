@@ -27,6 +27,34 @@ class ChatSpeechService:
         self.voice_cloning = voice_cloning
         self.tasks = {}
 
+    async def message_events(self, text: str, voice: str):
+        """Read persisted text, releasing the provider when the listener stops."""
+        sentences = asyncio.Queue()
+        for piece in split_speech_text(text, final=True)[0]:
+            sentences.put_nowait(piece)
+        sentences.put_nowait(None)
+        output = asyncio.Queue(maxsize=128)
+
+        async def produce():
+            try:
+                async with asyncio.timeout(120):
+                    await self._synthesize(sentences, output, voice)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                await output.put({"type": "audio_error", "message": "语音暂时不可用，请稍后重试"})
+
+        task = asyncio.create_task(produce())
+        try:
+            while True:
+                item = await output.get()
+                yield item
+                if item["type"] in {"audio_done", "audio_error"}:
+                    break
+        finally:
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+
     async def stop(self, user_id: str, run_id: str):
         task = self.tasks.get((user_id, run_id))
         if task:
