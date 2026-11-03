@@ -1,3 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application android:usesCleartextTraffic="true" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <application android:usesCleartextTraffic="${allowCleartextTraffic}"
+        tools:replace="android:usesCleartextTraffic" />
 </manifest>
