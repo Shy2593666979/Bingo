@@ -5,6 +5,7 @@ import 'package:bingo/features/roles/presentation/role_detail_page.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/roles/presentation/role_home_page.dart';
 import 'package:bingo/shared/widgets/partner_action_icon.dart';
+import 'package:bingo/shared/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -45,7 +46,7 @@ class _RoleHomeGateway implements RoleGateway {
 
 void main() {
   testWidgets(
-      'companion header is left aligned with a square logo profile entry',
+      'companion header is left aligned with a square initial profile entry',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(320, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -55,6 +56,7 @@ void main() {
         home: Scaffold(
             body: RoleHomePage(
                 userId: 'header-test',
+                userName: '小夏',
                 orderStore: MemoryRoleOrderStore(),
                 gateway: _RoleHomeGateway(),
                 onOpenRole: (_) async {},
@@ -83,12 +85,13 @@ void main() {
     expect(button.style?.side?.resolve({}), isNull);
     expect(find.descendant(of: profile, matching: find.byType(ClipOval)),
         findsNothing);
-    final logos = find.byWidgetPredicate((widget) =>
-        widget is Image &&
-        widget.image is AssetImage &&
-        (widget.image as AssetImage).assetName ==
-            'assets/images/bingo_logo.webp');
-    expect(logos, findsOneWidget);
+    final avatar = tester.widget<UserAvatar>(
+        find.descendant(of: profile, matching: find.byType(UserAvatar)));
+    expect(avatar.username, '小夏');
+    expect(avatar.size, 42);
+    expect(
+        find.descendant(of: profile, matching: find.text('夏')), findsOneWidget);
+    expect(tester.getSize(find.byType(UserAvatar)), const Size.square(42));
     final background = tester.widget<DecoratedBox>(
         find.byKey(const ValueKey('companion-background')));
     expect((background.decoration as BoxDecoration).gradient,
