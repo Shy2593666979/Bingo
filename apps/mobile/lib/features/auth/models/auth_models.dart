@@ -1,4 +1,5 @@
 import 'package:bingo/core/role_avatar_store.dart';
+import 'package:bingo/core/role_avatar_assets.dart';
 
 class UserProfile {
   const UserProfile({
@@ -9,6 +10,7 @@ class UserProfile {
     required this.personality,
     required this.role,
     required this.onboardingComplete,
+    this.companionSelectionComplete = true,
     this.roleId,
     this.birthday,
     this.gender,
@@ -22,6 +24,7 @@ class UserProfile {
   final String? personality;
   final String? role;
   final bool onboardingComplete;
+  final bool companionSelectionComplete;
   final String? roleId;
   final String? birthday;
   final String? gender;
@@ -39,6 +42,8 @@ class UserProfile {
       personality: json['personality'] as String?,
       role: json['role'] as String?,
       onboardingComplete: json['onboarding_complete'] as bool,
+      companionSelectionComplete:
+          json['companion_selection_complete'] as bool? ?? true,
       roleId: json['role_id'] as String?,
       birthday: json['birthday'] as String?,
       gender: json['gender'] as String?,
@@ -89,16 +94,23 @@ class RoleOption {
       this.personality,
       this.prompt = '',
       this.avatarData,
+      this.avatarAsset,
+      this.sourcePublicationId,
       this.voiceSourceId,
       this.hasVoice = true,
       this.hasClonedVoice = false,
       this.description = '',
+      this.openingLine = '',
       this.conversationId,
       this.lastMessage,
+      this.lastMessageAt,
       this.categories = const ['陪伴', '朋友'],
       this.traits = const ['善于倾听', '陪伴聊天'],
       this.messageCount = 0,
-      this.unreadCount = 0});
+      this.pinned = false,
+      this.muted = false,
+      this.unreadCount = 0,
+      this.archived = false});
 
   final String id;
   final String name;
@@ -113,16 +125,21 @@ class RoleOption {
       .join(' · ');
   final String prompt;
   final String? avatarData;
+  final String? avatarAsset, sourcePublicationId;
   final String? voiceSourceId;
   final bool hasVoice;
   final bool hasClonedVoice;
   final String description;
+  final String openingLine;
   final String? conversationId;
   final String? lastMessage;
+  final DateTime? lastMessageAt;
   final int unreadCount;
   final List<String> categories;
   final List<String> traits;
   final int messageCount;
+  final bool pinned, muted;
+  final bool archived;
 
   factory RoleOption.fromJson(Map<String, dynamic> json) {
     final role = RoleOption(
@@ -134,19 +151,30 @@ class RoleOption {
       personality: json['personality'] as String?,
       prompt: json['prompt'] as String? ?? '',
       avatarData: json['avatar_data'] as String?,
+      avatarAsset: _avatarAsset(json['avatar_asset'] as String?),
+      sourcePublicationId: json['source_publication_id'] as String?,
       voiceSourceId: json['voice_source_id'] as String?,
       hasVoice: json['has_voice'] as bool? ?? true,
       hasClonedVoice: json['has_cloned_voice'] as bool? ?? false,
       description: json['description'] as String? ?? '',
+      openingLine: json['opening_line'] as String? ?? '',
       conversationId: json['conversation_id'] as String?,
       lastMessage: json['last_message'] as String?,
+      lastMessageAt:
+          DateTime.tryParse(json['last_message_at'] as String? ?? ''),
       unreadCount: json['unread_count'] as int? ?? 0,
+      pinned: json['pinned'] as bool? ?? false,
+      archived: json['archived'] as bool? ?? false,
+      muted: json['muted'] as bool? ?? false,
       categories:
           List<String>.from(json['categories'] as List? ?? ['陪伴', '朋友']),
       traits: List<String>.from(json['traits'] as List? ?? ['善于倾听', '陪伴聊天']),
       messageCount: json['message_count'] as int? ?? 0,
     );
-    RoleAvatarStore.set(role.name, role.avatarData);
+    RoleAvatarStore.set(role.name, role.avatarData, asset: role.avatarAsset);
     return role;
   }
 }
+
+String? _avatarAsset(String? value) =>
+    roleAvatarFiles.contains(value) ? 'assets/images/$value' : null;

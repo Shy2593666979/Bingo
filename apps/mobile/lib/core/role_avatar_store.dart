@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 abstract final class RoleAvatarStore {
   static final images = ValueNotifier<Map<String, Uint8List>>({});
   static String? _userId;
+  static final assets = <String, String>{};
 
   static void selectUser(String userId) {
     if (_userId == userId) return;
@@ -12,8 +13,9 @@ abstract final class RoleAvatarStore {
     _userId = userId;
   }
 
-  static void set(String? name, String? encoded) {
+  static void set(String? name, String? encoded, {String? asset}) {
     if (name == null) return;
+    if (asset != null) assets[name] = asset;
     final updated = Map<String, Uint8List>.from(images.value);
     if (encoded == null) {
       updated.remove(name);
@@ -29,6 +31,7 @@ abstract final class RoleAvatarStore {
 
   static void clear() {
     _userId = null;
+    assets.clear();
     images.value = {};
   }
 }

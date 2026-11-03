@@ -1,7 +1,10 @@
+import 'package:bingo/features/stickers/sticker.dart';
 import 'dart:async';
+import 'package:bingo/features/community/data/community_gateway.dart';
+import 'package:bingo/features/group_chat/data/group_gateway.dart';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 
 import 'package:bingo/core/config/app_config.dart';
 import 'package:bingo/core/role_avatar_store.dart';
@@ -190,12 +193,14 @@ class ConversationSummary {
     required this.title,
     required this.createdAt,
     this.roleId,
+    this.welcomeUnread = false,
   });
 
   final String id;
   final String title;
   final DateTime createdAt;
   final String? roleId;
+  final bool welcomeUnread;
 
   factory ConversationSummary.fromJson(Map<String, dynamic> json) =>
       ConversationSummary(
@@ -203,6 +208,7 @@ class ConversationSummary {
         title: json['title'] as String,
         createdAt: DateTime.parse(json['created_at'] as String),
         roleId: json['role_id'] as String?,
+        welcomeUnread: json['welcome_unread'] == true,
       );
 }
 
@@ -287,6 +293,22 @@ abstract interface class ConversationGateway {
   Future<List<ChatMessage>> listMessages(String conversationId);
 }
 
+class ChatSettings {
+  const ChatSettings({this.muted = false, this.pinned = false});
+  final bool muted, pinned;
+  factory ChatSettings.fromJson(Map<String, dynamic> json) => ChatSettings(
+      muted: json['muted'] == true, pinned: json['pinned'] == true);
+}
+
+abstract interface class ChatInfoGateway {
+  Future<ChatSettings> getChatSettings(String conversationId);
+  Future<ChatSettings> updateChatSettings(String conversationId,
+      {bool? muted, bool? pinned});
+  Future<void> clearChatMessages(String conversationId);
+  Future<List<ChatMessage>> searchChatMessages(
+      String conversationId, String query);
+}
+
 abstract interface class ServerGateway {
   Future<bool> checkHealth();
 }
@@ -368,6 +390,8 @@ abstract interface class RoleGateway {
       String? personality,
       String? avatarData,
       String? voiceSourceId,
+      String? description,
+      String? openingLine,
       List<String>? categories,
       List<String>? traits,
       bool draft = false});
@@ -426,9 +450,23 @@ abstract interface class LocationGateway {
   String locationMapUrl(ChatLocation location, {int zoom = 15});
 }
 
+abstract interface class ConversationListGateway {
+  Future<void> archiveConversation(String id);
+}
+
+abstract interface class CompanionSelectionGateway {
+  Future<List<RoleOption>> companionCandidates();
+  Future<UserProfile> selectCompanions(List<String> ids);
+}
+
+abstract interface class WelcomeRefreshGateway {
+  Listenable get welcomeRefresh;
+}
+
 class HttpApiGateway
     implements
         AuthGateway,
+        CompanionSelectionGateway,
         UserDetailsGateway,
         AccountGateway,
         AccountDeletionGateway,
@@ -436,6 +474,17 @@ class HttpApiGateway
         RoleConversationGateway,
         ChatGateway,
         ConversationGateway,
+        WelcomeRefreshGateway,
+        ConversationListGateway,
+        ChatInfoGateway,
+        CommunityGateway,
+        CommunityPublishingGateway,
+        CommunityEngagementGateway,
+        GroupGateway,
+        GroupV2Gateway,
+        GroupMediaGateway,
+        GroupCallGateway,
+        GroupSpeechGateway,
         DeviceActionGateway,
         ServerGateway,
         SpeechGateway,
@@ -447,16 +496,385 @@ class HttpApiGateway
         PushGateway,
         LocationGateway,
         ReplySpeechGateway,
-        MomentGateway {
+        MomentGateway,
+        StickerGateway {
   HttpApiGateway({required this.config});
 
   final AppConfig config;
   final HttpClient _client = HttpClient();
+  HttpClient? _groupSpeechClient;
+  @override
+  void stopGroupSpeech() {
+    _groupSpeechClient?.close(force: true);
+    _groupSpeechClient = null;
+  }
+
+  @override
+  Stream<Uint8List> groupMessageSpeech(
+      String groupId, String messageId) async* {
+    stopGroupSpeech();
+    final client = HttpClient();
+    _groupSpeechClient = client;
+    try {
+      final uri =
+          config.endpoint('/groups/$groupId/messages/$messageId/speech');
+      final request =
+          await client.postUrl(uri).timeout(const Duration(seconds: 15));
+      _prepareRequest(request);
+      final response =
+          await request.close().timeout(const Duration(seconds: 30));
+      if (response.statusCode != 200) {
+        await response.drain<void>();
+        throw const ApiException('这条消息暂时无法播放，请稍后重试');
+      }
+      await for (final line in response
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .timeout(const Duration(seconds: 40))) {
+        if (line.trim().isEmpty) continue;
+        final item = jsonDecode(line) as Map<String, dynamic>;
+        if (item['type'] == 'audio') yield base64Decode(item['data'] as String);
+        if (item['type'] == 'audio_error') {
+          throw ApiException(item['message'] as String? ?? '语音暂时不可用');
+        }
+        if (item['type'] == 'audio_done') return;
+      }
+    } finally {
+      client.close(force: true);
+      if (identical(_groupSpeechClient, client)) _groupSpeechClient = null;
+    }
+  }
+
   String? accessToken;
+  @override
+  Future<void> archiveConversation(String id) async {
+    await _request('PATCH', config.endpoint('/conversations/$id/settings'),
+        body: {'archived': true});
+  }
+
   @override
   bool readAloud = false;
   final Set<String> _speechRuns = {};
   final Map<String, HttpClient> _momentClients = {};
+
+  @override
+  String? get stickerToken => accessToken;
+  @override
+  String stickerImageUrl(String id) => config
+      .endpoint('/stickers/${Uri.encodeComponent(id.substring(7))}/image')
+      .toString();
+  @override
+  Future<List<ChatSticker>> listStickers() async => (await _request(
+          'GET', config.endpoint('/stickers')) as List)
+      .map((row) => ChatSticker.fromJson(Map<String, dynamic>.from(row as Map)))
+      .toList();
+  @override
+  Future<ChatSticker> uploadSticker(
+          Uint8List bytes, String mime, String label) async =>
+      ChatSticker.fromJson(
+          await _request('POST', config.endpoint('/stickers'), body: {
+        'data': base64Encode(bytes),
+        'mime_type': mime,
+        'label': label,
+        'description': label
+      }) as Map<String, dynamic>);
+  @override
+  Future<void> deleteSticker(String id) async {
+    await _request('DELETE',
+        config.endpoint('/stickers/${Uri.encodeComponent(id.substring(7))}'));
+  }
+
+  @override
+  Future<List<ChatGroup>> listGroups() async => (await _request(
+          'GET', config.endpoint('/groups')) as List)
+      .map((row) => ChatGroup.fromJson(Map<String, dynamic>.from(row as Map)))
+      .toList();
+  @override
+  Future<ChatGroup> getGroup(String id) async =>
+      ChatGroup.fromJson(await _request('GET', config.endpoint('/groups/$id'))
+          as Map<String, dynamic>);
+  @override
+  Future<ChatGroup> createGroup(Map<String, dynamic> data) async =>
+      ChatGroup.fromJson(
+          await _request('POST', config.endpoint('/groups'), body: data)
+              as Map<String, dynamic>);
+  @override
+  Future<ChatGroup> updateGroup(String id, Map<String, dynamic> data) async =>
+      ChatGroup.fromJson(
+          await _request('PATCH', config.endpoint('/groups/$id'), body: data)
+              as Map<String, dynamic>);
+  @override
+  Future<ChatGroup> addGroupMembers(String id, List<String> roles) async =>
+      ChatGroup.fromJson(await _request(
+          'POST', config.endpoint('/groups/$id/members'),
+          body: {'role_ids': roles}) as Map<String, dynamic>);
+  @override
+  Future<ChatGroup> removeGroupMember(String id, String role) async =>
+      ChatGroup.fromJson(
+          await _request('DELETE', config.endpoint('/groups/$id/members/$role'))
+              as Map<String, dynamic>);
+  @override
+  Future<List<GroupChatMessage>> groupMessages(String id,
+          {int? before}) async =>
+      (await _request(
+              'GET',
+              config.endpoint('/groups/$id/messages').replace(queryParameters: {
+                'limit': '100',
+                if (before != null) 'before_seq': '$before'
+              })) as List)
+          .map((row) =>
+              GroupChatMessage.fromJson(Map<String, dynamic>.from(row as Map)))
+          .toList();
+  @override
+  Future<String> sendGroup(String id, String text, List<String> mentions,
+          String clientId) async =>
+      (await _request('POST', config.endpoint('/groups/$id/chat'), body: {
+        'content': text,
+        'mentions': mentions,
+        'client_message_id': clientId
+      }) as Map<String, dynamic>)['run_id'] as String;
+  @override
+  Future<String> sendGroupV2(
+          String id, String text, List<String> mentions, String clientId,
+          {bool mentionAll = false,
+          List<Map<String, String>> mentionTargets = const [],
+          String? replyToMessageId}) async =>
+      (await _request('POST', config.endpoint('/groups/$id/chat'), body: {
+        'content': text,
+        'mentions': mentions,
+        'client_message_id': clientId,
+        'mention_all': mentionAll,
+        'mention_targets': mentionTargets,
+        'reply_to_message_id': replyToMessageId,
+      }) as Map<String, dynamic>)['run_id'] as String;
+  @override
+  Future<String> sendGroupMedia(String groupId, String text, String clientId,
+          Map<String, dynamic> media) async =>
+      (await _request('POST', config.endpoint('/groups/$groupId/chat'), body: {
+        'content': text,
+        'client_message_id': clientId,
+        ...media,
+      }) as Map<String, dynamic>)['run_id'] as String;
+
+  @override
+  String groupImageUrl(String groupId, String messageId) =>
+      config.endpoint('/groups/$groupId/messages/$messageId/image').toString();
+  @override
+  String? get groupMediaToken => accessToken;
+
+  @override
+  Future<WebSocket> connectGroupCall(String groupId, List<String> roleIds) {
+    final token = accessToken;
+    if (token == null || token.isEmpty) throw const ApiException('请先登录');
+    final uri = config.endpoint('/groups/$groupId/calls/stream');
+    return WebSocket.connect(
+            uri.replace(
+              scheme: uri.scheme == 'https' ? 'wss' : 'ws',
+              queryParameters: {'role_id': roleIds},
+            ).toString(),
+            headers: {'Authorization': 'Bearer $token'})
+        .timeout(const Duration(seconds: 15));
+  }
+
+  @override
+  Future<List<GroupChatMessage>> groupMessageContext(
+          String id, String messageId) async =>
+      (await _request(
+                  'GET',
+                  config.endpoint(
+                      '/groups/$id/messages/${Uri.encodeComponent(messageId)}/context'))
+              as List)
+          .map((row) =>
+              GroupChatMessage.fromJson(Map<String, dynamic>.from(row as Map)))
+          .toList();
+  @override
+  Future<Map<String, dynamic>> groupEvents(
+          String id, String run, int after) async =>
+      await _request(
+              'GET',
+              config
+                  .endpoint('/groups/$id/runs/$run/events')
+                  .replace(queryParameters: {'after_event_seq': '$after'}))
+          as Map<String, dynamic>;
+  @override
+  Future<void> cancelGroupRun(String id, String run) async {
+    await _request('POST', config.endpoint('/groups/$id/runs/$run/cancel'));
+  }
+
+  @override
+  Future<void> readGroup(String id, int seq) async {
+    await _request(
+        'POST',
+        config
+            .endpoint('/groups/$id/read')
+            .replace(queryParameters: {'seq': '$seq'}));
+  }
+
+  @override
+  Future<void> clearGroup(String id, {bool destroy = false}) async {
+    await _request('DELETE',
+        config.endpoint(destroy ? '/groups/$id' : '/groups/$id/messages'));
+  }
+
+  @override
+  String? get communityAccessToken => accessToken;
+  @override
+  Future<CommunityShare> likeCompanion(String id, bool liked) async =>
+      CommunityShare.fromJson(await _request(
+          'PUT', config.endpoint('/community/characters/$id/like'),
+          body: {'liked': liked}) as Map<String, dynamic>);
+  @override
+  Future<List<CommunityComment>> listCompanionComments(String id,
+      {int offset = 0}) async {
+    final data = await _request(
+            'GET',
+            config
+                .endpoint('/community/characters/$id/comments')
+                .replace(queryParameters: {'offset': '$offset', 'limit': '20'}))
+        as Map<String, dynamic>;
+    return (data['items'] as List)
+        .map((row) =>
+            CommunityComment.fromJson(Map<String, dynamic>.from(row as Map)))
+        .toList();
+  }
+
+  @override
+  Future<CommunityComment> commentCompanion(
+          String id, String content, String requestId) async =>
+      CommunityComment.fromJson(await _request(
+              'POST', config.endpoint('/community/characters/$id/comments'),
+              body: {'content': content, 'request_id': requestId})
+          as Map<String, dynamic>);
+  @override
+  Future<void> deleteCompanionComment(String id, String commentId) async {
+    await _request('DELETE',
+        config.endpoint('/community/characters/$id/comments/$commentId'));
+  }
+
+  @override
+  String communityAvatarUrl(String id) =>
+      config.endpoint('/community/characters/$id/avatar').toString();
+  @override
+  String communityImageUrl(String id, int index) =>
+      config.endpoint('/community/characters/$id/images/$index').toString();
+  @override
+  Future<CommunityPageResult> listCommunity(
+      {String query = '',
+      String scope = 'all',
+      String sort = 'latest',
+      int offset = 0}) async {
+    final json = await _request(
+        'GET',
+        config.endpoint('/community/characters').replace(queryParameters: {
+          'q': query,
+          'scope': scope,
+          'sort': sort,
+          'offset': '$offset',
+          'limit': '20',
+        })) as Map<String, dynamic>;
+    return CommunityPageResult(
+        (json['items'] as List)
+            .map((row) =>
+                CommunityShare.fromJson(Map<String, dynamic>.from(row as Map)))
+            .toList(),
+        json['next_offset'] as int?,
+        json['total'] as int?);
+  }
+
+  @override
+  Future<CommunityShare> getCommunityShare(String id) async =>
+      CommunityShare.fromJson(
+          await _request('GET', config.endpoint('/community/characters/$id'))
+              as Map<String, dynamic>);
+  @override
+  Future<CommunityShare> publishCompanion(
+          {required String roleId,
+          required String introduction,
+          required String requestId,
+          List<String> images = const []}) async =>
+      CommunityShare.fromJson(await _request(
+          'POST', config.endpoint('/community/characters'),
+          body: {
+            'role_id': roleId,
+            'introduction': introduction,
+            'request_id': requestId,
+            if (images.isNotEmpty) 'images': images,
+          }) as Map<String, dynamic>);
+  @override
+  Future<RoleOption> installCompanion(String id) async =>
+      RoleOption.fromJson(await _request(
+              'POST', config.endpoint('/community/characters/$id/install'))
+          as Map<String, dynamic>);
+
+  @override
+  Future<CommunityShare> publishCompanionDetail(
+          {required String roleId,
+          required String introduction,
+          required String requestId,
+          String title = '',
+          List<String> shareTags = const [],
+          List<String> images = const []}) async =>
+      CommunityShare.fromJson(await _request(
+          'POST', config.endpoint('/community/characters'),
+          body: {
+            'role_id': roleId,
+            'introduction': introduction,
+            'request_id': requestId,
+            'title': title,
+            'share_tags': shareTags,
+            if (images.isNotEmpty) 'images': images,
+          }) as Map<String, dynamic>);
+  @override
+  Future<CommunityShare> favoriteCompanion(String id, bool favorite) async =>
+      CommunityShare.fromJson(await _request(
+          'PUT', config.endpoint('/community/characters/$id/favorite'),
+          body: {'favorite': favorite}) as Map<String, dynamic>);
+  @override
+  Future<void> withdrawCompanion(String id) async {
+    await _request('DELETE', config.endpoint('/community/characters/$id'));
+  }
+
+  @override
+  Future<void> reportCompanion(String id, String reason) async {
+    await _request('POST', config.endpoint('/community/characters/$id/reports'),
+        body: {'reason': reason});
+  }
+
+  @override
+  Future<ChatSettings> getChatSettings(String conversationId) async =>
+      ChatSettings.fromJson(await _request(
+              'GET', config.endpoint('/conversations/$conversationId/settings'))
+          as Map<String, dynamic>);
+
+  @override
+  Future<ChatSettings> updateChatSettings(String conversationId,
+          {bool? muted, bool? pinned}) async =>
+      ChatSettings.fromJson(await _request(
+          'PATCH', config.endpoint('/conversations/$conversationId/settings'),
+          body: {
+            if (muted != null) 'muted': muted,
+            if (pinned != null) 'pinned': pinned
+          }) as Map<String, dynamic>);
+
+  @override
+  Future<void> clearChatMessages(String conversationId) async {
+    await _request(
+        'DELETE', config.endpoint('/conversations/$conversationId/messages'));
+  }
+
+  @override
+  Future<List<ChatMessage>> searchChatMessages(
+      String conversationId, String query) async {
+    final rows = await _request(
+        'GET',
+        config
+            .endpoint('/conversations/$conversationId/messages')
+            .replace(queryParameters: {'q': query, 'limit': '100'})) as List;
+    return rows
+        .map((row) =>
+            ChatMessage.fromJson(Map<String, dynamic>.from(row as Map)))
+        .toList();
+  }
 
   @override
   Future<void> cancelMoment(String runId) async {
@@ -913,11 +1331,43 @@ class HttpApiGateway
   }
 
   @override
+  Future<List<RoleOption>> companionCandidates() async {
+    final items =
+        await _request('GET', config.endpoint('/onboarding/companions'))
+            as List;
+    return items
+        .map((item) =>
+            RoleOption.fromJson(Map<String, dynamic>.from(item as Map)))
+        .toList();
+  }
+
+  @override
+  Future<UserProfile> selectCompanions(List<String> ids) async {
+    final json = await _request(
+        'POST', config.endpoint('/onboarding/companions'),
+        body: {'role_ids': ids}) as Map<String, dynamic>;
+    return UserProfile.fromJson(json);
+  }
+
+  Future<Map<String, dynamic>> welcomeStatus() async =>
+      Map<String, dynamic>.from(
+          await _request('GET', config.endpoint('/onboarding/welcome')) as Map);
+
+  Future<void> retryWelcomes() async {
+    await _request('POST', config.endpoint('/onboarding/welcome/retry'));
+    _welcomeRefresh.value++;
+  }
+
+  final _welcomeRefresh = ValueNotifier(0);
+  @override
+  Listenable get welcomeRefresh => _welcomeRefresh;
+
+  @override
   Future<AuthResult> register(String phone, String password) async {
     final json = await _request(
       'POST',
       config.endpoint('/auth/register'),
-      body: {'phone': phone, 'password': password},
+      body: {'phone': phone, 'password': password, 'companion_selection': true},
       authenticated: false,
     ) as Map<String, dynamic>;
     return AuthResult.fromJson(json);
@@ -1136,6 +1586,8 @@ class HttpApiGateway
       String? personality,
       String? avatarData,
       String? voiceSourceId,
+      String? description,
+      String? openingLine,
       List<String>? categories,
       List<String>? traits,
       bool draft = false}) async {
@@ -1145,6 +1597,8 @@ class HttpApiGateway
           'name': name,
           'prompt': prompt,
           if (roleType != null) 'role_type': roleType,
+          if (description != null) 'description': description,
+          if (openingLine != null) 'opening_line': openingLine,
           if (personality != null) 'personality': personality,
           'avatar_data': avatarData,
           'voice_source_id': voiceSourceId,
@@ -1237,7 +1691,10 @@ class HttpApiGateway
     }
   }
 
-  void close() => _client.close(force: true);
+  void close() {
+    _welcomeRefresh.dispose();
+    _client.close(force: true);
+  }
 }
 
 class _WebSocketTranscriptionSession implements RealtimeTranscriptionSession {
