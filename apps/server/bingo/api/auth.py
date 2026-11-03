@@ -11,11 +11,13 @@ from bingo.schemas.auth import (
     AccountDeletion,
     AuthResponse,
     ChangePassword,
+    CompanionSelection,
     Credentials,
     PersonalityUpdate,
     ProfileOptionsResponse,
     ProfileUpdate,
     RecoveryProfile,
+    RegistrationCredentials,
     ResetPassword,
     UserDetailsUpdate,
     UserProfileResponse,
@@ -62,7 +64,7 @@ async def reset_password(
 
 
 @router.post("/auth/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
-async def register(payload: Credentials, session: SessionDependency) -> AuthResponse:
+async def register(payload: RegistrationCredentials, session: SessionDependency) -> AuthResponse:
     return await auth_service.register(payload=payload, session=session)
 
 
@@ -110,3 +112,28 @@ async def profile_options(
     session: SessionDependency, user: CurrentUserDependency
 ) -> ProfileOptionsResponse:
     return await auth_service.profile_options(session=session, user=user)
+
+
+@router.get("/onboarding/companions")
+async def companion_candidates(user: CurrentUserDependency, session: SessionDependency):
+    from bingo.services.companion_selection import candidates
+    return await candidates(user, session)
+
+
+@router.get("/onboarding/welcome")
+async def initial_welcome_status(user: CurrentUserDependency, session: SessionDependency):
+    from bingo.services.companion_welcome import welcome_status
+    return await welcome_status(session, user.id)
+
+
+@router.post("/onboarding/welcome/retry")
+async def retry_initial_welcome(user: CurrentUserDependency, session: SessionDependency):
+    from bingo.services.companion_welcome import retry_welcome
+    return await retry_welcome(session, user.id)
+
+
+@router.post("/onboarding/companions", response_model=UserProfileResponse)
+async def choose_companions(payload: CompanionSelection, user: CurrentUserDependency,
+                            session: SessionDependency):
+    from bingo.services.companion_selection import complete
+    return await complete(user, session, payload.role_ids)

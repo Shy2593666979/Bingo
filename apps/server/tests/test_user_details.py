@@ -65,6 +65,8 @@ def test_user_only_onboarding_and_recovery(client):
     "overrides",
     [
         {"gender": "invalid"},
+        {"gender": "不愿透露"},
+        {"gender": "其他"},
         {"username": "   "},
         {"birthday": "2099-01-01"},
         {"user_avatar_data": "not an image"},

@@ -14,6 +14,7 @@ from bingo.schemas.auth import (
     ProfileOptionsResponse,
     ProfileUpdate,
     RecoveryProfile,
+    RegistrationCredentials,
     ResetPassword,
     UserDetailsUpdate,
     UserProfileResponse,
@@ -110,12 +111,13 @@ async def user_response(user: User, session) -> UserProfileResponse:
     return response
 
 
-async def register(payload: Credentials, session: AsyncSession) -> AuthResponse:
+async def register(payload: RegistrationCredentials, session: AsyncSession) -> AuthResponse:
     users = UserRepository(session)
     if await users.get_by_phone(payload.phone):
         log_event(logger, logging.WARNING, "auth.registration_failed", error_type="PhoneExists")
         raise ServiceError(status_code=409, detail="该手机号已注册")
-    user = await users.create(payload.phone, hash_password(payload.password))
+    user = await users.create(payload.phone, hash_password(payload.password),
+                              selective_companions=payload.companion_selection)
     token = await AuthSessionRepository(session).create(user.id)
     log_event(logger, logging.INFO, "auth.registered", user_id=user.id)
     return AuthResponse(access_token=token, user=await user_response(user, session))

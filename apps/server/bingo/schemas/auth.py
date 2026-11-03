@@ -18,6 +18,22 @@ class Credentials(BaseModel):
         return value.strip()
 
 
+class RegistrationCredentials(Credentials):
+    # Older clients retain their existing built-in catalogue. New clients opt in.
+    companion_selection: bool = False
+
+
+class CompanionSelection(BaseModel):
+    role_ids: list[str] = Field(min_length=1, max_length=12)
+
+    @field_validator("role_ids")
+    @classmethod
+    def unique_ids(cls, value):
+        if len(value) != len(set(value)):
+            raise ValueError("请勿重复选择搭子")
+        return value
+
+
 class UserProfileResponse(BaseModel):
     id: str
     phone: str
@@ -31,6 +47,7 @@ class UserProfileResponse(BaseModel):
     user_avatar_data: str | None = None
     avatar_data: str | None = None
     onboarding_complete: bool
+    companion_selection_complete: bool = True
     created_at: datetime
 
 
@@ -53,7 +70,7 @@ class RecoveryProfile(BaseModel):
 
 class UserDetailsUpdate(RecoveryProfile):
     username: str = Field(min_length=1, max_length=30)
-    gender: Literal["男", "女", "不愿透露"]
+    gender: Literal["男", "女"]
     user_avatar_data: str | None = Field(default=None, max_length=3_000_000)
 
     @field_validator("username")
