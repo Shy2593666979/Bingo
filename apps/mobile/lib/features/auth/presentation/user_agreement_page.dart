@@ -106,7 +106,7 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
               Row(children: [
                 ClipRRect(
                     borderRadius: BorderRadius.circular(15),
-                    child: Image.asset('assets/images/bingo_logo.png',
+                    child: Image.asset('assets/images/bingo_logo.webp',
                         width: 55, height: 55)),
                 const SizedBox(width: 13),
                 const Column(

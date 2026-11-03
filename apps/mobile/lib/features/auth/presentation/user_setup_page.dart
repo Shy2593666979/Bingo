@@ -43,7 +43,9 @@ class _UserSetupPageState extends State<UserSetupPage> {
     super.initState();
     _nickname = TextEditingController(text: widget.profile.username);
     _birthday = DateTime.tryParse(widget.profile.birthday ?? '');
-    _gender = widget.profile.gender;
+    _gender = ['男', '女'].contains(widget.profile.gender)
+        ? widget.profile.gender
+        : null;
     _avatarData = widget.profile.userAvatarData;
   }
 
@@ -134,7 +136,9 @@ class _UserSetupPageState extends State<UserSetupPage> {
                                     onTap: _busy ? null : _chooseAvatar,
                                     child: Stack(children: [
                                       UserAvatar(
-                                          avatarData: _avatarData, size: 96),
+                                          avatarData: _avatarData,
+                                          username: _nickname.text,
+                                          size: 96),
                                       Positioned(
                                           right: 0,
                                           bottom: 0,
@@ -163,6 +167,7 @@ class _UserSetupPageState extends State<UserSetupPage> {
                                 padding: const EdgeInsets.all(12),
                                 child: TextFormField(
                                     controller: _nickname,
+                                    onChanged: (_) => setState(() {}),
                                     enabled: !_busy,
                                     maxLength: 30,
                                     textInputAction: TextInputAction.done,
@@ -188,7 +193,7 @@ class _UserSetupPageState extends State<UserSetupPage> {
                                               fontWeight: FontWeight.w600)),
                                       const SizedBox(height: 12),
                                       Row(children: [
-                                        for (final gender in ['男', '女', '不愿透露'])
+                                        for (final gender in ['男', '女'])
                                           Expanded(
                                               child: Padding(
                                                   padding: const EdgeInsets

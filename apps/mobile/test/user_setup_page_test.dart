@@ -2,6 +2,7 @@ import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/auth/presentation/user_setup_page.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
+import 'package:bingo/shared/widgets/user_avatar.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -52,13 +53,23 @@ void main() {
             onSaved: (value) => saved = value)));
     expect(find.text('用户昵称'), findsOneWidget);
     expect(find.text('用户性别'), findsOneWidget);
+    expect(find.text('男'), findsOneWidget);
+    expect(find.text('女'), findsOneWidget);
+    expect(find.text('不愿透露'), findsNothing);
+    expect(find.text('其他'), findsNothing);
     expect(find.text('用户生日'), findsOneWidget);
     expect(find.text('助手名称'), findsNothing);
     expect(find.text('助手角色'), findsNothing);
     expect(find.text('助手性格'), findsNothing);
-    final image = tester.widget<Image>(find.byType(Image));
-    expect(
-        (image.image as AssetImage).assetName, 'assets/images/bingo_logo.png');
+    expect(find.byType(Image), findsNothing);
+    expect(tester.widget<UserAvatar>(find.byType(UserAvatar)).username, '');
+    await tester.enterText(find.byType(TextFormField), '小雨');
+    await tester.pumpAndSettle();
+    expect(find.text('雨'), findsOneWidget);
+    await tester.enterText(find.byType(TextFormField), '');
+    await tester.pumpAndSettle();
+    expect(find.text('雨'), findsNothing);
+    expect(tester.widget<UserAvatar>(find.byType(UserAvatar)).username, '');
     await tester.enterText(find.byType(TextFormField), '小雨');
     await tester.pumpAndSettle();
     final nicknameCard = find.ancestor(

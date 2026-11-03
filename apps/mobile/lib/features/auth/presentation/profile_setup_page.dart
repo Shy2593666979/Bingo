@@ -1,4 +1,5 @@
 import 'package:bingo/core/theme/app_theme.dart';
+import 'package:bingo/core/design/bingo_icon.dart';
 import 'package:bingo/core/widgets/center_toast.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/auth/presentation/role_editor_page.dart';
@@ -387,7 +388,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                             padding: const EdgeInsets.all(7),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              shape: BoxShape.circle,
+                              borderRadius: BorderRadius.circular(28),
                               boxShadow: [
                                 BoxShadow(
                                   color:
@@ -466,28 +467,8 @@ class _AssistantNameIcon extends StatelessWidget {
   const _AssistantNameIcon();
 
   @override
-  Widget build(BuildContext context) => const SizedBox.square(
-        dimension: 30,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Icon(Icons.chat_bubble_outline_rounded,
-                color: BingoPalette.blue, size: 29),
-            Positioned(
-              top: 11,
-              child: Row(
-                children: [
-                  _IconDot(),
-                  SizedBox(width: 3),
-                  _IconDot(),
-                  SizedBox(width: 3),
-                  _IconDot(),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
+  Widget build(BuildContext context) =>
+      const BingoIcon(BingoSymbol.chat, color: BingoPalette.blue, size: 30);
 }
 
 class _RoleIcon extends StatelessWidget {
@@ -565,20 +546,6 @@ class _PersonalityIcon extends StatelessWidget {
                   color: BingoPalette.blue, size: 14),
             ),
           ],
-        ),
-      );
-}
-
-class _IconDot extends StatelessWidget {
-  const _IconDot();
-
-  @override
-  Widget build(BuildContext context) => Container(
-        width: 3,
-        height: 3,
-        decoration: const BoxDecoration(
-          color: BingoPalette.blue,
-          shape: BoxShape.circle,
         ),
       );
 }

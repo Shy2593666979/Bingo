@@ -53,11 +53,11 @@ class _CustomProfileGateway extends _ProfileGateway implements RoleGateway {
   @override
   Future<ProfileOptions> getProfileOptions() async => const ProfileOptions(
         personalities: ['温柔体贴'],
-        roles: ['女朋友', '倾听伙伴'],
+        roles: ['女朋友', '倾听搭子'],
         roleDetails: [
           RoleOption(id: 'system', name: '女朋友', builtin: true),
           RoleOption(
-              id: 'custom', name: '倾听伙伴', builtin: false, prompt: '耐心倾听，温柔陪伴'),
+              id: 'custom', name: '倾听搭子', builtin: false, prompt: '耐心倾听，温柔陪伴'),
         ],
       );
 
@@ -92,14 +92,14 @@ void main() {
     await tester.tap(find.text('助手角色'));
     await tester.pumpAndSettle();
     expect(find.text('女朋友'), findsNWidgets(2));
-    expect(find.text('倾听伙伴'), findsOneWidget);
-    expect(find.byTooltip('编辑倾听伙伴'), findsOneWidget);
+    expect(find.text('倾听搭子'), findsOneWidget);
+    expect(find.byTooltip('编辑倾听搭子'), findsOneWidget);
     expect(find.byTooltip('编辑女朋友'), findsNothing);
     expect(find.text('创建新角色'), findsOneWidget);
-    await tester.ensureVisible(find.text('倾听伙伴'));
-    await tester.tap(find.text('倾听伙伴'));
+    await tester.ensureVisible(find.text('倾听搭子'));
+    await tester.tap(find.text('倾听搭子'));
     await tester.pumpAndSettle();
-    expect(find.text('倾听伙伴'), findsOneWidget);
+    expect(find.text('倾听搭子'), findsOneWidget);
     expect(find.text('创建新角色'), findsNothing);
     await tester.ensureVisible(find.text('保存并继续'));
     await tester.tap(find.text('保存并继续'));
@@ -132,8 +132,8 @@ void main() {
     await tester.ensureVisible(find.text('助手角色'));
     await tester.tap(find.text('助手角色'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byTooltip('编辑倾听伙伴'));
-    await tester.tap(find.byTooltip('编辑倾听伙伴'));
+    await tester.ensureVisible(find.byTooltip('编辑倾听搭子'));
+    await tester.tap(find.byTooltip('编辑倾听搭子'));
     await tester.pumpAndSettle();
     expect(tester.widget<RoleEditorPage>(find.byType(RoleEditorPage)).role?.id,
         'custom');
