@@ -14,9 +14,7 @@ def main() -> None:
         host=settings.server.host,
         port=settings.server.port,
         reload=reload_enabled,
-        reload_excludes=["*.log", "*.db", "*.db-shm", "*.db-wal"]
-        if reload_enabled
-        else None,
+        reload_excludes=["*.log", "*.db", "*.db-shm", "*.db-wal"] if reload_enabled else None,
         access_log=False,
         log_config=None,
     )

@@ -10,8 +10,7 @@ from bingo.tools.base import BaseTool, ToolContext, ToolResult
 _SEARCH_URL = "https://cn.bing.com/search"
 _HEADERS = {
     "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 Chrome/140 Safari/537.36"
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140 Safari/537.36"
     ),
     "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
 }
@@ -19,9 +18,7 @@ _HEADERS = {
 
 # DuckDuckGo Lite 搜索效果通常优于必应，但仅适用于能够访问外网的环境。
 _DUCKDUCKGO_SEARCH_URL = "https://lite.duckduckgo.com/lite/"
-_NEWS_QUERY_SUFFIX = re.compile(
-    r"(?:有(?:什么|啥))?的?(?:最新)?(?:新闻|资讯)[？?。.!！]*$"
-)
+_NEWS_QUERY_SUFFIX = re.compile(r"(?:有(?:什么|啥))?的?(?:最新)?(?:新闻|资讯)[？?。.!！]*$")
 _QUERY_PREFIXES = (
     "麻烦帮我",
     "帮我",

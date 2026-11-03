@@ -111,7 +111,12 @@ def log_event(
     **fields: Any,
 ) -> None:
     safe_fields = {key: value for key, value in fields.items() if key in SAFE_FIELDS}
-    logger.log(level, event, extra={"event_fields": safe_fields})
+    try:
+        logger.log(level, event, extra={"event_fields": safe_fields})
+    except Exception:
+        # A broken or rotating log file must never turn a healthy
+        # request into a 500; drop the record instead.
+        pass
 
 
 def set_request_id(request_id: str) -> Token[str | None]:

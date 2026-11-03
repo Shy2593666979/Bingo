@@ -37,9 +37,7 @@ async def get_recommendations(
     context: ServiceContext, user: User, conversation_id: str | None = None
 ) -> RecommendationsResponse:
     service: EngagementService | None = context.engagement
-    items = (
-        [] if service is None else await service.get_recommendations(user.id, conversation_id)
-    )
+    items = [] if service is None else await service.get_recommendations(user.id, conversation_id)
     return RecommendationsResponse(items=items)
 
 
