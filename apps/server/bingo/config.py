@@ -40,6 +40,10 @@ class ModelSettings(BaseModel):
     api_key: str = ""
     model: str = "gpt-4.1-mini"
     timeout_seconds: float = 60.0
+    thinking: Literal["enabled", "disabled"] | None = None
+    trust_env: bool = True
+    reuse_connections: bool = False
+    max_output_tokens: int | None = Field(default=None, ge=128, le=32768)
 
 
 class VisionSettings(BaseModel):
@@ -143,7 +147,24 @@ class MapsSettings(BaseModel):
         return os.getenv("BINGO_AMAP_API_KEY") or value
 
 
+class SocialRuntimeSettings(BaseModel):
+    low_latency_chat: bool = True
+    direct_ark_connection: bool = True
+    mode: Literal["legacy_dispatcher", "independent_agents"] = "independent_agents"
+    decision_candidate_limit: int = Field(default=3, ge=1, le=8)
+    decision_concurrency: int = Field(default=8, ge=1, le=8)
+    max_decision_calls_per_run: int = Field(default=24, ge=1, le=64)
+    max_generation_calls_per_run: int = Field(default=12, ge=8, le=20)
+    max_run_duration_seconds: int = Field(default=240, ge=30, le=600)
+    max_ai_messages_per_run: int = Field(default=10, ge=8, le=10)
+    max_thread_replies: int = Field(default=4, ge=0, le=8)
+    pair_cooldown_seconds: float = Field(default=8, ge=0, le=120)
+    decision_timeout_seconds: float = Field(default=3, ge=1, le=60)
+    generation_timeout_seconds: float = Field(default=45, ge=1, le=120)
+
+
 class Settings(BaseModel):
+    social_agent_runtime: SocialRuntimeSettings = Field(default_factory=SocialRuntimeSettings)
     maps: MapsSettings = Field(default_factory=MapsSettings)
     app: AppSettings = Field(default_factory=AppSettings)
     server: ServerSettings = Field(default_factory=ServerSettings)

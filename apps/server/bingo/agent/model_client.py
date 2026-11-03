@@ -1,10 +1,14 @@
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Any, Protocol
+from urllib.parse import urlparse
 
+import httpx
 from openai import AsyncOpenAI
 
 from bingo.config import Settings
+from bingo.utils.stickers.content import model_sticker_text
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,6 +25,9 @@ class ModelMessage:
     image_data_urls: tuple[str, ...] = ()
     tool_calls: tuple[ModelToolCall, ...] = ()
     tool_call_id: str | None = None
+
+    def __post_init__(self):
+        object.__setattr__(self, "content", model_sticker_text(self.content))
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,6 +85,13 @@ class AgentModelClient:
         }
         self._model = settings.model.model
         self._api_mode = settings.model.api_mode
+        self._trust_env = settings.model.trust_env
+        self._reuse_connections = settings.model.reuse_connections
+        self._clients = {}
+        self._max_output_tokens = settings.model.max_output_tokens
+        self._text_extra_body = (
+            {"thinking": {"type": settings.model.thinking}} if settings.model.thinking else None
+        )
         vision = settings.vision
         uses_dedicated_vision_model = bool(vision.model)
         vision_api_key = vision.api_key if uses_dedicated_vision_model else settings.model.api_key
@@ -107,17 +121,46 @@ class AgentModelClient:
                 self._vision_api_mode,
                 self._vision_extra_body,
             )
-        return self._client_options, self._model, self._api_mode, None
+        return self._client_options, self._model, self._api_mode, self._text_extra_body
+
+    def _new_client(self, options):
+        if self._trust_env:
+            return AsyncOpenAI(**options)
+        return AsyncOpenAI(
+            **options, http_client=httpx.AsyncClient(trust_env=False, timeout=options["timeout"])
+        )
+
+    @asynccontextmanager
+    async def _client_session(self, options):
+        if not self._reuse_connections:
+            async with self._new_client(options) as client:
+                yield client
+            return
+        key = id(options)
+        if key not in self._clients:
+            self._clients[key] = self._new_client(options)
+        yield self._clients[key]
+
+    async def aclose(self):
+        clients = list(self._clients.values())
+        self._clients.clear()
+        for client in clients:
+            await client.close()
 
     async def complete(self, messages: list[ModelMessage]) -> str:
         client_options, model, api_mode, extra_body = self._route(messages)
-        async with AsyncOpenAI(**client_options) as client:
+        async with self._client_session(client_options) as client:
             if api_mode == "responses":
                 response = await client.responses.create(
                     model=model,
                     input=_responses_input(messages),
                     store=False,
                     extra_body=extra_body,
+                    **(
+                        {"max_output_tokens": self._max_output_tokens}
+                        if self._max_output_tokens
+                        else {}
+                    ),
                 )
                 return response.output_text or ""
 
@@ -134,7 +177,7 @@ class AgentModelClient:
         tools: list[dict[str, Any]] | None = None,
     ) -> AsyncIterator[ModelStreamEvent]:
         client_options, model, api_mode, extra_body = self._route(messages)
-        async with AsyncOpenAI(**client_options) as client:
+        async with self._client_session(client_options) as client:
             if api_mode == "responses":
                 async for event in self._stream_responses(
                     client, messages, tools, model=model, extra_body=extra_body
@@ -167,6 +210,8 @@ class AgentModelClient:
             request["tool_choice"] = "auto"
         if extra_body:
             request["extra_body"] = extra_body
+        if self._max_output_tokens:
+            request["max_output_tokens"] = self._max_output_tokens
         stream = await client.responses.create(**request)
         calls: dict[int, ModelToolCall] = {}
         async for event in stream:
@@ -313,3 +358,22 @@ def create_model_client(settings: Settings) -> ModelClient:
     if settings.model.provider == "openai_compat":
         return AgentModelClient(settings)
     return EchoModelClient()
+
+
+def create_group_model_client(settings: Settings) -> ModelClient:
+    host = urlparse(settings.model.base_url).hostname or ""
+    if (
+        settings.social_agent_runtime.low_latency_chat
+        and settings.model.provider == "openai_compat"
+        and settings.model.api_mode == "responses"
+        and host.endswith(".volces.com")
+    ):
+        # Regional Ark chat does not need hidden deep reasoning or a system proxy.
+        # Keep the single-chat/model configuration intact.
+        settings = settings.model_copy(deep=True)
+        settings.model.thinking = "disabled"
+        settings.model.max_output_tokens = settings.model.max_output_tokens or 1024
+        settings.model.reuse_connections = True
+        if settings.social_agent_runtime.direct_ark_connection:
+            settings.model.trust_env = False
+    return create_model_client(settings)
