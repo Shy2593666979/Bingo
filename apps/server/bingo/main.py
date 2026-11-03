@@ -5,16 +5,19 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from bingo.agent.model_client import create_model_client
+from bingo.agent.model_client import create_group_model_client, create_model_client
 from bingo.agent.runtime import AgentRuntime
 from bingo.api import (
     asr,
     auth,
     call_invitations,
     chat,
+    community,
     conversations,
     device_actions,
     engagement,
+    group_calls,
+    group_chat,
     location,
     maps,
     memories,
@@ -22,6 +25,7 @@ from bingo.api import (
     push,
     realtime_calls,
     roles,
+    stickers,
 )
 from bingo.api.exceptions import register_exception_handlers
 from bingo.api.middleware import RequestLoggingMiddleware
@@ -32,7 +36,9 @@ from bingo.db.session import Database
 from bingo.push import PushService, create_push_provider
 from bingo.services.chat_runs import ChatRunService
 from bingo.services.chat_speech import ChatSpeechService
+from bingo.services.companion_welcome import CompanionWelcomeService
 from bingo.services.context import ServiceContext
+from bingo.services.group_chat import GroupChatService
 from bingo.services.location import LocationService
 from bingo.services.logging import configure_logging, log_event
 from bingo.services.maps import MapsService
@@ -82,6 +88,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     chat_runs = ChatRunService(database.session_factory, runtime)
     voice_cloning = VoiceCloningService(database, resolved_settings)
     chat_speech = ChatSpeechService(voice_cloning)
+    groups = GroupChatService(
+        database,
+        create_group_model_client(resolved_settings),
+        resolved_settings.social_agent_runtime,
+    )
+    welcomes = CompanionWelcomeService(database, model_client, groups)
 
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
@@ -105,13 +117,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             location=location_service,
             maps=MapsService(resolved_settings.maps),
             chat_speech=chat_speech,
+            group_chat=groups,
+            companion_welcome=welcomes,
         )
+        await groups.start(proactive=resolved_settings.app.environment != "test")
+        if resolved_settings.app.environment != "test":
+            await welcomes.start()
         await voice_cloning.start()
         await push_service.start()
         if engagement_service is not None:
             await engagement_service.start()
         log_event(logger, logging.INFO, "application.started")
         yield
+        await welcomes.close()
+        await groups.close()
         await chat_runs.close()
         await chat_speech.close()
         await voice_cloning.close()
@@ -155,6 +174,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.include_router(asr.router, prefix=resolved_settings.server.api_prefix)
     application.include_router(realtime_calls.router, prefix=resolved_settings.server.api_prefix)
     application.include_router(roles.router, prefix=resolved_settings.server.api_prefix)
+    application.include_router(community.router, prefix=resolved_settings.server.api_prefix)
+    application.include_router(group_chat.router, prefix=resolved_settings.server.api_prefix)
+    application.include_router(group_calls.router, prefix=resolved_settings.server.api_prefix)
+    application.include_router(stickers.router, prefix=resolved_settings.server.api_prefix)
     application.include_router(location.router, prefix=resolved_settings.server.api_prefix)
     application.include_router(maps.router, prefix=resolved_settings.server.api_prefix)
     return application

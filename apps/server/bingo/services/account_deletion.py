@@ -20,10 +20,16 @@ from bingo.db.models import (
     Role,
     RolePreference,
     User,
+    UserCompanion,
     VoiceJob,
 )
+from bingo.db.models.stickers import UserSticker
+from bingo.db.models.welcome import WelcomeJob
 from bingo.services.chat import IMAGE_DIRECTORY
+from bingo.services.community import delete_user_community_data
 from bingo.services.context import ServiceContext
+from bingo.services.group_chat import delete_user_groups
+from bingo.services.stickers import file_path as sticker_file_path
 
 
 async def delete_account(user: User, session: AsyncSession, context: ServiceContext) -> None:
@@ -35,6 +41,10 @@ async def delete_account(user: User, session: AsyncSession, context: ServiceCont
     job_ids = [job.id for job in jobs]
     await session.rollback()
     await context.chat_runs.cancel_user(user_id)
+    if context.companion_welcome is not None:
+        await context.companion_welcome.cancel_user(user_id)
+    if context.group_chat is not None:
+        await context.group_chat.cancel_user(user_id)
     if context.chat_speech is not None:
         for owner, run_id in list(context.chat_speech.tasks):
             if owner == user_id:
@@ -59,6 +69,10 @@ async def delete_account(user: User, session: AsyncSession, context: ServiceCont
             )
         ).all()
     )
+    stickers = list(
+        (await session.exec(select(UserSticker.id).where(UserSticker.user_id == user_id))).all()
+    )
+    await session.exec(delete(UserSticker).where(UserSticker.user_id == user_id))
     jobs = list((await session.exec(select(VoiceJob).where(VoiceJob.user_id == user_id))).all())
     voices = {role.owned_voice for role in roles if role.owned_voice}
     voices.update(job.voice for job in jobs if job.kind in {"clone", "delete"} and job.voice)
@@ -96,9 +110,13 @@ async def delete_account(user: User, session: AsyncSession, context: ServiceCont
         DeviceAction,
         AuthSession,
         RolePreference,
+        UserCompanion,
         VoiceJob,
+        WelcomeJob,
     ):
         await session.exec(delete(model).where(model.user_id == user_id))
+    await delete_user_community_data(session, user_id)
+    await delete_user_groups(session, user_id)
     await session.exec(delete(Message).where(Message.conversation_id.in_(conversation_ids)))
     await session.exec(delete(Conversation).where(Conversation.user_id == user_id))
     await session.exec(delete(User).where(User.id == user_id))
@@ -110,6 +128,11 @@ async def delete_account(user: User, session: AsyncSession, context: ServiceCont
     await session.exec(delete(RolePreference).where(RolePreference.role_id.in_(role_ids)))
     await session.exec(delete(Role).where(Role.owner_id == user_id))
     await session.commit()
+    for identifier in stickers:
+        try:
+            sticker_file_path(identifier).unlink(missing_ok=True)
+        except OSError:
+            pass
     for image_id in images:
         try:
             identifier = str(UUID(image_id))

@@ -1,3 +1,4 @@
+from bingo.roles import BUILTIN_ROLES
 import sqlite3
 from uuid import uuid4
 
@@ -250,7 +251,7 @@ def test_deletes_own_data_revokes_sessions_and_preserves_other_accounts(
             == 0
         )
         assert (
-            database.execute("SELECT COUNT(*) FROM roles WHERE owner_id IS NULL").fetchone()[0] == 6
+            database.execute("SELECT COUNT(*) FROM roles WHERE owner_id IS NULL").fetchone()[0] == len(BUILTIN_ROLES)
         )
         assert database.execute("SELECT content FROM messages").fetchall() == [("keep",)]
         cleanups = database.execute(

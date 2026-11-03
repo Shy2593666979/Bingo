@@ -23,12 +23,18 @@ class EnvelopeRoute(APIRoute):
             "/chat/stream",
             "/moments/stream",
             "/chat/images/{image_id}",
+            "/stickers/{identifier}/image",
             "/role-voice-samples/{token}",
             "/locations/map",
+            "/community/characters/{identifier}/avatar",
+            "/community/characters/{identifier}/images/{index}",
+            "/groups/{identifier}/messages/{message_id}/speech",
+            "/groups/{identifier}/messages/{message_id}/image",
         }
         plain = kwargs.get("status_code") == 204 or any(
             path.endswith(item) for item in binary_paths
         )
+        plain = plain or path.endswith("/chat/stream")
         if not plain and not getattr(endpoint, "_bingo_enveloped", False):
             declared = kwargs.get("response_model")
             if not isinstance(declared, type) and not hasattr(declared, "__origin__"):
