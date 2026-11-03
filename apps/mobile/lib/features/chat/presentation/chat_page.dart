@@ -1,4 +1,8 @@
+import 'package:bingo/core/appearance/chat_appearance.dart';
+import 'package:bingo/features/chat/presentation/chat_info_page.dart';
 import 'dart:async';
+import 'package:bingo/core/design/chat_scene.dart';
+import 'package:bingo/shared/widgets/avatar_frame.dart';
 
 import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
@@ -10,6 +14,7 @@ import 'package:bingo/features/chat/presentation/companion_moment_page.dart';
 import 'package:bingo/features/chat/presentation/widgets/device_action_card.dart';
 import 'package:bingo/features/chat/presentation/widgets/message_bubble.dart';
 import 'package:bingo/features/chat/presentation/widgets/message_input.dart';
+import 'package:bingo/features/chat/presentation/widgets/chat_typing_hint.dart';
 import 'package:flutter/material.dart';
 import 'package:bingo/shared/widgets/assistant_avatar.dart';
 import 'package:bingo/features/chat/models/chat_location.dart';
@@ -17,6 +22,8 @@ import 'package:bingo/features/chat/presentation/widgets/location_card.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({
+    this.appearanceStore,
+    this.appearanceRoleId,
     required this.controller,
     required this.assistantName,
     required this.assistantRole,
@@ -28,13 +35,17 @@ class ChatPage extends StatefulWidget {
     this.onLocation,
     this.locationMapUrlBuilder,
     this.userAvatarData,
+    this.openingLine = '',
     this.imageUrlBuilder,
     this.imageAccessToken,
     required this.onOpenSettings,
     this.onBack,
+    this.infoGateway,
     super.key,
   });
 
+  final AppearanceStore? appearanceStore;
+  final String? appearanceRoleId;
   final ChatController controller;
   final String assistantName;
   final String? assistantRole;
@@ -46,10 +57,12 @@ class ChatPage extends StatefulWidget {
   final VoidCallback? onLocation;
   final String Function(ChatLocation)? locationMapUrlBuilder;
   final String? userAvatarData;
+  final String openingLine;
   final String Function(String imageId)? imageUrlBuilder;
   final String? imageAccessToken;
   final VoidCallback onOpenSettings;
   final VoidCallback? onBack;
+  final ChatInfoGateway? infoGateway;
 
   @override
   State<ChatPage> createState() => _ChatPageState();
@@ -58,25 +71,36 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   final _scrollController = ScrollController();
   int _lastTimelineLength = 0;
+  int _lastRecommendationsLength = 0;
   String? _lastMessageContent;
   bool _lastBusy = false;
 
   @override
   void initState() {
     super.initState();
+    unawaited(ChatScene.setNativeChrome(true));
     WidgetsBinding.instance.addObserver(this);
     unawaited(widget.controller.activateSpeech());
     widget.controller.setAssistantRole(widget.assistantRole);
     widget.controller.addListener(_onChanged);
+    widget.appearanceStore?.addListener(_onAppearanceChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _onChanged();
       _jumpToBottom();
     });
   }
 
+  void _onAppearanceChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void didUpdateWidget(covariant ChatPage oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.appearanceStore != widget.appearanceStore) {
+      oldWidget.appearanceStore?.removeListener(_onAppearanceChanged);
+      widget.appearanceStore?.addListener(_onAppearanceChanged);
+    }
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller.removeListener(_onChanged);
       widget.controller.addListener(_onChanged);
@@ -89,9 +113,11 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    unawaited(ChatScene.setNativeChrome(false));
     WidgetsBinding.instance.removeObserver(this);
     widget.controller.deactivateSpeech();
     widget.controller.removeListener(_onChanged);
+    widget.appearanceStore?.removeListener(_onAppearanceChanged);
     _scrollController.dispose();
     super.dispose();
   }
@@ -105,6 +131,17 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
       widget.controller.deactivateSpeech();
     }
   }
+
+  ChatInfoPage _chatInfo() => ChatInfoPage(
+      controller: widget.controller,
+      partnerName: widget.assistantName,
+      partnerRole: widget.assistantRole,
+      onCall: _startCall,
+      gateway: widget.infoGateway,
+      appearanceStore: widget.appearanceStore,
+      roleId: widget.appearanceRoleId,
+      imageUrlBuilder: widget.imageUrlBuilder,
+      imageAccessToken: widget.imageAccessToken);
 
   Future<void> _openMoment(CompanionMoment kind) async {
     await widget.controller.stopSpeech();
@@ -136,13 +173,19 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     if (!mounted) return;
     final controller = widget.controller;
     final lastContent = controller.messages.lastOrNull?.content;
+    final recommendationDockChanged =
+        controller.recommendations.length != _lastRecommendationsLength;
+    final nearBottom = _scrollController.hasClients &&
+        _scrollController.position.extentAfter < 48;
     final shouldScroll =
         controller.timelineItems.length != _lastTimelineLength ||
             lastContent != _lastMessageContent ||
-            controller.isBusy != _lastBusy;
+            controller.isBusy != _lastBusy ||
+            (recommendationDockChanged && nearBottom);
     _lastTimelineLength = controller.timelineItems.length;
     _lastMessageContent = lastContent;
     _lastBusy = controller.isBusy;
+    _lastRecommendationsLength = controller.recommendations.length;
     final incomingCall = widget.controller.takeIncomingCall();
     setState(() {});
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -173,167 +216,235 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final controller = widget.controller;
-    final showWaiting = controller.isBusy;
     final showRecommendations =
-        !showWaiting && controller.recommendations.isNotEmpty;
-    return Theme(
-      data: buildMintTheme(context),
-      child: Scaffold(
-        body: ColoredBox(
-          color: BingoPalette.mintBackground,
-          child: SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                _ChatHeader(
-                  assistantName: widget.assistantName,
-                  onBack: widget.onBack,
-                  speechEnabled: controller.readAloudEnabled,
-                  onSpeechToggle: () => unawaited(
-                      controller.setReadAloud(!controller.readAloudEnabled)),
-                ),
-                if (controller.speechError case final message?)
-                  Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Text(message,
-                          style: const TextStyle(
-                              fontSize: 12, color: Color(0xFF71817D)))),
-                if (controller.errorMessage case final message?)
-                  Container(
-                    margin: const EdgeInsets.fromLTRB(18, 4, 18, 8),
-                    padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.errorContainer,
-                      borderRadius: BorderRadius.circular(18),
+        !controller.isBusy && controller.recommendations.isNotEmpty;
+    final recommendationItems = showRecommendations
+        ? controller.recommendations
+        : controller.timelineItems.isEmpty && !controller.isBusy
+            ? chatStartersForRole(widget.assistantRole)
+            : const <String>[];
+    final appearance =
+        widget.appearanceStore?.effective(widget.appearanceRoleId) ??
+            const ChatAppearance();
+    final skin = ChatSkin.find(appearance.bubble);
+    final baseTheme = buildMintTheme(context);
+    return AppearanceScope(
+        value: appearance,
+        child: Theme(
+          data: baseTheme.copyWith(
+              colorScheme: baseTheme.colorScheme
+                  .copyWith(primary: skin.accent, primaryContainer: skin.user)),
+          child: Scaffold(
+            body: ChatWallpaper(
+              value: appearance,
+              child: SafeArea(
+                bottom: false,
+                child: Column(
+                  children: [
+                    _ChatHeader(
+                      assistantName: widget.assistantName,
+                      onBack: widget.onBack,
+                      assistantRole: widget.assistantRole,
+                      onSearch: () => Navigator.of(context).push<void>(
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  ChatSearchPage(info: _chatInfo()))),
+                      onInfo: () => Navigator.of(context).push<void>(
+                          MaterialPageRoute(builder: (_) => _chatInfo())),
                     ),
-                    child: Row(children: [
-                      const Icon(Icons.error_outline_rounded),
-                      const SizedBox(width: 10),
-                      Expanded(child: Text(message)),
-                      IconButton(
-                        onPressed: controller.dismissError,
-                        icon: const Icon(Icons.close_rounded),
-                      ),
-                    ]),
-                  ),
-                Expanded(
-                  child: controller.timelineItems.isEmpty &&
-                          !showWaiting &&
-                          !showRecommendations
-                      ? _EmptyChat(
-                          onSuggestion: controller.send,
-                          assistantRole: widget.assistantRole)
-                      : ListView.builder(
-                          controller: _scrollController,
-                          padding: const EdgeInsets.fromLTRB(18, 8, 18, 18),
-                          itemCount: controller.timelineItems.length +
-                              (showWaiting || showRecommendations ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            if (index == controller.timelineItems.length) {
-                              if (showWaiting) {
-                                return AssistantTypingBubble(
-                                  assistantRole: widget.assistantRole,
-                                );
-                              }
-                              return _RecommendationRows(
-                                items: controller.recommendations,
-                                onSelected: controller.sendRecommendation,
-                              );
-                            }
-                            final item = controller.timelineItems[index];
-                            if (item case final ChatMessage message) {
-                              final showTime = _shouldShowTime(
-                                controller.timelineItems,
-                                index,
-                              );
-                              return Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (showTime)
-                                    _MessageTimeDivider(
-                                      value: message.createdAt!,
-                                    ),
-                                  if (message.type == ChatMessageType.call)
-                                    CallRecordTile(
-                                      message: message,
-                                      assistantRole: widget.assistantRole,
-                                    )
-                                  else if (message.location != null)
-                                    Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 8),
-                                        child: Row(
-                                            mainAxisAlignment:
-                                                message.role == ChatRole.user
-                                                    ? MainAxisAlignment.end
-                                                    : MainAxisAlignment.start,
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              if (message.role !=
-                                                  ChatRole.user) ...[
-                                                AssistantAvatar(
-                                                    role: widget.assistantRole,
-                                                    size: 34),
-                                                const SizedBox(width: 9),
-                                              ],
-                                              Flexible(
-                                                  child: LocationCard(
-                                                      isUser: message.role ==
-                                                          ChatRole.user,
-                                                      location:
-                                                          message.location!,
-                                                      mapUrl: message.location!
-                                                              .hasCoordinates
-                                                          ? widget
-                                                              .locationMapUrlBuilder
-                                                              ?.call(message
-                                                                  .location!)
-                                                          : null,
-                                                      accessToken: widget
-                                                          .imageAccessToken)),
-                                            ]))
-                                  else
-                                    MessageBubble(
-                                      message: message,
-                                      assistantRole: widget.assistantRole,
-                                      imageUrlBuilder: widget.imageUrlBuilder,
-                                      imageAccessToken: widget.imageAccessToken,
-                                    ),
-                                ],
-                              );
-                            }
-                            if (item case final DeviceAction action) {
-                              return DeviceActionCard(
-                                key: ValueKey('device-action-${action.id}'),
-                                action: action,
-                                assistantRole: widget.assistantRole,
-                                onApprove: () =>
-                                    controller.approveDeviceAction(action),
-                                onReject: () =>
-                                    controller.rejectDeviceAction(action),
-                              );
-                            }
-                            return const SizedBox.shrink();
-                          },
+                    if (controller.speechError case final message?)
+                      Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Text(message,
+                              style: const TextStyle(
+                                  fontSize: 12, color: Color(0xFF71817D)))),
+                    if (controller.errorMessage case final message?)
+                      Container(
+                        margin: const EdgeInsets.fromLTRB(18, 4, 18, 8),
+                        padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.errorContainer,
+                          borderRadius: BorderRadius.circular(18),
                         ),
+                        child: Row(children: [
+                          const Icon(Icons.error_outline_rounded),
+                          const SizedBox(width: 10),
+                          Expanded(child: Text(message)),
+                          IconButton(
+                            onPressed: controller.dismissError,
+                            icon: const Icon(Icons.close_rounded),
+                          ),
+                        ]),
+                      ),
+                    Expanded(
+                      child: Stack(children: [
+                        Positioned.fill(
+                            child: controller.timelineItems.isEmpty &&
+                                    !controller.isWaitingForReply
+                                ? _EmptyChat(
+                                    openingLine: widget.openingLine,
+                                    assistantRole: widget.assistantRole)
+                                : ListView.builder(
+                                    controller: _scrollController,
+                                    padding: const EdgeInsets.fromLTRB(
+                                        12, 8, 12, 14),
+                                    itemCount: controller.timelineItems.length +
+                                        (controller.isWaitingForReply ? 1 : 0),
+                                    itemBuilder: (context, index) {
+                                      if (index ==
+                                          controller.timelineItems.length) {
+                                        return ChatTypingHint(
+                                            name: widget.assistantName,
+                                            role: widget.assistantRole);
+                                      }
+                                      final item =
+                                          controller.timelineItems[index];
+                                      if (item case final ChatMessage message) {
+                                        final showTime = _shouldShowTime(
+                                          controller.timelineItems,
+                                          index,
+                                        );
+                                        return Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            if (showTime)
+                                              _MessageTimeDivider(
+                                                value: message.createdAt!,
+                                              ),
+                                            if (message.type ==
+                                                ChatMessageType.call)
+                                              CallRecordTile(
+                                                message: message,
+                                                assistantRole:
+                                                    widget.assistantRole,
+                                              )
+                                            else if (message.location != null)
+                                              Padding(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(vertical: 8),
+                                                  child: Row(
+                                                      mainAxisAlignment: message
+                                                                  .role ==
+                                                              ChatRole.user
+                                                          ? MainAxisAlignment
+                                                              .end
+                                                          : MainAxisAlignment
+                                                              .start,
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        if (message.role !=
+                                                            ChatRole.user) ...[
+                                                          AssistantAvatar(
+                                                              role: widget
+                                                                  .assistantRole,
+                                                              size: 34),
+                                                          const SizedBox(
+                                                              width: 9),
+                                                        ],
+                                                        Flexible(
+                                                            child: LocationCard(
+                                                                isUser: message
+                                                                        .role ==
+                                                                    ChatRole
+                                                                        .user,
+                                                                location: message
+                                                                    .location!,
+                                                                mapUrl: message
+                                                                        .location!
+                                                                        .hasCoordinates
+                                                                    ? widget
+                                                                        .locationMapUrlBuilder
+                                                                        ?.call(message
+                                                                            .location!)
+                                                                    : null,
+                                                                accessToken: widget
+                                                                    .imageAccessToken)),
+                                                      ]))
+                                            else
+                                              MessageBubble(
+                                                message: message,
+                                                showAvatar:
+                                                    !_continuesAssistant(
+                                                        controller
+                                                            .timelineItems,
+                                                        index),
+                                                assistantRole:
+                                                    widget.assistantRole,
+                                                imageUrlBuilder:
+                                                    widget.imageUrlBuilder,
+                                                imageAccessToken:
+                                                    widget.imageAccessToken,
+                                              ),
+                                          ],
+                                        );
+                                      }
+                                      if (item case final DeviceAction action) {
+                                        return DeviceActionCard(
+                                          key: ValueKey(
+                                              'device-action-${action.id}'),
+                                          action: action,
+                                          assistantRole: widget.assistantRole,
+                                          onApprove: () => controller
+                                              .approveDeviceAction(action),
+                                          onReject: () => controller
+                                              .rejectDeviceAction(action),
+                                        );
+                                      }
+                                      return const SizedBox.shrink();
+                                    },
+                                  )),
+                      ]),
+                    ),
+                    if (recommendationItems.isNotEmpty)
+                      Padding(
+                          key: const ValueKey('chat-recommendations-dock'),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: _RecommendationRows(
+                              items: recommendationItems,
+                              onSelected: showRecommendations
+                                  ? controller.sendRecommendation
+                                  : controller.send)),
+                    MessageInput(
+                      initialVoiceMode: false,
+                      referenceStyle: true,
+                      hintText: '和${widget.assistantName}说点什么…',
+                      enabled: true,
+                      onSend: controller.send,
+                      speechGateway: widget.speechGateway,
+                      onCall: _startCall,
+                      onMoment: _openMoment,
+                      onGallery: widget.onPickGallery,
+                      onCamera: widget.onTakePhoto,
+                      onLocation: widget.onLocation,
+                    ),
+                  ],
                 ),
-                MessageInput(
-                  enabled: true,
-                  onSend: controller.send,
-                  speechGateway: widget.speechGateway,
-                  onCall: _startCall,
-                  onMoment: _openMoment,
-                  onGallery: widget.onPickGallery,
-                  onCamera: widget.onTakePhoto,
-                  onLocation: widget.onLocation,
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
-    );
+        ));
+  }
+
+  bool _continuesAssistant(List<Object> items, int index) {
+    if (index == 0) return false;
+    final current = items[index], previous = items[index - 1];
+    if (current is! ChatMessage ||
+        previous is! ChatMessage ||
+        current.role != ChatRole.assistant ||
+        previous.role != ChatRole.assistant ||
+        current.type != ChatMessageType.chat ||
+        previous.type != ChatMessageType.chat ||
+        current.location != null ||
+        previous.location != null ||
+        current.assistantRole != previous.assistantRole ||
+        current.createdAt == null ||
+        previous.createdAt == null) {
+      return false;
+    }
+    final gap = current.createdAt!.difference(previous.createdAt!);
+    return !gap.isNegative && gap <= const Duration(minutes: 2);
   }
 
   bool _shouldShowTime(List<Object> items, int index) {
@@ -359,17 +470,13 @@ class _MessageTimeDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 11, 0, 5),
+      padding: const EdgeInsets.fromLTRB(0, 14, 0, 9),
       child: Center(
-        child: Text(
-          _format(value),
-          style: const TextStyle(
-            color: Color(0xFF89938F),
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
+          child: Text(_format(value),
+              style: const TextStyle(
+                  color: ChatScene.muted,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w400))),
     );
   }
 
@@ -392,53 +499,71 @@ class _MessageTimeDivider extends StatelessWidget {
 }
 
 class _ChatHeader extends StatelessWidget {
-  const _ChatHeader({
-    required this.assistantName,
-    this.onBack,
-    required this.speechEnabled,
-    required this.onSpeechToggle,
-  });
-
+  const _ChatHeader(
+      {required this.assistantName,
+      required this.assistantRole,
+      this.onBack,
+      required this.onInfo,
+      required this.onSearch});
   final String assistantName;
+  final String? assistantRole;
   final VoidCallback? onBack;
-  final bool speechEnabled;
-  final VoidCallback onSpeechToggle;
+  final VoidCallback onInfo, onSearch;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
-      child: Row(
-        children: [
-          IconButton(
-              onPressed: onBack ?? () => Navigator.maybePop(context),
-              tooltip: '返回角色',
-              icon: const Icon(Icons.arrow_back_rounded, size: 23)),
-          Expanded(
-            child: Text(
-              assistantName,
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-          ),
-          IconButton(
-              onPressed: onSpeechToggle,
-              tooltip: speechEnabled ? '关闭自动朗读' : '开启自动朗读',
-              icon: Icon(
-                  speechEnabled
-                      ? Icons.volume_up_outlined
-                      : Icons.volume_off_outlined,
-                  size: 20,
-                  color: speechEnabled
-                      ? BingoPalette.blue
-                      : const Color(0xFF8B9994))),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => ChatGlass(
+      child: Container(
+          decoration: const BoxDecoration(color: Colors.transparent),
+          padding: const EdgeInsets.fromLTRB(8, 7, 10, 11),
+          child: Row(children: [
+            IconButton(
+                onPressed: onBack ?? () => Navigator.maybePop(context),
+                tooltip: '返回角色',
+                icon: const Icon(Icons.chevron_left_rounded,
+                    size: 25, color: ChatScene.ink)),
+            ChatPortrait(
+                size: 36,
+                child: AssistantAvatar(role: assistantRole, size: 36)),
+            const SizedBox(width: 9),
+            Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  Row(children: [
+                    Flexible(
+                        child: Text(assistantName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                                color: ChatScene.ink))),
+                    const SizedBox(width: 7),
+                    Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                            color: Colors.transparent,
+                            border: Border.all(color: const Color(0xFFB9DED2)),
+                            borderRadius: BorderRadius.circular(3)),
+                        child: const Text('AI',
+                            style: TextStyle(
+                                fontSize: 10,
+                                color: BingoPalette.primary,
+                                fontWeight: FontWeight.w700)))
+                  ]),
+                ])),
+            IconButton(
+                onPressed: onSearch,
+                tooltip: '查找聊天记录',
+                icon: const Icon(Icons.search_rounded,
+                    size: 21, color: ChatScene.ink)),
+            IconButton(
+                onPressed: onInfo,
+                tooltip: '聊天信息',
+                icon: const Icon(Icons.more_horiz_rounded,
+                    size: 24, color: ChatScene.ink)),
+          ])));
 }
 
 class _RecommendationRows extends StatelessWidget {
@@ -451,84 +576,46 @@ class _RecommendationRows extends StatelessWidget {
   final ValueChanged<String> onSelected;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 14, 0, 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFDDF4EB),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.auto_awesome_rounded,
-                      size: 14, color: BingoPalette.blue),
-                  const SizedBox(width: 5),
-                  const Text(
-                    '为您推荐',
-                    style: TextStyle(
-                      color: BingoPalette.ink,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          for (final item in items)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(18),
-                onTap: () => onSelected(item),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F8F5).withValues(alpha: 0.96),
-                    border: Border.all(color: const Color(0xFFDCECE6)),
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x0A205F4F),
-                        blurRadius: 12,
-                        offset: Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    item,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Padding(
+      padding: const EdgeInsets.only(top: 10, bottom: 4),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('为您推荐',
+            style: TextStyle(fontSize: 10, color: ChatScene.muted)),
+        const SizedBox(height: 6),
+        SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(children: [
+              for (final item in items)
+                Padding(
+                    padding: const EdgeInsets.only(right: 7),
+                    child: Material(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        child: InkWell(
+                            onTap: () => onSelected(item),
+                            borderRadius: BorderRadius.circular(18),
+                            child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
+                                child: Text(item,
+                                    maxLines: 1,
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        color: ChatScene.muted))))))
+            ]))
+      ]));
 }
 
 class _EmptyChat extends StatelessWidget {
-  const _EmptyChat({required this.onSuggestion, this.assistantRole});
+  const _EmptyChat({this.assistantRole, this.openingLine = ''});
+  final String openingLine;
 
-  final ValueChanged<String> onSuggestion;
   final String? assistantRole;
 
   @override
   Widget build(BuildContext context) {
-    final suggestions = chatStartersForRole(assistantRole);
-    return Center(
+    return Align(
+      alignment: const Alignment(0, -.15),
       child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
         child: Column(
@@ -543,36 +630,15 @@ class _EmptyChat extends StatelessWidget {
             ),
             const SizedBox(height: 22),
             Text(
-              '今天想聊点什么？',
+              openingLine.isEmpty ? '今天想聊点什么？' : openingLine,
+              textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
-            ),
-            const SizedBox(height: 24),
-            Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    for (var index = 0; index < 2; index++) ...[
-                      if (index > 0) const SizedBox(width: 8),
-                      Flexible(child: _suggestion(suggestions[index])),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 8),
-                _suggestion(suggestions[2]),
-              ],
             ),
           ],
         ),
       ),
     );
   }
-
-  Widget _suggestion(String text) => ActionChip(
-        label: Text(text,
-            textAlign: TextAlign.center, softWrap: true, maxLines: 3),
-        onPressed: () => onSuggestion(text),
-      );
 }

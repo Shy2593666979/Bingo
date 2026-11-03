@@ -120,7 +120,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
             builder: (context) => AlertDialog(
                   title: const Text('使用高德地图'),
                   content: const Text('动态地图由高德提供。使用时，高德会处理设备和网络信息以加载地图及验证服务。'
-                      '定位仍由手机系统获取，仅在你确认发送后将选中地点交给伙伴。你也可以选择暂不使用动态地图。'),
+                      '定位仍由手机系统获取，仅在你确认发送后将选中地点交给搭子。你也可以选择暂不使用动态地图。'),
                   actions: [
                     TextButton(
                         onPressed: () =>

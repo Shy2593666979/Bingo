@@ -84,7 +84,7 @@ class _CompanionRecordsPageState extends State<CompanionRecordsPage> {
         records.add((
           key: data.key,
           entry: entry,
-          partner: value['partner_name'] as String? ?? '伙伴'
+          partner: value['partner_name'] as String? ?? '搭子'
         ));
       }
     }
@@ -165,7 +165,7 @@ class _CompanionRecordsPageState extends State<CompanionRecordsPage> {
                                           const SizedBox(height: 16),
                                           Text('还没有${_kind.title}记录'),
                                           const SizedBox(height: 8),
-                                          const Text('和伙伴一起留下的小事，会收在这里',
+                                          const Text('和搭子一起留下的小事，会收在这里',
                                               style: TextStyle(
                                                   fontSize: 12,
                                                   color: Color(0xFF809589))),

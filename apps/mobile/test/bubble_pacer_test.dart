@@ -17,7 +17,8 @@ void main() {
 
   testWidgets('first bubble is immediate and later bubbles queue in order',
       (tester) async {
-    final pacer = BubblePacer(random: () => 0.5);
+    final pacer =
+        BubblePacer(random: () => 0.5, elapsedSinceReveal: () => Duration.zero);
     final visible = <String>[];
     pacer.enqueue('早呀', () => visible.add('早呀'));
     pacer.enqueue('昨晚睡得怎么样？', () => visible.add('昨晚睡得怎么样？'));
@@ -63,7 +64,8 @@ void main() {
 
   testWidgets('delay uses the upcoming bubble, not the previous bubble',
       (tester) async {
-    final pacer = BubblePacer(random: () => 0.5);
+    final pacer =
+        BubblePacer(random: () => 0.5, elapsedSinceReveal: () => Duration.zero);
     final visible = <String>[];
     pacer.enqueue('字' * 100, () => visible.add('长句'));
     pacer.enqueue('短句', () => visible.add('短句'));

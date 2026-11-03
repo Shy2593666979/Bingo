@@ -1,3 +1,4 @@
+import 'package:bingo/core/appearance/chat_appearance.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/shared/widgets/assistant_avatar.dart';
 import 'package:flutter/material.dart';
@@ -18,6 +19,7 @@ class DeviceActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final skin = AppearanceScope.skin(context);
     final scheduledAt =
         DateTime.tryParse(action.arguments['scheduled_at']?.toString() ?? '')
             ?.toLocal();
@@ -59,13 +61,13 @@ class DeviceActionCard extends StatelessWidget {
     final buttonShape =
         RoundedRectangleBorder(borderRadius: BorderRadius.circular(11));
     final confirmStyle = FilledButton.styleFrom(
-        backgroundColor: const Color(0xFFBFE5D4),
-        foregroundColor: const Color(0xFF365E49),
+        backgroundColor: skin.id == 'mint' ? const Color(0xFFBFE5D4) : skin.user,
+        foregroundColor: skin.id == 'mint' ? const Color(0xFF365E49) : skin.accent,
         minimumSize: const Size(0, 38),
         padding: const EdgeInsets.symmetric(horizontal: 12),
         textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
         shape: buttonShape,
-        side: const BorderSide(color: Color(0xFFAFD7C5)));
+        side: BorderSide(color: skin.accent.withValues(alpha: .25)));
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -79,8 +81,8 @@ class DeviceActionCard extends StatelessWidget {
               constraints: const BoxConstraints(maxWidth: 300),
               padding: const EdgeInsets.fromLTRB(14, 16, 14, 13),
               decoration: BoxDecoration(
-                color: const Color(0xFFF8FCFA),
-                border: Border.all(color: const Color(0xFFDEEBE3)),
+                color: skin.other,
+                border: Border.all(color: skin.accent.withValues(alpha: .2)),
                 borderRadius: BorderRadius.circular(17),
               ),
               child: Column(
@@ -92,11 +94,11 @@ class DeviceActionCard extends StatelessWidget {
                       width: 42,
                       height: 42,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE6F3EB),
+                        color: skin.user,
                         borderRadius: BorderRadius.circular(13),
                       ),
-                      child: const Icon(Icons.alarm_outlined,
-                          color: Color(0xFF648775), size: 24),
+                      child: Icon(Icons.alarm_outlined,
+                          color: skin.accent, size: 24),
                     ),
                     const SizedBox(width: 12),
                     Expanded(

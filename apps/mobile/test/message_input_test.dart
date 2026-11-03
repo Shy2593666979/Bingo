@@ -4,6 +4,7 @@ import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/chat/presentation/widgets/message_input.dart';
 import 'package:bingo/features/chat/presentation/widgets/chat_menu_icon.dart';
+import 'package:bingo/features/stickers/sticker_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -45,6 +46,89 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   const deviceChannel = MethodChannel('bingo/device_tools');
   const audioControlChannel = MethodChannel('bingo/audio_stream');
+
+  testWidgets('group plus offers only photo camera phone and location',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(360, 780));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    var called = false;
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: Align(
+                alignment: Alignment.bottomCenter,
+                child: MessageInput(
+                    enabled: true,
+                    referenceStyle: true,
+                    initialVoiceMode: false,
+                    groupMenu: true,
+                    speechGateway: _FakeSpeechGateway(),
+                    onSend: (_) {},
+                    onCall: () => called = true)))));
+    await tester.tap(find.byTooltip('更多功能'));
+    await tester.pumpAndSettle();
+    for (final label in ['照片', '相机', '电话', '位置']) {
+      expect(find.text(label), findsOneWidget);
+    }
+    expect(find.byType(ChatMenuIcon), findsNWidgets(4));
+    expect(find.text('群聊功能'), findsNothing);
+    expect(find.text('群聊设置'), findsNothing);
+    await tester.tap(find.text('电话'));
+    await tester.pumpAndSettle();
+    expect(called, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'composer has voice on left and mutually exclusive more or send on right',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(360, 780));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    String? sent;
+    await tester.pumpWidget(MaterialApp(
+        theme: buildBingoTheme(),
+        home: Scaffold(
+            body: Align(
+                alignment: Alignment.bottomCenter,
+                child: MessageInput(
+                    enabled: true,
+                    referenceStyle: true,
+                    initialVoiceMode: false,
+                    speechGateway: _FakeSpeechGateway(),
+                    onCall: () {},
+                    onSend: (value) => sent = value)))));
+    await tester.pumpAndSettle();
+    final plus = find.byTooltip('更多功能'), send = find.byTooltip('发送消息');
+    expect(send, findsNothing);
+    expect(tester.getSize(plus), const Size(43, 43));
+    expect(
+        tester.getSize(find.byKey(const ValueKey('more'))), const Size(27, 27));
+    expect(tester.getCenter(find.byTooltip('语音输入')).dx,
+        lessThan(tester.getCenter(find.byType(TextField)).dx));
+    final actionPosition = tester.getCenter(plus);
+    expect(actionPosition.dx,
+        greaterThan(tester.getCenter(find.byType(TextField)).dx));
+    await tester.enterText(find.byType(TextField), '今天也要开心');
+    await tester.pumpAndSettle();
+    expect(plus, findsNothing);
+    expect(
+        tester.getSize(find.byKey(const ValueKey('send'))), const Size(32, 32));
+    expect(tester.getSize(send), const Size(43, 43));
+    expect(tester.getCenter(send), actionPosition);
+    await tester.tap(send);
+    await tester.pumpAndSettle();
+    expect(sent, '今天也要开心');
+    await tester.tap(plus);
+    await tester.pumpAndSettle();
+    expect(find.text('语音输入'), findsNothing);
+    expect(find.text('键盘输入'), findsNothing);
+    await tester.tap(find.byTooltip('语音输入'));
+    await tester.pumpAndSettle();
+    expect(find.text('按住说话'), findsOneWidget);
+    await tester.tap(find.byTooltip('键盘输入'));
+    await tester.pumpAndSettle();
+    expect(find.byType(TextField), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   setUp(() async {
     final messenger =
@@ -216,6 +300,62 @@ void main() {
     expect(find.byType(TextField), findsOneWidget);
   });
 
+  for (final groupMenu in [false, true]) {
+    testWidgets('sticker panel dismisses outside in group=$groupMenu',
+        (tester) async {
+      var outsideTaps = 0;
+      final sent = <String>[];
+      await tester.pumpWidget(MaterialApp(
+          home: Scaffold(
+              body: Column(children: [
+        Expanded(
+            child: Center(
+                child: TextButton(
+                    onPressed: () => outsideTaps++,
+                    child: const Text('聊天区域')))),
+        MessageInput(
+            enabled: true,
+            referenceStyle: true,
+            initialVoiceMode: false,
+            groupMenu: groupMenu,
+            speechGateway: _FakeSpeechGateway(),
+            onSend: sent.add,
+            onCall: () {})
+      ]))));
+      await tester.tap(find.byTooltip('表情'));
+      await tester.pumpAndSettle();
+      expect(find.byType(StickerPanel), findsOneWidget);
+      // Interacting inside the panel must still allow sending several stickers.
+      await tester.tap(find.bySemanticsLabel(RegExp('发送表情：.*')).first);
+      await tester.pumpAndSettle();
+      expect(sent, hasLength(1));
+      expect(find.byType(StickerPanel), findsOneWidget);
+      await tester.tap(find.text('聊天区域'));
+      await tester.pumpAndSettle();
+      expect(outsideTaps, 1);
+      expect(find.byType(StickerPanel), findsNothing);
+      // Its own button toggles closed rather than closing and reopening.
+      await tester.tap(find.byTooltip('表情'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('表情'));
+      await tester.pumpAndSettle();
+      expect(find.byType(StickerPanel), findsNothing);
+      await tester.tap(find.byTooltip('表情'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('更多功能'));
+      await tester.pumpAndSettle();
+      expect(find.byType(StickerPanel), findsNothing);
+      expect(find.text(groupMenu ? '照片' : '相册'), findsOneWidget);
+      await tester.tap(find.byTooltip('表情'));
+      await tester.pumpAndSettle();
+      expect(find.byType(StickerPanel), findsOneWidget);
+      await tester.tap(find.byType(TextField));
+      await tester.pumpAndSettle();
+      expect(find.byType(StickerPanel), findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
+
   testWidgets('switches the trailing action between more and send',
       (tester) async {
     String? sent;
@@ -232,22 +372,22 @@ void main() {
       ),
     );
 
-    expect(find.byIcon(Icons.add_rounded), findsOneWidget);
+    expect(find.byTooltip('更多功能'), findsOneWidget);
     expect(find.byIcon(Icons.arrow_upward_rounded), findsNothing);
 
-    await tester.tap(find.byIcon(Icons.keyboard_alt_rounded));
+    await tester.tap(find.byTooltip('键盘输入'));
     await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.add_rounded), findsOneWidget);
+    expect(find.byTooltip('更多功能'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), 'hello');
     await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.add_rounded), findsNothing);
+    expect(find.byTooltip('更多功能'), findsNothing);
     expect(find.byIcon(Icons.arrow_upward_rounded), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.arrow_upward_rounded));
     await tester.pumpAndSettle();
     expect(sent, 'hello');
-    expect(find.byIcon(Icons.add_rounded), findsOneWidget);
+    expect(find.byTooltip('更多功能'), findsOneWidget);
     expect(find.byIcon(Icons.arrow_upward_rounded), findsNothing);
   });
 }

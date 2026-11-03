@@ -25,12 +25,12 @@ const _roleChatStarters = {
     '帮我制定一个适合我的学习计划',
     '最近学习没动力，给我一点建议吧',
   ],
-  '家长': [
+  '邻家大叔': [
     '最近有些烦心事，想听听你的建议',
     '工作和生活总顾不过来，怎么办？',
     '今天有什么新闻可以分享给我的',
   ],
-  '小朋友': [
+  '弟弟': [
     '我们一起编个有趣的小故事吧',
     '来玩一个简单的猜谜游戏吧',
     '如果你有超能力，最想做什么？',
@@ -38,4 +38,9 @@ const _roleChatStarters = {
 };
 
 List<String> chatStartersForRole(String? role) =>
-    _roleChatStarters[role] ?? defaultChatStarters;
+    _roleChatStarters[switch (role) {
+      '家长' => '邻家大叔',
+      '小朋友' || '小孩' || '儿子' || '女儿' => '弟弟',
+      _ => role,
+    }] ??
+    defaultChatStarters;

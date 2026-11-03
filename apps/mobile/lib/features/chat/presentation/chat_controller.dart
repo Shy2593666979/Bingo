@@ -1,3 +1,4 @@
+import 'package:bingo/features/stickers/sticker.dart';
 import 'dart:async';
 import 'package:bingo/features/chat/presentation/bubble_pacer.dart';
 import 'package:bingo/core/device/device_tool_executor.dart';
@@ -42,7 +43,7 @@ class ChatController extends ChangeNotifier {
         notifyListeners();
       });
   final _companionStore = CompanionStore();
-  bool _readAloudEnabled = false;
+  bool _readAloudEnabled = true;
   bool _speechActive = false;
   bool _acceptAudio = false;
   String? _speechError;
@@ -54,6 +55,10 @@ class ChatController extends ChangeNotifier {
 
   Future<void> activateSpeech() async {
     _bubblePacingSuspended = false;
+    _paceWelcome();
+    if (_unfinishedRunId()?.startsWith('welcome-') == true) {
+      _startRecoveryPolling();
+    }
     _speechActive = true;
     final userId = _userId;
     if (userId == null) return;
@@ -61,10 +66,10 @@ class ChatController extends ChangeNotifier {
     try {
       enabled = await _companionStore.read(userId, 'read_aloud');
     } catch (_) {
-      enabled = false;
+      enabled = null;
     }
     if (_userId != userId || !_speechActive) return;
-    _readAloudEnabled = enabled == true;
+    _readAloudEnabled = enabled != false;
     _updateSpeechGateway();
     notifyListeners();
   }
@@ -93,6 +98,9 @@ class ChatController extends ChangeNotifier {
   }
 
   void deactivateSpeech() {
+    if (_activeRunId?.startsWith('welcome-') == true) {
+      _stopRecoveryPolling();
+    }
     _bubblePacingSuspended = true;
     _resetBubblePacing();
     _speechActive = false;
@@ -133,16 +141,21 @@ class ChatController extends ChangeNotifier {
   int _runSequence = 0;
   String? _activeRunId;
   String? _attachedRunId;
+  bool _welcomePresentation = false;
   IncomingCallInvitation? _incomingCall;
   Timer? _recoveryTimer;
   int _recoveryAttempts = 0;
 
-  List<ChatMessage> get messages => List.unmodifiable(
-      _messages.where((message) => !_hiddenBubbleIds.contains(message.id)));
+  List<ChatMessage> get messages =>
+      List.unmodifiable(_messages.where((message) =>
+          !_hiddenBubbleIds.contains(message.id) && !_emptyWelcome(message)));
+  bool _emptyWelcome(ChatMessage message) =>
+      message.runId?.startsWith('welcome-') == true &&
+      message.content.trim().isEmpty;
   List<DeviceAction> get deviceActions => List.unmodifiable(_deviceActionItems);
   List<Object> get timelineItems =>
       List.unmodifiable(_timelineItems.where((item) => item is ChatMessage
-          ? !_hiddenBubbleIds.contains(item.id)
+          ? !_hiddenBubbleIds.contains(item.id) && !_emptyWelcome(item)
           : item is! DeviceAction ||
               !_bubblePacer.isPending ||
               !_pacedActionIds.contains(item.id)));
@@ -150,8 +163,43 @@ class ChatController extends ChangeNotifier {
       _bubblePacer.isPending ? ChatStatus.sending : _status;
   String? get errorMessage => _errorMessage;
   bool get isBusy => _status == ChatStatus.sending || _bubblePacer.isPending;
+  // Keep the hint through every inter-bubble wait, including queued bubbles
+  // whose generation has already finished but whose reveal is still paced.
+  bool get isWaitingForReply => !_bubblePacingSuspended && isBusy;
   List<String> get recommendations => List.unmodifiable(_recommendations);
   String? get conversationId => _conversationId;
+
+  Future<void> clearHistory(ChatInfoGateway gateway) async {
+    final conversationId = _conversationId;
+    final binding = _bindingSequence;
+    if (isBusy || conversationId == null) {
+      throw StateError('当前对话无法清空');
+    }
+    await gateway.clearChatMessages(conversationId);
+    if (binding != _bindingSequence) return;
+    _bindingSequence++;
+    final clearedBinding = _bindingSequence;
+    await stopSpeech();
+    if (clearedBinding != _bindingSequence) return;
+    _stopRecoveryPolling();
+    _resetBubblePacing();
+    _messages.clear();
+    _timelineItems.clear();
+    _deviceActionItems.clear();
+    _pendingTimelineActions.clear();
+    _recommendations.clear();
+    _incomingCall = null;
+    _title = null;
+    _activeRunId = null;
+    _attachedRunId = null;
+    _errorMessage = null;
+    _status = ChatStatus.idle;
+    await _persist();
+    if (clearedBinding != _bindingSequence) return;
+    await _clearRecommendations();
+    if (clearedBinding != _bindingSequence) return;
+    notifyListeners();
+  }
 
   IncomingCallInvitation? takeIncomingCall() {
     final invitation = _incomingCall;
@@ -185,6 +233,13 @@ class ChatController extends ChangeNotifier {
           .where((message) => message.role == ChatRole.user)
           .map((message) => message.content)
           .firstOrNull;
+      final waiting = _unfinishedRunId();
+      if (waiting?.startsWith('welcome-') == true) {
+        _activeRunId = waiting;
+        _status = ChatStatus.sending;
+        _startRecoveryPolling();
+      }
+      _paceWelcome();
       await _persist();
       notifyListeners();
     } catch (_) {
@@ -194,6 +249,19 @@ class ChatController extends ChangeNotifier {
 
   void setAssistantRole(String? role) {
     _assistantRole = role;
+  }
+
+  void resumeWelcome() {
+    if (_messages.any((message) => message.role == ChatRole.user)) return;
+    final index = _messages.indexWhere(_emptyWelcome);
+    if (index < 0) return;
+    _replaceMessageAt(
+        index, _messages[index].copyWith(status: ChatMessageStatus.streaming));
+    _welcomePresentation = true;
+    _activeRunId = _messages[index].runId;
+    _status = ChatStatus.sending;
+    _startRecoveryPolling();
+    notifyListeners();
   }
 
   Future<void> bindAccount(String userId) async {
@@ -206,8 +274,10 @@ class ChatController extends ChangeNotifier {
   }
 
   Future<void> bindConversation(
-      String userId, String conversationId, String role) async {
+      String userId, String conversationId, String role,
+      {bool welcomeUnread = false}) async {
     unbindUser();
+    _welcomePresentation = welcomeUnread;
     _userId = userId;
     _roleConversation = true;
     _assistantRole = role;
@@ -304,8 +374,9 @@ class ChatController extends ChangeNotifier {
   }
 
   void unbindUser() {
+    _welcomePresentation = false;
     deactivateSpeech();
-    _readAloudEnabled = false;
+    _readAloudEnabled = true;
     _bindingSequence++;
     _stopRecoveryPolling();
     _runSequence++;
@@ -432,9 +503,9 @@ class ChatController extends ChangeNotifier {
         : content.isEmpty
             ? '[图片]'
             : content;
-    _title ??= displayedContent.length > 80
-        ? displayedContent.substring(0, 80)
-        : displayedContent;
+    final titleContent = ChatSticker.preview(displayedContent);
+    _title ??=
+        titleContent.length > 80 ? titleContent.substring(0, 80) : titleContent;
     if (existingMomentIndex < 0) {
       _addMessage(
         ChatMessage(
@@ -691,6 +762,7 @@ class ChatController extends ChangeNotifier {
       _status = ChatStatus.idle;
       _errorMessage = null;
       _stopRecoveryPolling();
+      _paceWelcome();
       await _persist();
       notifyListeners();
     } on Exception {
@@ -702,6 +774,10 @@ class ChatController extends ChangeNotifier {
 
   String? _unfinishedRunId() {
     for (final message in _messages.reversed) {
+      if (message.runId?.startsWith('welcome-') == true &&
+          message.status == ChatMessageStatus.streaming) {
+        return message.runId;
+      }
       if (message.role != ChatRole.user || message.runId == null) continue;
       final replies = _messages.where(
         (candidate) =>
@@ -719,12 +795,35 @@ class ChatController extends ChangeNotifier {
     return null;
   }
 
+  void _paceWelcome() {
+    if (!_welcomePresentation || _bubblePacingSuspended) return;
+    final replies = _messages
+        .where((message) =>
+            message.runId?.startsWith('welcome-') == true &&
+            message.status == ChatMessageStatus.completed &&
+            message.content.trim().isNotEmpty)
+        .toList();
+    if (replies.isEmpty) return;
+    _welcomePresentation = false;
+    final generation = _runSequence;
+    for (final message in replies) {
+      _hiddenBubbleIds.add(message.id);
+      _bubblePacer.enqueue(message.content, () {
+        if (generation != _runSequence) return;
+        _hiddenBubbleIds.remove(message.id);
+        notifyListeners();
+      });
+    }
+  }
+
   void _startRecoveryPolling() {
     if (_recoveryTimer != null || _unfinishedRunId() == null) return;
     _recoveryAttempts = 0;
     _recoveryTimer = Timer.periodic(const Duration(seconds: 2), (_) {
       _recoveryAttempts++;
-      if (_recoveryAttempts >= 60 || _unfinishedRunId() == null) {
+      final pending = _unfinishedRunId();
+      if (pending == null ||
+          (_recoveryAttempts >= 60 && !pending.startsWith('welcome-'))) {
         _stopRecoveryPolling();
         return;
       }

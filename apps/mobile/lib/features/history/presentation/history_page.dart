@@ -1,7 +1,9 @@
 import 'package:bingo/core/widgets/center_toast.dart';
+import 'package:bingo/core/design/bingo_icon.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/chat/data/local_chat_store.dart';
 import 'package:flutter/material.dart';
+import 'package:bingo/shared/widgets/avatar_frame.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({
@@ -144,8 +146,10 @@ class _HistoryPageState extends State<HistoryPage> {
                 return ListTile(
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-                  leading: CircleAvatar(
-                    child: Text(item.title.characters.first.toUpperCase()),
+                  leading: AvatarFrame(
+                    size: 40,
+                    child: Center(
+                        child: Text(item.title.characters.first.toUpperCase())),
                   ),
                   title: Text(
                     item.title,
@@ -201,7 +205,12 @@ class _HistoryState extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       children: [
         const SizedBox(height: 150),
-        Icon(icon, size: 44, color: Theme.of(context).colorScheme.primary),
+        if (icon == Icons.forum_outlined)
+          Center(
+              child: BingoIcon(BingoSymbol.chat,
+                  size: 44, color: Theme.of(context).colorScheme.primary))
+        else
+          Icon(icon, size: 44, color: Theme.of(context).colorScheme.primary),
         const SizedBox(height: 16),
         Text(
           title,

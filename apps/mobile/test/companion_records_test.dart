@@ -118,7 +118,7 @@ void main() {
   testWidgets('scoped shortcut and focus sleep histories remain available',
       (tester) async {
     seed('user', 'first', 'focus', '专注了25分钟');
-    seed('user', 'second', 'focus', '不应展示的另一位伙伴');
+    seed('user', 'second', 'focus', '不应展示的另一位搭子');
     seed('user', 'first', 'sleep', '陪伴了10分钟');
     await tester.pumpWidget(const MaterialApp(
         home: CompanionRecordsPage(
@@ -127,7 +127,7 @@ void main() {
             initialKind: CompanionRecordKind.focus)));
     await tester.pumpAndSettle();
     expect(find.text('专注了25分钟'), findsOneWidget);
-    expect(find.text('不应展示的另一位伙伴'), findsNothing);
+    expect(find.text('不应展示的另一位搭子'), findsNothing);
     await tester.tap(find.text('入睡'));
     await tester.pumpAndSettle();
     expect(find.text('陪伴了10分钟'), findsOneWidget);

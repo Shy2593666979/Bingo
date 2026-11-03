@@ -17,7 +17,7 @@ import 'package:flutter/services.dart';
 
 enum CompanionMoment {
   focus('一起专注', ChatMenuSymbol.focus, '把这段时间，留给一件重要的小事'),
-  promise('小约定', ChatMenuSymbol.promise, '和伙伴约好，一件值得期待的小事'),
+  promise('小约定', ChatMenuSymbol.promise, '和搭子约好，一件值得期待的小事'),
   sleep('陪我入睡', ChatMenuSymbol.sleep, '不用急着回应，慢慢放松下来'),
   diary('今日小记', ChatMenuSymbol.diary, '今天的心情和小事，都可以留在这里');
 
@@ -86,7 +86,7 @@ class _CompanionMomentPageState extends State<CompanionMomentPage>
   Future<void> _load() async {
     try {
       if (_userId == null || _conversationId == null) {
-        throw StateError('请先进入伙伴聊天');
+        throw StateError('请先进入搭子聊天');
       }
       final raw = await _store.read(_userId!, _key);
       if (!mounted) return;

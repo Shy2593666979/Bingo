@@ -1,3 +1,8 @@
+import 'package:bingo/core/design/chat_scene.dart';
+import 'package:bingo/shared/widgets/avatar_frame.dart';
+import 'package:bingo/features/stickers/sticker.dart';
+import 'package:bingo/features/stickers/sticker_widgets.dart';
+import 'package:bingo/core/appearance/chat_appearance.dart';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -12,11 +17,13 @@ class MessageBubble extends StatelessWidget {
     required this.message,
     required this.assistantRole,
     this.imageUrlBuilder,
+    this.showAvatar = true,
     this.imageAccessToken,
     super.key,
   });
 
   final ChatMessage message;
+  final bool showAvatar;
   final String? assistantRole;
   final String Function(String imageId)? imageUrlBuilder;
   final String? imageAccessToken;
@@ -24,81 +31,92 @@ class MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isUser = message.role == ChatRole.user;
-    final bubble = Container(
-      constraints: const BoxConstraints(maxWidth: 560),
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
-      decoration: BoxDecoration(
-        color: isUser
-            ? BingoPalette.userBubble
-            : BingoPalette.softSurface.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(26),
-          topRight: const Radius.circular(26),
-          bottomLeft: Radius.circular(isUser ? 26 : 8),
-          bottomRight: Radius.circular(isUser ? 8 : 26),
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x08205F4F),
-            blurRadius: 10,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: message.content.isEmpty
-          ? const _TypingDots()
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (message.imageBytes != null)
-                  _MemoryChatImage(bytes: message.imageBytes!)
-                else if (message.imageId != null && imageUrlBuilder != null)
-                  _ChatImage(
-                    url: imageUrlBuilder!(message.imageId!),
-                    accessToken: imageAccessToken,
-                  ),
-                if (isUser && CompanionMomentCard.matches(message.content))
-                  CompanionMomentCard(content: message.content)
-                else if (message.imageId == null || message.content != '[图片]')
-                  SelectableText(
-                    message.content,
-                    style: TextStyle(
-                      color: BingoPalette.ink,
-                      fontSize: 16,
-                      height: 1.55,
-                    ),
-                  ),
-                if (message.status == ChatMessageStatus.interrupted) ...[
-                  const SizedBox(height: 5),
-                  Text(
-                    '已中断',
-                    style: TextStyle(
-                      color: BingoPalette.ink.withValues(alpha: 0.48),
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-    );
+    final sticker = ChatSticker.parse(message.content);
+    if (sticker != null) {
+      return Align(
+          alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+          child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 7),
+              child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (!isUser) ...[
+                      ChatPortrait(
+                          size: 36,
+                          child: AssistantAvatar(
+                              role: message.assistantRole ?? assistantRole,
+                              size: 36)),
+                      const SizedBox(width: 6)
+                    ],
+                    StickerMessageView(sticker),
+                  ])));
+    }
+
+    final bubble = ConstrainedBox(
+        constraints: BoxConstraints(
+            maxWidth: math.min(560, MediaQuery.sizeOf(context).width * .8)),
+        child: BubbleSurface(
+          isUser: isUser,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: message.content.isEmpty
+              ? const _TypingDots()
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (message.imageBytes != null)
+                      _MemoryChatImage(bytes: message.imageBytes!)
+                    else if (message.imageId != null && imageUrlBuilder != null)
+                      _ChatImage(
+                        url: imageUrlBuilder!(message.imageId!),
+                        accessToken: imageAccessToken,
+                      ),
+                    if (isUser && CompanionMomentCard.matches(message.content))
+                      CompanionMomentCard(content: message.content)
+                    else if (message.imageId == null ||
+                        message.content != '[图片]')
+                      SelectableText(
+                        message.content,
+                        style: TextStyle(
+                          color: ChatScene.ink,
+                          fontSize: 15,
+                          height: 1.45,
+                        ),
+                      ),
+                    if (message.status == ChatMessageStatus.interrupted) ...[
+                      const SizedBox(height: 5),
+                      Text(
+                        '已中断',
+                        style: TextStyle(
+                          color: BingoPalette.ink.withValues(alpha: 0.48),
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+        ));
 
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 5),
+        padding: EdgeInsets.only(top: showAvatar ? 5 : 1, bottom: 4),
         child: isUser
             ? bubble
             : Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.only(right: 9, bottom: 6),
-                    child: AssistantAvatar(
-                      role: message.assistantRole ?? assistantRole,
-                      size: 42,
-                    ),
+                    padding: const EdgeInsets.only(right: 6, top: 0),
+                    child: showAvatar
+                        ? ChatPortrait(
+                            size: 36,
+                            child: AssistantAvatar(
+                                role: message.assistantRole ?? assistantRole,
+                                size: 36))
+                        : const SizedBox.square(dimension: 36),
                   ),
                   Flexible(child: bubble),
                 ],
@@ -132,55 +150,49 @@ class CallRecordTile extends StatelessWidget {
       'failed' => '通话异常结束',
       _ => '通话已结束',
     };
-    final bubble = Container(
-      constraints: const BoxConstraints(maxWidth: 300),
-      padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 13),
-      decoration: BoxDecoration(
-        color: isUser ? BingoPalette.userBubble : BingoPalette.softSurface,
-        borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(22),
-          topRight: const Radius.circular(22),
-          bottomLeft: Radius.circular(isUser ? 22 : 7),
-          bottomRight: Radius.circular(isUser ? 7 : 22),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            failed || status == 'rejected' || status == 'missed'
-                ? Icons.call_end_rounded
-                : Icons.call_rounded,
-            size: 23,
-            color: BingoPalette.ink,
-          ),
-          const SizedBox(width: 10),
-          Column(
+    final bubble = ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 300),
+        child: BubbleSurface(
+          isUser: isUser,
+          padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 13),
+          child: Row(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '语音通话',
-                style: TextStyle(
-                  color: BingoPalette.ink,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                ),
+              Icon(
+                failed || status == 'rejected' || status == 'missed'
+                    ? Icons.call_end_rounded
+                    : Icons.call_rounded,
+                size: 23,
+                color: BingoPalette.ink,
               ),
-              const SizedBox(height: 2),
-              Text(
-                '$statusLabel  $minutes:$seconds',
-                style: TextStyle(
-                  color: const Color(0xFF65716D),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              const SizedBox(width: 10),
+              Flexible(
+                  child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '语音通话',
+                    style: TextStyle(
+                      color: BingoPalette.ink,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '$statusLabel  $minutes:$seconds',
+                    style: TextStyle(
+                      color: const Color(0xFF65716D),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              )),
             ],
           ),
-        ],
-      ),
-    );
+        ));
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Padding(
@@ -192,11 +204,12 @@ class CallRecordTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.only(right: 9, bottom: 6),
-                    child: AssistantAvatar(
-                      role: message.assistantRole ?? assistantRole,
-                      size: 42,
-                    ),
+                    padding: const EdgeInsets.only(right: 6, bottom: 0),
+                    child: ChatPortrait(
+                        size: 36,
+                        child: AssistantAvatar(
+                            role: message.assistantRole ?? assistantRole,
+                            size: 36)),
                   ),
                   Flexible(child: bubble),
                 ],
@@ -294,29 +307,14 @@ class AssistantTypingBubble extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Padding(
-              padding: const EdgeInsets.only(right: 9, bottom: 6),
-              child: AssistantAvatar(role: assistantRole, size: 42),
+              padding: const EdgeInsets.only(right: 6, bottom: 0),
+              child: ChatPortrait(
+                  size: 36,
+                  child: AssistantAvatar(role: assistantRole, size: 36)),
             ),
-            Container(
-              width: 66,
-              height: 46,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: BingoPalette.softSurface.withValues(alpha: 0.94),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(26),
-                  topRight: Radius.circular(26),
-                  bottomLeft: Radius.circular(8),
-                  bottomRight: Radius.circular(26),
-                ),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x08205F4F),
-                    blurRadius: 10,
-                    offset: Offset(0, 3),
-                  ),
-                ],
-              ),
+            BubbleSurface(
+              isUser: false,
+              padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 15),
               child: const _TypingDots(),
             ),
           ],
@@ -363,9 +361,9 @@ class _TypingDotsState extends State<_TypingDots>
               height: 7,
               margin: const EdgeInsets.symmetric(horizontal: 2),
               decoration: BoxDecoration(
-                color: BingoPalette.blue.withValues(
-                  alpha: 0.42 + progress * 0.58,
-                ),
+                color: AppearanceScope.skin(context).accent.withValues(
+                      alpha: 0.42 + progress * 0.58,
+                    ),
                 shape: BoxShape.circle,
               ),
             ),

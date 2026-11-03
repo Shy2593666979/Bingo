@@ -380,7 +380,7 @@ void main() {
     expect(find.text('定位权限未开启，仍可搜索地点发送'), findsOneWidget);
     expect(find.byType(CheckboxListTile), findsNothing);
     expect(find.textContaining('仅发送区县'), findsNothing);
-    expect(find.textContaining('确认后发送给当前伙伴'), findsNothing);
+    expect(find.textContaining('确认后发送给当前搭子'), findsNothing);
     expect(
         tester
             .widget<FilledButton>(find.widgetWithText(FilledButton, '发送'))

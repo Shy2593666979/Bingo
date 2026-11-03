@@ -301,7 +301,7 @@ void main() {
     expect(controller.messages, isEmpty);
     expect(gateway.narratives.length, 2);
     expect(gateway.narratives.last, contains('小兔子'));
-    expect(controller.readAloudEnabled, isFalse);
+    expect(controller.readAloudEnabled, isTrue);
     expect(nativeCalls.any((call) => call.method == 'playReplyAudio'), isTrue);
     await tester.ensureVisible(find.text('暂停陪伴'));
     await tester.pumpAndSettle();

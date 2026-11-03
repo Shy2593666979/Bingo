@@ -8,6 +8,7 @@ import 'package:bingo/features/chat/presentation/chat_controller.dart';
 import 'package:bingo/shared/widgets/assistant_avatar.dart';
 import 'package:bingo/features/chat/presentation/chat_page.dart';
 import 'package:bingo/features/chat/presentation/widgets/message_bubble.dart';
+import 'package:bingo/features/chat/presentation/widgets/message_input.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -287,13 +288,16 @@ class RecoveringChatGateway implements ChatGateway, ConversationGateway {
   RecoveringChatGateway(this.remoteMessages);
 
   List<ChatMessage> remoteMessages;
+  int loads = 0;
 
   @override
   Future<List<ConversationSummary>> listConversations() async => const [];
 
   @override
-  Future<List<ChatMessage>> listMessages(String conversationId) async =>
-      List.of(remoteMessages);
+  Future<List<ChatMessage>> listMessages(String conversationId) async {
+    loads++;
+    return List.of(remoteMessages);
+  }
 
   @override
   Stream<ChatStreamEvent> send({
@@ -307,6 +311,120 @@ class RecoveringChatGateway implements ChatGateway, ConversationGateway {
 }
 
 void main() {
+  testWidgets(
+      'pending AI welcome shows typing then reveals sentence bubbles gradually',
+      (tester) async {
+    for (final name in ['bingo/local_chat', 'bingo/device_tools']) {
+      tester.binding.defaultBinaryMessenger
+          .setMockMethodCallHandler(MethodChannel(name), (_) async => null);
+      addTearDown(() => tester.binding.defaultBinaryMessenger
+          .setMockMethodCallHandler(MethodChannel(name), null));
+    }
+    final gateway = RecoveringChatGateway([
+      const ChatMessage(
+          id: 'welcome',
+          role: ChatRole.assistant,
+          content: '',
+          runId: 'welcome-job',
+          status: ChatMessageStatus.streaming)
+    ]);
+    final controller = ChatController(gateway: gateway, remoteHistory: gateway);
+    await controller.bindConversation('u', 'c', '女朋友', welcomeUnread: true);
+    await controller.activateSpeech();
+    expect(controller.messages, isEmpty);
+    expect(controller.timelineItems, isEmpty);
+    expect(controller.isWaitingForReply, isTrue);
+    await tester.pump(const Duration(seconds: 130));
+    controller.deactivateSpeech();
+    final beforePause = gateway.loads;
+    await tester.pump(const Duration(seconds: 10));
+    expect(gateway.loads, beforePause);
+    await controller.activateSpeech();
+    gateway.remoteMessages = [
+      const ChatMessage(
+          id: 'welcome',
+          role: ChatRole.assistant,
+          content: '小雨，很高兴认识你。今天想聊些什么？',
+          runId: 'welcome-job')
+    ];
+    await tester.pump(const Duration(seconds: 2));
+    expect(controller.messages, hasLength(1));
+    expect(controller.isWaitingForReply, isTrue);
+    await tester.pump(const Duration(seconds: 3));
+    expect(controller.messages, hasLength(2));
+    expect(controller.isWaitingForReply, isFalse);
+    controller.dispose();
+  });
+  testWidgets('speech defaults on and preserves a saved disabled preference',
+      (tester) async {
+    const local = MethodChannel('bingo/local_chat');
+    String? preference;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+            local,
+            (call) async =>
+                call.method == 'readCompanionData' ? preference : null);
+    addTearDown(() => TestDefaultBinaryMessengerBinding
+        .instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(local, null));
+    final controller = ChatController(gateway: FakeChatGateway());
+    await controller.bindAccount('voice-default-user');
+    await controller.activateSpeech();
+    expect(controller.readAloudEnabled, isTrue);
+    controller.deactivateSpeech();
+    preference = 'false';
+    await controller.activateSpeech();
+    expect(controller.readAloudEnabled, isFalse);
+    controller.dispose();
+    await tester.pump();
+  });
+  testWidgets(
+      'H3 consecutive assistant bubbles share one portrait and content edge',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(360, 780));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final store = MemoryChatStore();
+    store.conversations['h3'] =
+        LocalConversation(id: 'h3', title: '连贯对话', messages: [
+      ChatMessage(
+          id: 'one',
+          role: ChatRole.assistant,
+          content: '第一句',
+          createdAt: DateTime.utc(2026, 11, 1, 12)),
+      ChatMessage(
+          id: 'two',
+          role: ChatRole.assistant,
+          content: '接着聊一句',
+          createdAt: DateTime.utc(2026, 11, 1, 12, 0, 20)),
+      ChatMessage(
+          id: 'three',
+          role: ChatRole.assistant,
+          content: '过一会儿再聊',
+          createdAt: DateTime.utc(2026, 11, 1, 12, 5)),
+    ]);
+    store.activeId = 'h3';
+    final controller =
+        ChatController(gateway: FakeChatGateway(), localStore: store);
+    await controller.bindUser('h3-user');
+    await tester.pumpWidget(MaterialApp(
+        home: ChatPage(
+            controller: controller,
+            assistantName: '甜甜',
+            assistantRole: '女朋友',
+            speechGateway: FakeSpeechGateway(),
+            onStartCall: () {},
+            onIncomingCall: (_) async {},
+            onOpenSettings: () {})));
+    await tester.pumpAndSettle();
+    final bubbles =
+        tester.widgetList<MessageBubble>(find.byType(MessageBubble)).toList();
+    expect(bubbles.map((b) => b.showAvatar), [true, false, true]);
+    expect(tester.getTopLeft(find.text('第一句')).dx,
+        tester.getTopLeft(find.text('接着聊一句')).dx);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    controller.dispose();
+  });
   test('does not create an alarm again when reporting its result fails',
       () async {
     final gateway = FakeApprovalGateway()..completionFailures = 1;
@@ -448,7 +566,8 @@ void main() {
     controller.dispose();
   });
 
-  testWidgets('chat header centers name with speaker and keeps call in menu',
+  testWidgets(
+      'chat header opens chat info and keeps speech controls in settings',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(360, 780));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -466,22 +585,23 @@ void main() {
             onIncomingCall: (_) async {},
             onOpenSettings: () {})));
     await tester.pumpAndSettle();
-    expect(tester.getCenter(find.text('暖暖')).dx, closeTo(180, 1));
+    expect(find.text('陪伴中'), findsNothing);
     expect(tester.getCenter(find.byTooltip('返回角色')).dx,
         lessThan(tester.getCenter(find.text('暖暖')).dx));
-    expect(find.byTooltip('语音通话'), findsNothing);
-    expect(tester.getCenter(find.byTooltip('开启自动朗读')).dx,
-        greaterThan(tester.getCenter(find.text('暖暖')).dx));
-    await tester.tap(find.byTooltip('开启自动朗读'));
+    expect(find.byTooltip('查找聊天记录'), findsOneWidget);
+    await tester.tap(find.byTooltip('聊天信息'));
+    await tester.pumpAndSettle();
+    expect(find.text('聊天信息'), findsOneWidget);
+    await tester.tap(find.text('语音通话'));
     await tester.pumpAndSettle();
     expect(controller.readAloudEnabled, isTrue);
-    expect(find.byTooltip('关闭自动朗读'), findsOneWidget);
-    await tester.tap(find.byTooltip('关闭自动朗读'));
+    await tester.tap(find.text('开启声音'));
     await tester.pumpAndSettle();
     expect(controller.readAloudEnabled, isFalse);
-    await tester.tap(find.byTooltip('更多功能'));
+    await tester.tap(find.text('开启声音'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('电话'));
+    expect(controller.readAloudEnabled, isTrue);
+    await tester.tap(find.byTooltip('返回'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('返回角色'));
     expect(calls, 1);
@@ -519,6 +639,8 @@ void main() {
     expect(assistantAvatarAsset('男朋友'), 'assets/images/boyfriend.png');
     expect(assistantAvatarAsset('女朋友'), 'assets/images/girlfriend.png');
     expect(assistantAvatarAsset('家长'), 'assets/images/parent.png');
+    expect(assistantAvatarAsset('邻家大叔'), 'assets/images/parent.png');
+    expect(assistantAvatarAsset('弟弟'), 'assets/images/child.png');
     expect(assistantAvatarAsset('老师'), 'assets/images/teacher.png');
     expect(assistantAvatarAsset('小孩'), 'assets/images/child.png');
     expect(assistantAvatarAsset('同事'), 'assets/images/colleague.png');
@@ -936,11 +1058,13 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(360, 780));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final store = MemoryChatStore();
-    store.conversations['conversation-1'] = const LocalConversation(
+    store.conversations['conversation-1'] = LocalConversation(
       id: 'conversation-1',
       title: '已有对话',
       messages: [
-        ChatMessage(id: 'message-1', role: ChatRole.assistant, content: '聊天记录'),
+        for (var i = 0; i < 30; i++)
+          ChatMessage(
+              id: 'message-$i', role: ChatRole.assistant, content: '聊天记录 $i'),
       ],
     );
     store.activeId = 'conversation-1';
@@ -983,7 +1107,9 @@ void main() {
         lessThan(tester.getSize(mediumBubble).width));
     expect(tester.getSize(mediumBubble).width,
         lessThan(tester.getSize(longBubble).width));
-    expect(tester.getTopLeft(shortBubble).dx, tester.getTopLeft(longBubble).dx);
+    expect(tester.getTopLeft(shortBubble).dy, tester.getTopLeft(longBubble).dy);
+    expect(tester.getTopLeft(shortBubble).dx,
+        lessThan(tester.getTopLeft(longBubble).dx));
     expect(tester.takeException(), isNull);
     expect(find.byIcon(Icons.north_west_rounded), findsNothing);
     expect(
@@ -991,8 +1117,15 @@ void main() {
         of: find.text('为您推荐'),
         matching: find.byType(ListView),
       ),
-      findsOneWidget,
+      findsNothing,
     );
+    final dock = find.byKey(const ValueKey('chat-recommendations-dock'));
+    final beforeScroll = tester.getTopLeft(dock);
+    await tester.drag(find.byType(ListView), const Offset(0, 400));
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(dock), beforeScroll);
+    expect(tester.getBottomLeft(dock).dy,
+        lessThanOrEqualTo(tester.getTopLeft(find.byType(MessageInput)).dy));
   });
 
   testWidgets(
@@ -1022,29 +1155,28 @@ void main() {
     expect(find.byIcon(Icons.settings_rounded), findsNothing);
     final avatars =
         tester.widgetList<AssistantAvatar>(find.byType(AssistantAvatar));
-    expect(avatars.length, 1);
+    expect(avatars.length, 2);
     expect(avatars.every((avatar) => avatar.role == '男朋友'), isTrue);
     final welcomeAvatar = find.byKey(const ValueKey('empty-chat-avatar'));
     expect(tester.getSize(welcomeAvatar), const Size(104, 104));
-    expect(find.descendant(of: welcomeAvatar, matching: find.byType(ClipOval)),
+    expect(
+        find.descendant(
+            of: welcomeAvatar, matching: find.byType(ClipRSuperellipse)),
         findsOneWidget);
     expect(
         find.descendant(of: welcomeAvatar, matching: find.byType(DecoratedBox)),
         findsNothing);
-    final first =
-        tester.getCenter(find.widgetWithText(ActionChip, '今天不太开心，安慰我一下吧'));
-    final second =
-        tester.getCenter(find.widgetWithText(ActionChip, '有件事让我纠结，陪我一起想想'));
-    final third =
-        tester.getCenter(find.widgetWithText(ActionChip, '睡前陪我聊一会儿吧'));
+    expect(find.text('为您推荐'), findsOneWidget);
+    expect(find.byType(ActionChip), findsNothing);
+    final first = tester.getCenter(find.text('今天不太开心，安慰我一下吧'));
+    final second = tester.getCenter(find.text('有件事让我纠结，陪我一起想想'));
+    final third = tester.getCenter(find.text('睡前陪我聊一会儿吧'));
     expect(first.dy, second.dy);
-    expect(first.dx, lessThan(third.dx));
-    expect(second.dx, greaterThan(third.dx));
-    expect(third.dy, greaterThan(first.dy));
+    expect(second.dy, third.dy);
+    expect(first.dx, lessThan(second.dx));
+    expect(second.dx, lessThan(third.dx));
     final firstLabel = tester.widget<Text>(find.text('今天不太开心，安慰我一下吧'));
-    expect(firstLabel.softWrap, isTrue);
-    expect(firstLabel.maxLines, 3);
-    expect(tester.getSize(find.text('今天不太开心，安慰我一下吧')).height, greaterThan(25));
+    expect(firstLabel.maxLines, 1);
     await tester.tap(find.text('今天不太开心，安慰我一下吧'));
     await tester.pumpAndSettle();
     expect(gateway.lastContent, '今天不太开心，安慰我一下吧');

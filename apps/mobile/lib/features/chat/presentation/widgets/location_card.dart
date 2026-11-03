@@ -1,3 +1,4 @@
+import 'package:bingo/core/appearance/chat_appearance.dart';
 import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/core/widgets/center_toast.dart';
 import 'package:bingo/features/chat/models/chat_location.dart';
@@ -106,7 +107,9 @@ class LocationCard extends StatelessWidget {
   Widget build(BuildContext context) => ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 274),
       child: Material(
-          color: isUser ? const Color(0xFFE4F3E9) : Colors.white,
+          color: isUser
+              ? AppearanceScope.skin(context).user
+              : AppearanceScope.skin(context).other,
           clipBehavior: Clip.antiAlias,
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.only(
@@ -115,7 +118,9 @@ class LocationCard extends StatelessWidget {
                   bottomLeft: const Radius.circular(16),
                   bottomRight: const Radius.circular(16)),
               side: BorderSide(
-                  color: isUser ? const Color(0xFFD0E7D9) : BingoPalette.line)),
+                  color: AppearanceScope.skin(context)
+                      .accent
+                      .withValues(alpha: .2))),
           child: InkWell(
               onTap: () => Navigator.of(context).push<void>(MaterialPageRoute(
                   builder: (_) => LocationDetailPage(
