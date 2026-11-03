@@ -20,9 +20,83 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  fonts:
+    - family: BingoSans
+      fonts:
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Regular.ttf
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Medium.ttf
+          weight: 500
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Medium.ttf
+          weight: 600
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Bold.ttf
+          weight: 700
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Bold.ttf
+          weight: 800
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Black.ttf
+          weight: 900
   assets:
-    - assets/images/
+    - assets/images/bingo_logo.webp
+    - assets/avatars_square/bestie.webp
+    - assets/avatars_square/boyfriend.webp
+    - assets/avatars_square/bro.webp
+    - assets/avatars_square/child.webp
+    - assets/avatars_square/colleague.webp
+    - assets/avatars_square/confidant.webp
+    - assets/avatars_square/fitness.webp
+    - assets/avatars_square/girlfriend.webp
+    - assets/avatars_square/parent.webp
+    - assets/avatars_square/senior_brother.webp
+    - assets/avatars_square/senior_sister.webp
+    - assets/avatars_square/teacher.webp
+    - assets/chat_bubbles/autumncat.webp
+    - assets/chat_bubbles/bear.webp
+    - assets/chat_bubbles/blossom.webp
+    - assets/chat_bubbles/carrot.webp
+    - assets/chat_bubbles/chefmouse.webp
+    - assets/chat_bubbles/droolcat.webp
+    - assets/chat_bubbles/ghost.webp
+    - assets/chat_bubbles/ginger.webp
+    - assets/chat_bubbles/h2-atlas.webp
+    - assets/chat_bubbles/icecream.webp
+    - assets/chat_bubbles/moeye.webp
+    - assets/chat_bubbles/mushroom.webp
+    - assets/chat_bubbles/nian.webp
+    - assets/chat_bubbles/peachmilk.webp
+    - assets/chat_bubbles/please.webp
+    - assets/chat_bubbles/pot-v2.webp
+    - assets/chat_bubbles/qiqi.webp
+    - assets/chat_bubbles/sadworker.webp
+    - assets/chat_bubbles/sailor.webp
+    - assets/chat_bubbles/shiba.webp
+    - assets/chat_bubbles/snowburger.webp
+    - assets/chat_bubbles/star27.webp
+    - assets/chat_bubbles/truck-v2.webp
+    - assets/chat_bubbles/wolf.webp
+    - assets/chat_bubbles/wuta.webp
+    - assets/stickers/boyfriend.webp
+    - assets/stickers/child.webp
+    - assets/stickers/colleague.webp
+    - assets/stickers/girlfriend.webp
+    - assets/stickers/parent.webp
+    - assets/stickers/teacher.webp
+    - assets/reference/home.webp
+    - assets/reference/group_chat.webp
+    - assets/reference/single_chat.webp
+    - assets/reference/create_group.webp
     - assets/licenses/
+    - assets/onboarding/roles.json
+    - assets/onboarding/bestie.m4a
+    - assets/onboarding/boyfriend.m4a
+    - assets/onboarding/bro.m4a
+    - assets/onboarding/child.m4a
+    - assets/onboarding/colleague.m4a
+    - assets/onboarding/confidant.m4a
+    - assets/onboarding/fitness.m4a
+    - assets/onboarding/girlfriend.m4a
+    - assets/onboarding/parent.m4a
+    - assets/onboarding/senior_brother.m4a
+    - assets/onboarding/senior_sister.m4a
+    - assets/onboarding/teacher.m4a
 
 flutter_launcher_icons:
   android: true
