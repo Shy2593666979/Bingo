@@ -1,13 +1,21 @@
+import 'package:bingo/shared/widgets/avatar_frame.dart';
 import 'package:flutter/material.dart';
 import 'package:bingo/core/role_avatar_store.dart';
+import 'package:bingo/core/role_avatar_assets.dart';
 
 String assistantAvatarAsset(String? role) => switch (role) {
       '男朋友' => 'assets/images/boyfriend.png',
       '女朋友' => 'assets/images/girlfriend.png',
-      '家长' => 'assets/images/parent.png',
+      '家长' || '邻家大叔' => 'assets/images/parent.png',
       '老师' || '导师' => 'assets/images/teacher.png',
-      '小朋友' || '小孩' || '儿子' || '女儿' => 'assets/images/child.png',
+      '弟弟' || '小朋友' || '小孩' || '儿子' || '女儿' => 'assets/images/child.png',
       '同事' || '朋友' => 'assets/images/colleague.png',
+      '闺蜜' => 'assets/images/bestie.png',
+      '好兄弟' => 'assets/images/bro.png',
+      '学姐' => 'assets/images/senior_sister.png',
+      '学长' => 'assets/images/senior_brother.png',
+      '知己' || '树洞搭子' => 'assets/images/confidant.png',
+      '运动搭子' => 'assets/images/fitness.png',
       _ => 'assets/images/bingo_logo.png',
     };
 
@@ -16,12 +24,23 @@ class AssistantAvatar extends StatelessWidget {
     required this.role,
     required this.size,
     this.showOnline = false,
+    this.cornerRadius,
     super.key,
   });
 
   final String? role;
   final double size;
   final bool showOnline;
+  final double? cornerRadius;
+
+  Widget _asset() => Image.asset(
+      squareAvatarAsset(
+          RoleAvatarStore.assets[role] ?? assistantAvatarAsset(role)),
+      fit: BoxFit.cover,
+      cacheWidth: 512,
+      cacheHeight: 512,
+      errorBuilder: (_, __, ___) =>
+          Image.asset('assets/images/bingo_logo.webp', fit: BoxFit.cover));
 
   @override
   Widget build(BuildContext context) {
@@ -31,27 +50,22 @@ class AssistantAvatar extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          SizedBox(
-            width: size,
-            height: size,
-            child: ClipOval(
-              child: ValueListenableBuilder(
-                valueListenable: RoleAvatarStore.images,
-                builder: (context, images, _) => images[role] != null
-                    ? Image.memory(images[role]!, fit: BoxFit.cover)
-                    : Transform.scale(
-                        scale: 1.12,
-                        child: Image.asset(
-                          assistantAvatarAsset(role),
+          ValueListenableBuilder(
+              valueListenable: RoleAvatarStore.images,
+              builder: (context, images, _) => AvatarFrame(
+                  size: size,
+                  cornerRadius: cornerRadius,
+                  color: images[role] == null &&
+                          isTransparentRoleAvatarAsset(
+                              RoleAvatarStore.assets[role] ??
+                                  assistantAvatarAsset(role))
+                      ? Colors.transparent
+                      : const Color(0xFFE8F8F2),
+                  child: images[role] != null
+                      ? Image.memory(images[role]!,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Image.asset(
-                            'assets/images/bingo_logo.png',
-                            fit: BoxFit.cover,
-                          ),
-                        )),
-              ),
-            ),
-          ),
+                          errorBuilder: (_, __, ___) => _asset())
+                      : _asset())),
           if (showOnline)
             Positioned(
               right: 0,

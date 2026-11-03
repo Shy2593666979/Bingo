@@ -1,0 +1,31 @@
+import 'dart:ui';
+
+// Visible artwork bounds measured from source alpha; original assets stay intact.
+const bubbleSourceBounds = <String, Rect>{
+  'autumncat': Rect.fromLTRB(0.0351, 0.0835, 0.9639, 0.9029),
+  'bear': Rect.fromLTRB(0.0237, 0.0662, 0.9752, 0.9313),
+  'blossom': Rect.fromLTRB(0.0305, 0.1293, 0.9685, 0.8880),
+  'carrot': Rect.fromLTRB(0.0778, 0.0551, 0.9592, 0.9066),
+  'chefmouse': Rect.fromLTRB(0.0217, 0.0798, 0.9721, 0.8695),
+  'droolcat': Rect.fromLTRB(0.0237, 0.0192, 0.9876, 0.9227),
+  'ghost': Rect.fromLTRB(0.0433, 0.0848, 0.9629, 0.8794),
+  'ginger': Rect.fromLTRB(0.0444, 0.0415, 0.9556, 0.8621),
+  'icecream': Rect.fromLTRB(0.0068, 0.0118, 0.9927, 0.9301),
+  'moeye': Rect.fromLTRB(0.0397, 0.0341, 0.9773, 0.9078),
+  'mushroom': Rect.fromLTRB(0.0387, 0.0959, 0.9654, 0.8930),
+  'nian': Rect.fromLTRB(0.0490, 0.0477, 0.9639, 0.8868),
+  'peachmilk': Rect.fromLTRB(0.0539, 0.0990, 0.9823, 0.8875),
+  'please': Rect.fromLTRB(0.0416, 0.1134, 0.9921, 0.8780),
+  'pot-v2': Rect.fromLTRB(0.0078, 0.0354, 0.9922, 0.9325),
+  'pot': Rect.fromLTRB(0.0114, 0.0378, 0.9881, 0.9288),
+  'qiqi': Rect.fromLTRB(0.0366, 0.0872, 0.9644, 0.8880),
+  'sadworker': Rect.fromLTRB(0.0567, 0.1218, 0.9577, 0.8584),
+  'sailor': Rect.fromLTRB(0.0619, 0.0848, 0.9433, 0.8905),
+  'shiba': Rect.fromLTRB(0.0506, 0.1192, 0.9650, 0.8624),
+  'snowburger': Rect.fromLTRB(0.0408, 0.1256, 0.9582, 0.8868),
+  'star27': Rect.fromLTRB(0.0459, 0.1082, 0.9474, 0.8720),
+  'truck-v2': Rect.fromLTRB(0.0047, 0.1194, 0.9778, 0.9758),
+  'truck': Rect.fromLTRB(0.0047, 0.0242, 0.9927, 0.9746),
+  'wolf': Rect.fromLTRB(0.0588, 0.0872, 0.9731, 0.9115),
+  'wuta': Rect.fromLTRB(0.0346, 0.0489, 0.9747, 0.9066),
+};

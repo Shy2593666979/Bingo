@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bingo/core/design/bingo_icon.dart';
 
 enum PartnerActionSymbol { edit, chat, create }
 
@@ -18,6 +19,10 @@ class PartnerActionIcon extends StatelessWidget {
         this.color ?? theme.color ?? Theme.of(context).colorScheme.onSurface;
     final color = inheritedColor.withValues(
         alpha: inheritedColor.a * (theme.opacity ?? 1));
+    if (symbol == PartnerActionSymbol.chat) {
+      return ExcludeSemantics(
+          child: BingoIcon(BingoSymbol.chat, size: size, color: color));
+    }
     return ExcludeSemantics(
         child: CustomPaint(
             size: Size.square(size),

@@ -2,50 +2,60 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 abstract final class BingoPalette {
-  static const ink = Color(0xFF172723);
-  static const blue = Color(0xFF08775D);
-  static const cyan = Color(0xFF67CDAE);
-  static const violet = Color(0xFF35A980);
-  static const blush = Color(0xFFE4F7F0);
-  static const ice = Color(0xFFF9FCFB);
-  static const line = Color(0xFFE3EEEA);
-  static const softSurface = Color(0xFFEDF5F2);
-  static const userBubble = Color(0xFFD5F0E3);
-  static const avatarButton = Color(0xFFDDF2E7);
-  static const avatarButtonInk = Color(0xFF4F8067);
-  static const mintBackground = Color(0xFFF6FBF9);
-  static const mintTint = Color(0xFFE3F3EB);
-  static const mintPrimary = Color(0xFF267F67);
-  static const chatMenuSurface = Color(0xFFF6FBF8);
-  static const chatMenuInk = Color(0xFF447F65);
-  static const chatMenuBorder = Color(0xFFDFEBE3);
-  static const companionActionSurface = Color(0xFFBFE5D4);
-  static const companionActionInk = Color(0xFF275C48);
-  static const companionActionIcon = Color(0xFF47765E);
-  static const companionActionBorder = Color(0xFFB0D7C5);
+  static const ink = Color(0xFF182D29);
+  static const primary = Color(0xFF00A786);
+  static const primaryText = Color(0xFF08775D);
+  static const sage = Color(0xFF20C5A6);
+  static const muted = Color(0xFF67778E);
+  static const surface = Colors.white;
+  static const pageTop = Color(0xFFEAFBF7);
+  static const pageBottom = Color(0xFFF2FBF9);
+  static const rose = Color(0xFFF45D88);
+  static const gold = Color(0xFFE6A342);
+  static const lavender = Color(0xFF8B73D9);
+  static const blue = primary;
+  static const cyan = Color(0xFF67D8C2);
+  static const violet = sage;
+  static const blush = Color(0xFFDDF9F2);
+  static const ice = Color(0xFFF7FBFA);
+  static const line = Color(0xFFEAF0F3);
+  static const softSurface = Color(0xFFF0FAF7);
+  static const userBubble = Color(0xFFCAFAEC);
+  static const avatarButton = blush;
+  static const avatarButtonInk = primary;
+  static const mintBackground = ice;
+  static const mintTint = blush;
+  static const mintPrimary = primary;
+  static const chatMenuSurface = surface;
+  static const chatMenuInk = primary;
+  static const chatMenuBorder = line;
+  static const companionActionSurface = Color(0xFFDDF9F2);
+  static const companionActionInk = primary;
+  static const companionActionIcon = primary;
+  static const companionActionBorder = Color(0xFFB7EEE0);
 
   static const brandGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF08775D), Color(0xFF35A980)],
+    colors: [Color(0xFF20C9AA), primary],
   );
 
   static const softGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFFFFFFFF), Color(0xFFF3FBF8), Color(0xFFFBFDFC)],
+    colors: [surface, ice, pageBottom],
   );
 
   static const companionGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFFF8FDFC), Color(0xFFF3FBF7)],
+    colors: [surface, ice],
   );
 
   static const companionGlow = RadialGradient(
     center: Alignment(0.9, -1),
     radius: 1,
-    colors: [Color(0xFFE6F7ED), Color(0x00E6F7ED)],
+    colors: [Color(0xFFDDF9F2), Color(0x00DDF9F2)],
   );
 }
 
@@ -80,19 +90,20 @@ ThemeData buildBingoTheme() {
   final colors = ColorScheme.fromSeed(
     seedColor: BingoPalette.blue,
     brightness: Brightness.light,
-    surface: Colors.white,
+    surface: BingoPalette.surface,
   ).copyWith(
     primary: BingoPalette.blue,
     secondary: BingoPalette.violet,
     onSurface: BingoPalette.ink,
-    outline: const Color(0xFFCBD9D4),
+    outline: const Color(0xFFB8CFC9),
     outlineVariant: BingoPalette.line,
-    surfaceContainer: const Color(0xFFF0F7F4),
-    surfaceContainerHigh: const Color(0xFFE9F3EF),
+    surfaceContainer: BingoPalette.softSurface,
+    surfaceContainerHigh: BingoPalette.blush,
   );
   final base = ThemeData(
     colorScheme: colors,
     useMaterial3: true,
+    fontFamily: 'BingoSans',
   );
   return base.copyWith(
     scaffoldBackgroundColor: BingoPalette.ice,
@@ -105,6 +116,11 @@ ThemeData buildBingoTheme() {
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       centerTitle: false,
+      titleTextStyle: const TextStyle(
+          fontFamily: 'BingoSans',
+          fontSize: 19,
+          fontWeight: FontWeight.w800,
+          color: BingoPalette.ink),
       foregroundColor: colors.onSurface,
       systemOverlayStyle: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -116,24 +132,24 @@ ThemeData buildBingoTheme() {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: Colors.white.withValues(alpha: 0.9),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 17),
-      prefixIconColor: const Color(0xFF69718B),
-      suffixIconColor: const Color(0xFF69718B),
+      fillColor: BingoPalette.surface.withValues(alpha: 0.9),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      prefixIconColor: BingoPalette.muted,
+      suffixIconColor: BingoPalette.muted,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: colors.outlineVariant),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: colors.primary, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: colors.error),
       ),
     ),
@@ -141,7 +157,7 @@ ThemeData buildBingoTheme() {
       style: FilledButton.styleFrom(
         minimumSize: const Size(0, 54),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
@@ -149,8 +165,24 @@ ThemeData buildBingoTheme() {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      titleTextStyle: const TextStyle(
+          fontFamily: 'BingoSans',
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: BingoPalette.ink),
+      contentTextStyle: const TextStyle(
+          fontFamily: 'BingoSans',
+          fontSize: 14,
+          height: 1.6,
+          color: BingoPalette.muted),
+    ),
     cardTheme: CardThemeData(
-      color: Colors.white.withValues(alpha: 0.92),
+      color: BingoPalette.surface.withValues(alpha: 0.96),
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
     ),
