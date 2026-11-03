@@ -3,13 +3,47 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Response
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from bingo.api.dependencies import CurrentUserDependency, get_session
+from bingo.api.dependencies import CurrentUserDependency, get_service_context, get_session
 from bingo.api.response import EnvelopeRoute
-from bingo.schemas.chat import ConversationResponse, MessageResponse
+from bingo.schemas.chat import (
+    ChatSettings,
+    ChatSettingsUpdate,
+    ConversationResponse,
+    MessageResponse,
+)
 from bingo.services import conversations as conversations_service
+from bingo.services.context import ServiceContext
 
 router = APIRouter(tags=["conversations"], route_class=EnvelopeRoute)
 SessionDependency = Annotated[AsyncSession, Depends(get_session)]
+
+
+@router.get("/conversations/{conversation_id}/settings", response_model=ChatSettings)
+async def get_chat_settings(
+    conversation_id: str, session: SessionDependency, user: CurrentUserDependency
+) -> ChatSettings:
+    return await conversations_service.get_chat_settings(conversation_id, session, user)
+
+
+@router.patch("/conversations/{conversation_id}/settings", response_model=ChatSettings)
+async def update_chat_settings(
+    conversation_id: str,
+    payload: ChatSettingsUpdate,
+    session: SessionDependency,
+    user: CurrentUserDependency,
+) -> ChatSettings:
+    return await conversations_service.update_chat_settings(conversation_id, payload, session, user)
+
+
+@router.delete("/conversations/{conversation_id}/messages", status_code=204)
+async def clear_messages(
+    conversation_id: str,
+    session: SessionDependency,
+    user: CurrentUserDependency,
+    context: Annotated[ServiceContext, Depends(get_service_context)],
+) -> Response:
+    await conversations_service.clear_messages(conversation_id, session, user, context)
+    return Response(status_code=204)
 
 
 @router.post("/conversations/{conversation_id}/read", status_code=204)
@@ -37,7 +71,8 @@ async def list_messages(
     session: SessionDependency,
     user: CurrentUserDependency,
     limit: int = Query(default=50, ge=1, le=200),
+    q: str | None = Query(default=None, max_length=200),
 ) -> list[MessageResponse]:
     return await conversations_service.list_messages(
-        conversation_id=conversation_id, session=session, user=user, limit=limit
+        conversation_id=conversation_id, session=session, user=user, limit=limit, query=q
     )

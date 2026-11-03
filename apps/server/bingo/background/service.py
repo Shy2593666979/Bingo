@@ -161,6 +161,9 @@ class EngagementService:
         key, _ = await self._recommendation_target(user_id, conversation_id)
         await self._broker.clear_recommendations(key)
 
+    async def reset_conversation(self, user_id: str, conversation_id: str) -> None:
+        await self._broker.record_activity(f"{user_id}:{conversation_id}")
+
     async def forget_user(self, user_id: str, conversation_ids: list[str]) -> None:
         await self._broker.forget_user(user_id, conversation_ids)
         task = self._active_jobs.get(user_id)
@@ -308,6 +311,8 @@ class EngagementService:
         stage = int(payload["stage"])
         if stage != 1:
             return
+        activity_key = f"{payload['user_id']}:{payload['conversation_id']}"
+        activity_version = await self._broker.current_version(activity_key)
         async with self._session_factory() as session:
             user = await UserRepository(session).get(payload["user_id"])
             if user is None:
@@ -343,7 +348,7 @@ class EngagementService:
             content = clean_assistant_text(
                 await self._llm.complete([*context, ModelMessage(role="user", content=prompt)])
             ).strip()
-            if content:
+            if content and activity_version == await self._broker.current_version(activity_key):
                 proactive = await ProactiveMessageRepository(session, user.id).create(
                     payload["conversation_id"],
                     content[:500],

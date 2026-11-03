@@ -23,6 +23,8 @@ class ChatRequest(BaseModel):
 
     @model_validator(mode="after")
     def require_content_or_image(self) -> "ChatRequest":
+        if self.content.startswith("[[bingo.sticker.v1]]") and (self.images or self.location):
+            raise ValueError("表情请单独发送")
         if self.location is not None and self.images:
             raise ValueError("位置和图片请分别发送")
         if not self.content.strip() and not self.images and self.location is None:
@@ -59,6 +61,18 @@ class ConversationResponse(BaseModel):
     title: str
     created_at: datetime
     role_id: str | None = None
+    welcome_unread: bool = False
+
+
+class ChatSettings(BaseModel):
+    muted: bool = False
+    pinned: bool = False
+
+
+class ChatSettingsUpdate(BaseModel):
+    archived: bool | None = None
+    muted: bool | None = None
+    pinned: bool | None = None
 
 
 class MemoryCreate(BaseModel):

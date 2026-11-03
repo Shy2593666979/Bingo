@@ -8,7 +8,7 @@ from datetime import timedelta
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from bingo.db.models import ProactiveMessage
+from bingo.db.models import Conversation, ProactiveMessage
 from bingo.db.repositories import PushOutboxRepository
 from bingo.db.time import beijing_now
 from bingo.push.provider import PushDelivery, PushProvider
@@ -66,6 +66,9 @@ class PushService:
         }
 
         async def enqueue_in_session(target: AsyncSession) -> int:
+            conversation = await target.get(Conversation, proactive.conversation_id)
+            if conversation and conversation.muted:
+                return 0
             return await PushOutboxRepository(target).enqueue_for_user(
                 user_id=proactive.user_id,
                 proactive_message_id=proactive.id,
@@ -113,6 +116,13 @@ class PushService:
             if row is None:
                 return False
             outbox, device = row
+            proactive = await session.get(ProactiveMessage, outbox.proactive_message_id)
+            conversation = (
+                await session.get(Conversation, proactive.conversation_id) if proactive else None
+            )
+            if conversation and conversation.muted:
+                await repository.mark_failed(outbox, outbox.attempts, "chat_muted")
+                return True
             started_at = time.perf_counter()
             try:
                 provider_id = await self._provider.send(
