@@ -32,6 +32,7 @@ class _RoleEditorPageState extends State<RoleEditorPage>
   final _form = GlobalKey<FormState>();
   late final TextEditingController _name;
   late final TextEditingController _prompt;
+  late final TextEditingController _description, _opening;
   late final TextEditingController _roleType;
   late String _personality;
   bool get _builtin => widget.role?.builtin ?? false;
@@ -68,6 +69,8 @@ class _RoleEditorPageState extends State<RoleEditorPage>
     _roleType = TextEditingController(text: widget.role?.typeLabel);
     _personality = widget.role?.personality ?? '温柔体贴';
     _prompt = TextEditingController(text: widget.role?.prompt);
+    _description = TextEditingController(text: widget.role?.description);
+    _opening = TextEditingController(text: widget.role?.openingLine);
     _avatarData = widget.role?.avatarData;
     _voiceId = widget.role?.voiceSourceId ?? widget.roles.firstOrNull?.id;
     _cloned = widget.role?.hasClonedVoice ?? false;
@@ -90,6 +93,8 @@ class _RoleEditorPageState extends State<RoleEditorPage>
     }
     _name.dispose();
     _prompt.dispose();
+    _description.dispose();
+    _opening.dispose();
     _roleType.dispose();
     super.dispose();
   }
@@ -119,6 +124,8 @@ class _RoleEditorPageState extends State<RoleEditorPage>
           ? (_prompt.text.trim().isEmpty ? '陪伴用户自然交流。' : _prompt.text.trim())
           : _prompt.text.trim(),
       roleType: _roleType.text.trim(),
+      description: _description.text.trim(),
+      openingLine: _opening.text.trim(),
       personality: _personality,
       avatarData: _avatarData,
       voiceSourceId: _voiceId,
@@ -235,7 +242,7 @@ class _RoleEditorPageState extends State<RoleEditorPage>
     setState(() {
       _busy = true;
       _error = null;
-      _progress = '正在保存伙伴…';
+      _progress = '正在保存搭子…';
     });
     try {
       await _device.invokeMethod<void>('stopPreviewAudio');
@@ -285,9 +292,9 @@ class _RoleEditorPageState extends State<RoleEditorPage>
       Row(children: [
         const Expanded(
             child: Text('选择 2～3 个特征',
-                style: TextStyle(fontSize: 12, color: Color(0xFF7D918A)))),
+                style: TextStyle(fontSize: 12, color: Color(0xFF738297)))),
         Text('已选 ${_traits.length} / 3',
-            style: const TextStyle(fontSize: 11, color: Color(0xFF7D918A))),
+            style: const TextStyle(fontSize: 11, color: Color(0xFF738297))),
       ]),
       const SizedBox(height: 12),
       Wrap(spacing: 7, runSpacing: 8, children: [
@@ -309,7 +316,7 @@ class _RoleEditorPageState extends State<RoleEditorPage>
                       borderRadius: BorderRadius.circular(16),
                       onTap: () {
                         if (!_traits.contains(label) && _traits.length >= 3) {
-                          showCenterToast(context, '最多选择 3 个伙伴特征');
+                          showCenterToast(context, '最多选择 3 个搭子特征');
                           return;
                         }
                         setState(() {
@@ -348,8 +355,8 @@ class _RoleEditorPageState extends State<RoleEditorPage>
       if (choices.isEmpty)
         const Padding(
             padding: EdgeInsets.symmetric(vertical: 12),
-            child: Text('暂无可用的伙伴音色，可以通过录音创建。',
-                style: TextStyle(fontSize: 12, color: Color(0xFF7D918A))))
+            child: Text('暂无可用的搭子音色，可以通过录音创建。',
+                style: TextStyle(fontSize: 12, color: Color(0xFF738297))))
       else
         TapRegion(
             onTapOutside: (_) {
@@ -403,7 +410,7 @@ class _RoleEditorPageState extends State<RoleEditorPage>
                                     ? Icons.keyboard_arrow_up_rounded
                                     : Icons.keyboard_arrow_down_rounded,
                                 size: 22,
-                                color: const Color(0xFF7D918A)),
+                                color: const Color(0xFF738297)),
                           ])))),
               if (_voiceExpanded) ...[
                 const SizedBox(height: 6),
@@ -455,7 +462,7 @@ class _RoleEditorPageState extends State<RoleEditorPage>
         Expanded(
             child: Text('当前音色：$voiceLabel',
                 style:
-                    const TextStyle(fontSize: 11, color: Color(0xFF7D918A)))),
+                    const TextStyle(fontSize: 11, color: Color(0xFF738297)))),
         TextButton.icon(
             onPressed: _voiceId == null ? null : _preview,
             icon: Icon(_playing ? Icons.stop : Icons.play_arrow_rounded,
@@ -488,240 +495,187 @@ class _RoleEditorPageState extends State<RoleEditorPage>
                           const SizedBox(height: 5),
                           const Text('按引导朗读 20～30 秒，无需手动上传音频',
                               style: TextStyle(
-                                  fontSize: 10, color: Color(0xFF7D918A))),
+                                  fontSize: 10, color: Color(0xFF738297))),
                         ])),
                     const Icon(Icons.chevron_right_rounded,
-                        size: 20, color: Color(0xFF7D918A)),
+                        size: 20, color: Color(0xFF738297)),
                   ])))),
       const SizedBox(height: 10),
       const Text('少于 15 秒需要重新录制，复刻完成后可试听。',
-          style: TextStyle(fontSize: 11, color: Color(0xFF7D918A))),
+          style: TextStyle(fontSize: 11, color: Color(0xFF738297))),
     ]);
   }
 
-  Widget _voiceAvatar(RoleOption role) => role.builtin
-      ? AssistantAvatar(role: role.name, size: 26)
-      : ClipOval(child: UserAvatar(avatarData: role.avatarData, size: 26));
+  Widget _voiceAvatar(RoleOption role) =>
+      role.builtin || (role.avatarData?.isEmpty ?? true)
+          ? AssistantAvatar(role: role.name, size: 26)
+          : UserAvatar(avatarData: role.avatarData, size: 26);
 
-  Widget _panel(String title, IconData icon, Widget child) => Container(
-      padding: const EdgeInsets.symmetric(vertical: 18),
-      decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: BingoPalette.line))),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Icon(icon, size: 20, color: BingoPalette.blue),
-          const SizedBox(width: 9),
-          Text(title,
-              style:
-                  const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-        ]),
-        const SizedBox(height: 14),
-        child,
-      ]));
-
+  Widget _label(String title) => Padding(
+      padding: const EdgeInsets.only(top: 18, bottom: 9),
+      child: Text(title,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800)));
   @override
   Widget build(BuildContext context) {
-    final voices = widget.roles.where((role) => role.id == _voiceId);
     final voiceLabel = _cloned && _voiceId == _role?.id
         ? '我的复刻声音'
-        : (voices.firstOrNull?.displayName ?? '系统默认');
+        : widget.roles
+                .where((role) => role.id == _voiceId)
+                .firstOrNull
+                ?.displayName ??
+            '系统默认';
     return PopScope(
         canPop: !_busy,
         child: Stack(children: [
           Scaffold(
-            backgroundColor: BingoPalette.ice,
-            appBar: AppBar(
-                centerTitle: true,
-                title: Text(widget.role == null ? '创建伙伴' : '编辑伙伴')),
-            body: DecoratedBox(
-                decoration: const BoxDecoration(
-                    gradient: BingoPalette.companionGradient),
-                child: SafeArea(
-                    child: AbsorbPointer(
-                        absorbing: _busy,
-                        child: Theme(
-                            data: Theme.of(context).copyWith(
-                                inputDecorationTheme: Theme.of(context).inputDecorationTheme.copyWith(
-                                    fillColor: const Color(0xFFF7FAF7),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 13),
-                                    border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: BorderSide.none),
-                                    enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: BorderSide.none),
-                                    disabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: BorderSide.none),
-                                    focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(
-                                            color: Color(0xFFB8D8C3))))),
-                            child: Form(
-                                key: _form,
-                                child: ListView(padding: const EdgeInsets.fromLTRB(20, 12, 20, 20), children: [
-                                  Row(children: [
-                                    InkWell(
-                                        onTap: _builtin ? null : _chooseAvatar,
-                                        borderRadius: BorderRadius.circular(18),
-                                        child: Stack(children: [
-                                          _builtin
-                                              ? AssistantAvatar(
-                                                  role: widget.role!.name,
-                                                  size: 64)
-                                              : UserAvatar(
-                                                  avatarData: _avatarData,
-                                                  size: 64),
-                                          if (!_builtin)
-                                            Positioned(
-                                                right: 0,
-                                                bottom: 0,
-                                                child: Container(
-                                                    padding:
-                                                        const EdgeInsets.all(5),
-                                                    decoration:
-                                                        const BoxDecoration(
-                                                            color:
-                                                                BingoPalette
-                                                                    .avatarButton,
-                                                            shape: BoxShape
-                                                                .circle),
-                                                    child: const Icon(
-                                                        Icons
-                                                            .photo_camera_outlined,
-                                                        color: BingoPalette
-                                                            .avatarButtonInk,
-                                                        size: 15))),
-                                        ])),
-                                    const SizedBox(width: 16),
-                                    Expanded(
+              backgroundColor: BingoPalette.pageTop,
+              appBar: AppBar(
+                  centerTitle: true,
+                  title: Text(widget.role == null ? '创建搭子' : '编辑搭子')),
+              body: SafeArea(
+                  top: false,
+                  child: AbsorbPointer(
+                      absorbing: _busy,
+                      child: Form(
+                          key: _form,
+                          child: ListView(
+                              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                              children: [
+                                Material(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: Padding(
+                                        padding: const EdgeInsets.all(14),
                                         child: Column(
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                          Text(
-                                              _builtin
-                                                  ? '熟悉的 TA，新的默契'
-                                                  : '让陪伴，有自己的样子',
-                                              style: const TextStyle(
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.w700)),
-                                          const SizedBox(height: 7),
-                                          const Text('一个名字，一种性格，一个熟悉的声音。',
-                                              style: TextStyle(
-                                                  fontSize: 11,
-                                                  color: Color(0xFF7D918A))),
-                                        ])),
-                                  ]),
-                                  const SizedBox(height: 22),
-                                  if (_builtin)
-                                    const Padding(
-                                        padding: EdgeInsets.only(bottom: 14),
-                                        child: Text('系统伙伴的身份保持不变，聊天性格可以自由调整。',
-                                            style: TextStyle(
-                                                fontSize: 11,
-                                                color: Color(0xFF7D918A)))),
-                                  Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 16),
-                                      decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius:
-                                              BorderRadius.circular(24),
-                                          border: Border.all(
-                                              color: BingoPalette.line)),
-                                      child: Column(children: [
-                                        _panel(
-                                            '伙伴昵称',
-                                            Icons.person_outline_rounded,
-                                            TextFormField(
-                                                controller: _name,
-                                                enabled: !_builtin,
-                                                maxLength: 30,
-                                                decoration:
-                                                    const InputDecoration(
-                                                        counterText: '',
-                                                        hintText:
-                                                            '给 TA 起一个亲切的名字'),
-                                                validator: (value) =>
-                                                    (value?.trim().isEmpty ??
-                                                            true)
-                                                        ? '请输入伙伴昵称'
-                                                        : null)),
-                                        _panel(
-                                            '伙伴角色',
-                                            Icons.badge_outlined,
-                                            TextFormField(
-                                                controller: _roleType,
-                                                enabled: !_builtin,
-                                                maxLength: 30,
-                                                decoration:
-                                                    const InputDecoration(
-                                                        hintText:
-                                                            '你希望 TA 以怎样的身份陪伴你',
-                                                        counterText: ''))),
-                                        _panel(
-                                            '伙伴性格',
-                                            Icons.favorite_border_rounded,
-                                            Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Wrap(
-                                                      spacing: 7,
-                                                      runSpacing: 8,
-                                                      children: [
-                                                        for (final personality
-                                                            in _personalities)
-                                                          ChoiceChip(
-                                                              label: Text(
-                                                                  personality,
-                                                                  style: const TextStyle(
-                                                                      fontSize:
-                                                                          12)),
-                                                              selected: _personality ==
-                                                                  personality,
-                                                              showCheckmark:
-                                                                  false,
-                                                              side: BorderSide(
-                                                                  color: _personality == personality
-                                                                      ? const Color(
-                                                                          0xFFC0DFCC)
-                                                                      : const Color(
-                                                                          0xFFE7EEE8)),
-                                                              shape: RoundedRectangleBorder(
-                                                                  borderRadius:
-                                                                      BorderRadius.circular(
-                                                                          11)),
-                                                              materialTapTargetSize:
-                                                                  MaterialTapTargetSize
-                                                                      .shrinkWrap,
-                                                              selectedColor:
-                                                                  const Color(
-                                                                      0xFFE5F4E9),
-                                                              backgroundColor:
-                                                                  const Color(
-                                                                      0xFFF7FAF7),
-                                                              onSelected: (_) =>
-                                                                  setState(() => _personality = personality)),
-                                                      ]),
-                                                  const SizedBox(height: 8),
-                                                  const Text(
-                                                      '只影响这位伙伴，其他伙伴保持不变。',
-                                                      style: TextStyle(
-                                                          fontSize: 11,
-                                                          color: Color(
-                                                              0xFF7D918A))),
-                                                ])),
-                                        if (!_builtin) ...[
-                                          _panel(
-                                              '伙伴设定',
-                                              Icons.note_alt_outlined,
-                                              Column(children: [
+                                              Row(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    InkWell(
+                                                        onTap: _builtin
+                                                            ? null
+                                                            : _chooseAvatar,
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(16),
+                                                        child: SizedBox(
+                                                            width: 80,
+                                                            height: 80,
+                                                            child: Stack(
+                                                                children: [
+                                                                  if (_builtin)
+                                                                    AssistantAvatar(
+                                                                        role: widget
+                                                                            .role!
+                                                                            .name,
+                                                                        size:
+                                                                            80)
+                                                                  else if (_avatarData !=
+                                                                      null)
+                                                                    UserAvatar(
+                                                                        avatarData:
+                                                                            _avatarData,
+                                                                        size:
+                                                                            80)
+                                                                  else
+                                                                    Container(
+                                                                        width:
+                                                                            80,
+                                                                        height:
+                                                                            80,
+                                                                        decoration: BoxDecoration(
+                                                                            color:
+                                                                                BingoPalette.softSurface,
+                                                                            border: Border.all(color: BingoPalette.primary.withValues(alpha: .4)),
+                                                                            borderRadius: BorderRadius.circular(16)),
+                                                                        child: const Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                                                                          Icon(
+                                                                              Icons.add_rounded,
+                                                                              size: 29,
+                                                                              color: BingoPalette.primary),
+                                                                          SizedBox(
+                                                                              height: 4),
+                                                                          Text(
+                                                                              '上传头像',
+                                                                              style: TextStyle(fontSize: 10, color: BingoPalette.primary))
+                                                                        ])),
+                                                                  if (_avatarData !=
+                                                                          null &&
+                                                                      !_builtin)
+                                                                    const Positioned(
+                                                                        right:
+                                                                            2,
+                                                                        bottom:
+                                                                            2,
+                                                                        child: Icon(
+                                                                            Icons
+                                                                                .photo_camera_outlined,
+                                                                            size:
+                                                                                18,
+                                                                            color:
+                                                                                BingoPalette.primary))
+                                                                ]))),
+                                                    const SizedBox(width: 14),
+                                                    Expanded(
+                                                        child: Column(
+                                                            crossAxisAlignment:
+                                                                CrossAxisAlignment
+                                                                    .start,
+                                                            children: [
+                                                          const Text('名称',
+                                                              style: TextStyle(
+                                                                  fontSize: 14,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w800)),
+                                                          const SizedBox(
+                                                              height: 10),
+                                                          TextFormField(
+                                                              controller: _name,
+                                                              enabled:
+                                                                  !_builtin,
+                                                              maxLength: 30,
+                                                              decoration: const InputDecoration(
+                                                                  hintText:
+                                                                      '给 TA 起一个亲切的名字',
+                                                                  counterText:
+                                                                      '',
+                                                                  contentPadding:
+                                                                      EdgeInsets
+                                                                          .all(
+                                                                              12)),
+                                                              validator: (v) =>
+                                                                  (v?.trim().isEmpty ??
+                                                                          true)
+                                                                      ? '请输入搭子昵称'
+                                                                      : null)
+                                                        ]))
+                                                  ]),
+                                              if (_builtin) ...[
+                                                const SizedBox(height: 16),
+                                                const Text(
+                                                    '系统搭子的身份保持不变，聊天性格可以自由调整。',
+                                                    style: TextStyle(
+                                                        fontSize: 11,
+                                                        color:
+                                                            BingoPalette.muted))
+                                              ] else ...[
+                                                _label('一句话介绍'),
+                                                TextFormField(
+                                                    controller: _description,
+                                                    maxLength: 200,
+                                                    decoration:
+                                                        const InputDecoration(
+                                                            hintText:
+                                                                '用一句话描述你的搭子',
+                                                            counterText: '')),
+                                                _label('性格与设定'),
                                                 TextFormField(
                                                     controller: _prompt,
-                                                    minLines: 3,
+                                                    minLines: 4,
                                                     maxLines: 7,
                                                     maxLength: 2000,
                                                     decoration:
@@ -729,71 +683,213 @@ class _RoleEditorPageState extends State<RoleEditorPage>
                                                             counterText: '',
                                                             hintText:
                                                                 'TA 是谁？怎样说话？你希望 TA 怎样陪伴你？'),
-                                                    validator: (value) => (value
-                                                                ?.trim()
-                                                                .isEmpty ??
-                                                            true)
-                                                        ? '请描述这个伙伴'
-                                                        : null),
-                                                Align(
-                                                    alignment:
-                                                        Alignment.centerRight,
-                                                    child: TextButton(
-                                                        onPressed: () {
-                                                          _prompt.text =
-                                                              '你是一位温柔、有耐心的陪伴伙伴。认真倾听我的心情，用自然亲切的语言交流，给予理解和鼓励。';
-                                                        },
-                                                        child: const Text(
-                                                            '试试这个设定'))),
-                                              ])),
-                                          _panel(
-                                              '陪伴特征',
-                                              Icons.auto_awesome_outlined,
-                                              _traitPicker()),
-                                          _panel(
-                                              '伙伴声音',
-                                              Icons.graphic_eq_rounded,
-                                              _voicePicker(voiceLabel)),
-                                        ],
-                                      ])),
-                                  if (_busy)
-                                    Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 16),
-                                        child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              const SizedBox.square(
-                                                  dimension: 18,
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                          strokeWidth: 2)),
-                                              const SizedBox(width: 12),
-                                              Flexible(child: Text(_progress)),
-                                            ])),
-                                  if (_error != null)
-                                    Text(_error!,
-                                        style: TextStyle(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .error)),
-                                ])))))),
-            bottomNavigationBar: SafeArea(
-                child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
-                    child: SizedBox(
-                        height: 54,
-                        child: FilledButton(
-                            onPressed: _busy ? null : _save,
-                            style: companionActionButtonStyle(),
-                            child: Text(widget.role == null ? '创建伙伴' : '保存修改',
-                                style: const TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w700)))))),
-          ),
+                                                    validator: (v) =>
+                                                        (v?.trim().isEmpty ??
+                                                                true)
+                                                            ? '请描述这个搭子'
+                                                            : null),
+                                                _label('开场白'),
+                                                TextFormField(
+                                                    controller: _opening,
+                                                    minLines: 2,
+                                                    maxLines: 3,
+                                                    maxLength: 300,
+                                                    decoration:
+                                                        const InputDecoration(
+                                                            hintText:
+                                                                '第一次见面，TA 会怎样打招呼？',
+                                                            counterText: '')),
+                                                _label('声音'),
+                                                _voicePicker(voiceLabel),
+                                                _label('角色分类'),
+                                                Wrap(
+                                                    spacing: 7,
+                                                    runSpacing: 6,
+                                                    children: [
+                                                      for (final (label, type, icon)
+                                                          in [
+                                                        (
+                                                          '女友系',
+                                                          '女朋友',
+                                                          Icons.favorite_rounded
+                                                        ),
+                                                        (
+                                                          '男友系',
+                                                          '男朋友',
+                                                          Icons.person_rounded
+                                                        ),
+                                                        (
+                                                          '老师系',
+                                                          '老师',
+                                                          Icons.school_rounded
+                                                        ),
+                                                        (
+                                                          '工作搭子',
+                                                          '同事',
+                                                          Icons.work_rounded
+                                                        ),
+                                                        (
+                                                          '邻家大叔',
+                                                          '邻家大叔',
+                                                          Icons.coffee_outlined
+                                                        ),
+                                                        (
+                                                          '弟弟',
+                                                          '弟弟',
+                                                          Icons
+                                                              .emoji_emotions_outlined
+                                                        ),
+                                                        (
+                                                          '闺蜜',
+                                                          '闺蜜',
+                                                          Icons
+                                                              .favorite_border_rounded
+                                                        ),
+                                                        (
+                                                          '好兄弟',
+                                                          '好兄弟',
+                                                          Icons
+                                                              .handshake_outlined
+                                                        ),
+                                                        (
+                                                          '学姐',
+                                                          '学姐',
+                                                          Icons.school_outlined
+                                                        ),
+                                                        (
+                                                          '学长',
+                                                          '学长',
+                                                          Icons
+                                                              .menu_book_outlined
+                                                        ),
+                                                        (
+                                                          '树洞搭子',
+                                                          '树洞搭子',
+                                                          Icons
+                                                              .chat_bubble_outline_rounded
+                                                        ),
+                                                        (
+                                                          '运动搭子',
+                                                          '运动搭子',
+                                                          Icons
+                                                              .directions_run_rounded
+                                                        )
+                                                      ])
+                                                        ChoiceChip(
+                                                            avatar: Icon(icon,
+                                                                size: 16,
+                                                                color: _roleType
+                                                                            .text ==
+                                                                        type
+                                                                    ? BingoPalette
+                                                                        .primary
+                                                                    : BingoPalette
+                                                                        .muted),
+                                                            label: Text(label,
+                                                                style:
+                                                                    const TextStyle(
+                                                                        fontSize:
+                                                                            11)),
+                                                            selected: _roleType
+                                                                    .text ==
+                                                                type,
+                                                            showCheckmark:
+                                                                false,
+                                                            selectedColor:
+                                                                BingoPalette
+                                                                    .blush,
+                                                            onSelected: (_) =>
+                                                                setState(() =>
+                                                                    _roleType
+                                                                            .text =
+                                                                        type))
+                                                    ]),
+                                                const SizedBox(height: 9),
+                                                TextFormField(
+                                                    controller: _roleType,
+                                                    maxLength: 30,
+                                                    decoration:
+                                                        const InputDecoration(
+                                                            hintText:
+                                                                '也可以自定义搭子身份',
+                                                            counterText: ''))
+                                              ],
+                                              const SizedBox(height: 12),
+                                              ExpansionTile(
+                                                  tilePadding: EdgeInsets.zero,
+                                                  initiallyExpanded: _builtin,
+                                                  title: const Text('搭子性格',
+                                                      style: TextStyle(
+                                                          fontSize: 14,
+                                                          fontWeight:
+                                                              FontWeight.w800)),
+                                                  children: [
+                                                    Wrap(
+                                                        spacing: 7,
+                                                        runSpacing: 6,
+                                                        children: [
+                                                          for (final p
+                                                              in _personalities)
+                                                            ChoiceChip(
+                                                                label: Text(p,
+                                                                    style: const TextStyle(
+                                                                        fontSize:
+                                                                            12)),
+                                                                selected:
+                                                                    _personality ==
+                                                                        p,
+                                                                selectedColor:
+                                                                    BingoPalette
+                                                                        .blush,
+                                                                showCheckmark:
+                                                                    false,
+                                                                onSelected: (_) =>
+                                                                    setState(() =>
+                                                                        _personality =
+                                                                            p))
+                                                        ])
+                                                  ]),
+                                              if (!_builtin)
+                                                ExpansionTile(
+                                                    tilePadding:
+                                                        EdgeInsets.zero,
+                                                    title: const Text('陪伴特征',
+                                                        style: TextStyle(
+                                                            fontSize: 14,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .w800)),
+                                                    children: [_traitPicker()]),
+                                              if (_error != null)
+                                                Text(_error!,
+                                                    style: TextStyle(
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .error)),
+                                              if (_busy)
+                                                Padding(
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                            12),
+                                                    child: Text(_progress))
+                                            ])))
+                              ])))),
+              bottomNavigationBar: SafeArea(
+                  top: false,
+                  child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
+                      child: FilledButton(
+                          onPressed: _busy ? null : _save,
+                          style: FilledButton.styleFrom(
+                              backgroundColor: BingoPalette.primary,
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size(double.infinity, 54)),
+                          child: Text(widget.role == null ? '创建搭子' : '保存修改',
+                              style: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700)))))),
           if (_cloning)
-            Positioned.fill(child: VoiceCloneProgress(message: _progress)),
+            Positioned.fill(child: VoiceCloneProgress(message: _progress))
         ]));
   }
 }

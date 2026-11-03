@@ -35,7 +35,7 @@ class _RoleHomeGateway implements RoleGateway {
       RoleOption(id: 'teacher', name: '老师', builtin: true),
       RoleOption(id: 'child', name: '小孩', builtin: true),
       RoleOption(id: 'colleague', name: '同事', builtin: true),
-      RoleOption(id: 'custom', name: '倾听伙伴', builtin: false, prompt: '认真倾听'),
+      RoleOption(id: 'custom', name: '倾听搭子', builtin: false, prompt: '认真倾听'),
     ];
   }
 
@@ -63,14 +63,14 @@ void main() {
     expect(tester.getTopLeft(find.text('陪伴空间')).dx, 18);
     expect(tester.getTopLeft(find.text('在这里，慢慢聊~')).dx, 18);
     final createStyle = tester
-        .widget<FilledButton>(find.widgetWithText(FilledButton, '创建伙伴'))
+        .widget<FilledButton>(find.widgetWithText(FilledButton, '创建搭子'))
         .style!;
     expect(createStyle.backgroundColor!.resolve({}),
         BingoPalette.companionActionSurface);
     expect(createStyle.foregroundColor!.resolve({}),
         BingoPalette.companionActionInk);
     final createIcon = tester.widget<PartnerActionIcon>(find.descendant(
-        of: find.widgetWithText(FilledButton, '创建伙伴'),
+        of: find.widgetWithText(FilledButton, '创建搭子'),
         matching: find.byType(PartnerActionIcon)));
     expect(createIcon.symbol, PartnerActionSymbol.create);
     expect(createIcon.color, BingoPalette.companionActionIcon);
@@ -87,7 +87,7 @@ void main() {
         widget is Image &&
         widget.image is AssetImage &&
         (widget.image as AssetImage).assetName ==
-            'assets/images/bingo_logo.png');
+            'assets/images/bingo_logo.webp');
     expect(logos, findsOneWidget);
     final background = tester.widget<DecoratedBox>(
         find.byKey(const ValueKey('companion-background')));
@@ -195,12 +195,12 @@ void main() {
     await tester.tap(find.widgetWithText(TextButton, '进入').first);
     await tester.pumpAndSettle();
     expect(opened, 'girlfriend');
-    await tester.scrollUntilVisible(find.text('倾听伙伴'), 400,
+    await tester.scrollUntilVisible(find.text('倾听搭子'), 400,
         scrollable: find.byType(Scrollable).last);
-    await tester.tap(find.text('倾听伙伴'));
+    await tester.tap(find.text('倾听搭子'));
     await tester.pumpAndSettle();
     expect(find.byType(RoleDetailPage), findsOneWidget);
-    await tester.tap(find.byTooltip('编辑伙伴'));
+    await tester.tap(find.byTooltip('编辑搭子'));
     await tester.pumpAndSettle();
     expect(tester.widget<RoleEditorPage>(find.byType(RoleEditorPage)).role?.id,
         'custom');
@@ -208,8 +208,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.pageBack();
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('创建伙伴'));
-    await tester.tap(find.text('创建伙伴'));
+    await tester.ensureVisible(find.text('创建搭子'));
+    await tester.tap(find.text('创建搭子'));
     await tester.pumpAndSettle();
     expect(tester.widget<RoleEditorPage>(find.byType(RoleEditorPage)).role,
         isNull);

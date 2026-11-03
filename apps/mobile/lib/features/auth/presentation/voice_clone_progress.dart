@@ -27,10 +27,10 @@ class VoiceCloneProgress extends StatelessWidget {
                             child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Image.asset('assets/images/bingo_logo.png',
+                                  Image.asset('assets/images/bingo_logo.webp',
                                       width: 68, height: 68),
                                   const SizedBox(height: 24),
-                                  const Text('让伙伴记住这个声音',
+                                  const Text('让搭子记住这个声音',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                           fontSize: 25,

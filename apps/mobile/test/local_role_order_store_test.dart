@@ -8,7 +8,7 @@ void main() {
   const roles = [
     RoleOption(id: 'first', name: '第一位', builtin: true),
     RoleOption(id: 'second', name: '第二位', builtin: true),
-    RoleOption(id: 'new', name: '新伙伴', builtin: false),
+    RoleOption(id: 'new', name: '新搭子', builtin: false),
   ];
 
   test('no local order preserves the server default', () {

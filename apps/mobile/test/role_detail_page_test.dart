@@ -21,10 +21,11 @@ class DetailGateway implements RoleGateway, ConversationGateway {
             conversationId: 'conversation')
       ];
   @override
-  Future<List<ChatMessage>> listMessages(String conversationId) async => const [
-        ChatMessage(id: 'user', role: ChatRole.user, content: '你好'),
+  Future<List<ChatMessage>> listMessages(String conversationId) async => [
+        const ChatMessage(id: 'user', role: ChatRole.user, content: '你好'),
         ChatMessage(
             id: 'assistant',
+            createdAt: DateTime.utc(2026, 10, 31, 12, 9),
             role: ChatRole.assistant,
             content: '你好呀，今天过得怎么样？无论有什么开心的事情或者烦恼，都可以慢慢和我说。'),
       ];
@@ -53,7 +54,7 @@ void main() {
             onEdit: () async => edits++)));
     await tester.pumpAndSettle();
     final chatButton = find.widgetWithText(FilledButton, '进入聊天');
-    final editButton = find.widgetWithText(OutlinedButton, '编辑伙伴');
+    final editButton = find.widgetWithText(OutlinedButton, '编辑搭子');
     final chatIcon = find.descendant(
         of: chatButton, matching: find.byType(PartnerActionIcon));
     final editIcon = find.descendant(
@@ -61,15 +62,12 @@ void main() {
     expect(tester.widget<PartnerActionIcon>(chatIcon).symbol,
         PartnerActionSymbol.chat);
     expect(tester.widget<PartnerActionIcon>(chatIcon).size, 20);
-    expect(tester.widget<PartnerActionIcon>(chatIcon).color,
-        BingoPalette.companionActionIcon);
+    expect(tester.widget<PartnerActionIcon>(chatIcon).color, Colors.white);
     final chatStyle = tester.widget<FilledButton>(chatButton).style!;
-    expect(chatStyle.backgroundColor!.resolve({}),
-        BingoPalette.companionActionSurface);
-    expect(chatStyle.foregroundColor!.resolve({}),
-        BingoPalette.companionActionInk);
+    expect(chatStyle.backgroundColor!.resolve({}), BingoPalette.primary);
+    expect(chatStyle.foregroundColor!.resolve({}), Colors.white);
     expect(tester.getSize(chatButton), tester.getSize(editButton));
-    expect(tester.getSize(chatButton).height, 54);
+    expect(tester.getSize(chatButton).height, 48);
     expect(tester.widget<PartnerActionIcon>(editIcon).symbol,
         PartnerActionSymbol.edit);
     expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
@@ -98,43 +96,33 @@ void main() {
                   conversationId: 'conversation'),
               gateway: DetailGateway(),
               userAvatarData: custom ? avatar : null,
+              userName: '周小雨',
               onChat: (_) async {})));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('你好'));
       expect(find.text('最近对话'), findsOneWidget);
+      expect(find.text('20:09'), findsOneWidget);
       expect(find.text('你们的最近对话'), findsNothing);
       expect(find.byType(UserAvatar), findsOneWidget);
-      final image = tester.widget<Image>(find.descendant(
-          of: find.byType(UserAvatar), matching: find.byType(Image)));
       if (custom) {
+        final image = tester.widget<Image>(find.descendant(
+            of: find.byType(UserAvatar), matching: find.byType(Image)));
         expect((image.image as MemoryImage).bytes, base64Decode(avatar));
       } else {
-        expect((image.image as AssetImage).assetName,
-            'assets/images/bingo_logo.png');
+        expect(
+            find.descendant(
+                of: find.byType(UserAvatar), matching: find.text('雨')),
+            findsOneWidget);
       }
       expect(find.byType(AssistantAvatar), findsNWidgets(2));
       final userRow = tester.widget<Row>(
           find.ancestor(of: find.text('你好'), matching: find.byType(Row)).first);
-      expect(userRow.mainAxisAlignment, MainAxisAlignment.end);
-      final assistantRow = tester.widget<Row>(find
-          .ancestor(
-              of: find.text('你好呀，今天过得怎么样？无论有什么开心的事情或者烦恼，都可以慢慢和我说。'),
-              matching: find.byType(Row))
-          .first);
-      expect(assistantRow.mainAxisAlignment, MainAxisAlignment.start);
+      expect(userRow.mainAxisAlignment, MainAxisAlignment.start);
       expect(tester.getTopLeft(find.byType(UserAvatar)).dx,
-          greaterThan(tester.getTopRight(find.text('你好')).dx));
-      final shortBubble = tester.getSize(find
-          .ancestor(of: find.text('你好'), matching: find.byType(Container))
-          .first);
-      final longBubble = tester.getSize(find
-          .ancestor(
-              of: find.text('你好呀，今天过得怎么样？无论有什么开心的事情或者烦恼，都可以慢慢和我说。'),
-              matching: find.byType(Container))
-          .first);
-      expect(shortBubble.width, lessThan(140));
-      expect(shortBubble.width, lessThan(longBubble.width));
-      expect(longBubble.height, greaterThan(shortBubble.height));
+          lessThan(tester.getTopLeft(find.text('你好')).dx));
+      for (final text in ['你好', '你好呀，今天过得怎么样？无论有什么开心的事情或者烦恼，都可以慢慢和我说。']) {
+        expect(tester.widget<Text>(find.text(text)).maxLines, 1);
+      }
       expect(tester.takeException(), isNull);
     });
   }

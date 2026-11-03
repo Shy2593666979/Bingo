@@ -1,3 +1,4 @@
+import 'package:bingo/core/widgets/bingo_confirm_dialog.dart';
 import 'dart:async';
 import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/core/widgets/center_toast.dart';
@@ -23,6 +24,10 @@ class RoleHomePage extends StatefulWidget {
       this.onRolesChanged,
       this.onOpenSettings,
       this.userAvatarData,
+      this.userName = '',
+      this.onShareRole,
+      this.onOpenCommunity,
+      this.showCreateButton = true,
       super.key});
   final RoleGateway gateway;
   final String userId;
@@ -31,12 +36,17 @@ class RoleHomePage extends StatefulWidget {
   final Future<void> Function()? onRolesChanged;
   final VoidCallback? onOpenSettings;
   final String? userAvatarData;
+  final String userName;
+  final Future<void> Function(RoleOption)? onShareRole;
+  final VoidCallback? onOpenCommunity;
+  final bool showCreateButton;
   @override
   State<RoleHomePage> createState() => RoleHomePageState();
 }
 
 class RoleHomePageState extends State<RoleHomePage>
     with WidgetsBindingObserver {
+  Future<void> createCompanion() => _edit();
   List<RoleOption>? _roles;
   String? _error;
   String? _openingId;
@@ -88,7 +98,7 @@ class RoleHomePageState extends State<RoleHomePage>
       }
     } on Exception {
       if (mounted && accountVersion == _accountVersion) {
-        setState(() => _error = '伙伴加载失败，请重试');
+        setState(() => _error = '搭子加载失败，请重试');
       }
     } finally {
       if (accountVersion == _accountVersion) _loading = false;
@@ -119,6 +129,7 @@ class RoleHomePageState extends State<RoleHomePage>
       final role = roles.removeAt(oldIndex);
       roles.insert(newIndex, role);
       _orderIds = roles.map((role) => role.id).toList();
+      _roles = applyLocalRoleOrder(roles, _orderIds);
     });
     try {
       await widget.orderStore.save(userId, List.of(_orderIds));
@@ -161,8 +172,10 @@ class RoleHomePageState extends State<RoleHomePage>
         builder: (_) => RoleDetailPage(
             role: role,
             userAvatarData: widget.userAvatarData,
+            userName: widget.userName,
             gateway: widget.gateway,
             onChat: _open,
+            onShare: widget.onShareRole,
             onEdit: () => _edit(role))));
     await refresh();
   }
@@ -205,7 +218,9 @@ class RoleHomePageState extends State<RoleHomePage>
                         tooltip: '我的',
                         onPressed: widget.onOpenSettings,
                         icon: UserAvatar(
-                            avatarData: widget.userAvatarData, size: 42)),
+                            avatarData: widget.userAvatarData,
+                            username: widget.userName,
+                            size: 42)),
                   ])),
               Expanded(
                   child: RefreshIndicator(
@@ -258,24 +273,49 @@ class RoleHomePageState extends State<RoleHomePage>
                                     const Padding(
                                         padding: EdgeInsets.all(40),
                                         child: Center(
-                                            child: Text('还没有伙伴，创建一位新的伙伴吧'))),
+                                            child: Text('还没有搭子，创建一位新的搭子吧'))),
                                   ...?roles?.map(_card),
                                 ]))),
-              Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
-                  child: SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: FilledButton.icon(
-                          onPressed: _openingId == null ? _edit : null,
-                          icon: const PartnerActionIcon(
-                              symbol: PartnerActionSymbol.create,
-                              size: 25,
-                              color: BingoPalette.companionActionIcon),
-                          label: const Text('创建伙伴',
-                              style: TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.w700)),
-                          style: companionActionButtonStyle(height: 56)))),
+              if (widget.onOpenCommunity != null)
+                Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+                    child: InkWell(
+                        onTap: widget.onOpenCommunity,
+                        borderRadius: BorderRadius.circular(17),
+                        child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 13),
+                            decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: .75),
+                                borderRadius: BorderRadius.circular(17)),
+                            child: const Row(children: [
+                              Icon(Icons.explore_outlined,
+                                  color: Color(0xFF6B9380), size: 21),
+                              SizedBox(width: 10),
+                              Expanded(
+                                  child: Text('去社区，遇见更多有趣的搭子',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: Color(0xFF648574)))),
+                              Icon(Icons.arrow_forward_rounded,
+                                  size: 17, color: Color(0xFF6B9380))
+                            ])))),
+              if (widget.showCreateButton)
+                Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
+                    child: SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: FilledButton.icon(
+                            onPressed: _openingId == null ? _edit : null,
+                            icon: const PartnerActionIcon(
+                                symbol: PartnerActionSymbol.create,
+                                size: 25,
+                                color: BingoPalette.companionActionIcon),
+                            label: const Text('创建搭子',
+                                style: TextStyle(
+                                    fontSize: 18, fontWeight: FontWeight.w700)),
+                            style: companionActionButtonStyle(height: 56)))),
             ]))));
   }
 
@@ -302,6 +342,15 @@ class RoleHomePageState extends State<RoleHomePage>
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                 Row(children: [
+                                  if (role.pinned || role.muted) ...[
+                                    Icon(
+                                        role.pinned
+                                            ? Icons.push_pin_rounded
+                                            : Icons.notifications_off_outlined,
+                                        size: 15,
+                                        color: const Color(0xFF85928F)),
+                                    const SizedBox(width: 5),
+                                  ],
                                   Expanded(
                                       child: Text(role.displayName,
                                           maxLines: 1,
@@ -342,21 +391,13 @@ class RoleHomePageState extends State<RoleHomePage>
     final affected = (_roles ?? [])
         .where((item) => item.id != role.id && item.voiceSourceId == role.id)
         .length;
-    final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-                title: Text('删除${role.displayName}？'),
-                content: Text('删除后，该伙伴的专属音色也会失效。'
-                    '${affected > 0 ? '\n另外 $affected 位伙伴使用了这个音色，将自动切回系统默认音色。' : ''}'),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('取消')),
-                  TextButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text('删除',
-                          style: TextStyle(color: Color(0xFFC3676D)))),
-                ]));
+    final confirmed = await showBingoConfirmDialog(context,
+        title: '删除${role.displayName}？',
+        message: '删除后，该搭子的专属音色也会失效。'
+            '${affected > 0 ? '\n另外 $affected 位搭子使用了这个音色，将自动切回系统默认音色。' : ''}',
+        confirmLabel: '删除',
+        icon: Icons.person_remove_outlined,
+        destructive: true);
     if (confirmed != true || !mounted) return;
     setState(() => _openingId = role.id);
     try {

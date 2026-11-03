@@ -31,5 +31,8 @@ List<RoleOption> applyLocalRoleOrder(
     if (role != null) ordered.add(role);
   }
   ordered.addAll(remaining.values);
-  return ordered;
+  return [
+    ...ordered.where((role) => role.pinned),
+    ...ordered.where((role) => !role.pinned),
+  ];
 }

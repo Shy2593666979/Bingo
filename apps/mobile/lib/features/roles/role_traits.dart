@@ -42,9 +42,15 @@ const roleTraits = <String, String>{
   '阅读交流': 'book',
   '安静陪伴': 'moon',
   '灵感碰撞': 'bulb',
-  '运动伙伴': 'sun',
+  '运动搭子': 'sun',
   '美食分享': 'coffee',
   '游戏搭子': 'game',
+  '幽默风趣': 'sun',
+  '思路清晰': 'bulb',
+  '沉稳温和': 'shield',
+  '放松聊天': 'chat',
+  '积极活泼': 'run',
+  '尊重节奏': 'sprout',
 };
 
 class TraitIcon extends StatelessWidget {
@@ -58,19 +64,25 @@ class TraitIcon extends StatelessWidget {
 }
 
 class TraitBadge extends StatelessWidget {
-  const TraitBadge(this.label, {super.key});
+  const TraitBadge(this.label, {this.outlined = false, super.key});
   final String label;
+  final bool outlined;
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-            color: const Color(0xFFEDF8F5),
-            borderRadius: BorderRadius.circular(24)),
+            color: outlined ? Colors.white : const Color(0xFFEDF8F5),
+            border:
+                outlined ? Border.all(color: const Color(0xFFB7E5DA)) : null,
+            borderRadius: BorderRadius.circular(outlined ? 10 : 24)),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          TraitIcon(roleTraits[label] ?? 'chat', size: 15),
+          TraitIcon(roleTraits[label] ?? 'chat',
+              size: 15, color: outlined ? const Color(0xFF00A786) : null),
           const SizedBox(width: 5),
           Text(label,
-              style: const TextStyle(fontSize: 10, color: Color(0xFF294C46))),
+              style: TextStyle(
+                  fontSize: outlined ? 12 : 10,
+                  color: const Color(0xFF294C46))),
         ]),
       );
 }
@@ -99,6 +111,29 @@ class _TraitPainter extends CustomPainter {
       ..strokeJoin = StrokeJoin.round;
     final white = Paint()..color = Colors.white;
     switch (kind) {
+      case 'run':
+        canvas.drawCircle(const Offset(16, 3.5), 2.6, fill);
+        final limbs = Paint()
+          ..color = color
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.8
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round;
+        canvas.drawPath(
+            Path()
+              ..moveTo(5, 10)
+              ..lineTo(9, 6)
+              ..lineTo(13, 8)
+              ..lineTo(17, 12)
+              ..lineTo(21, 12)
+              ..moveTo(13, 8)
+              ..lineTo(10, 14)
+              ..lineTo(15, 17)
+              ..lineTo(13, 22)
+              ..moveTo(10, 14)
+              ..lineTo(6, 19)
+              ..lineTo(2, 20),
+            limbs);
       case 'heart':
         canvas.drawPath(
             Path()
