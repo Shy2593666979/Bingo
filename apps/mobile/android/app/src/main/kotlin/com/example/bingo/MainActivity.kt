@@ -68,16 +68,28 @@ class MainActivity : FlutterActivity() {
     private var callAudio = false
     private var callAudioTrack: AudioTrack? = null
     private var callPlaybackThread: Thread? = null
-    private val callPlaybackQueue = LinkedBlockingQueue<ByteArray>(80)
+    private val callPlaybackQueue = LinkedBlockingQueue<Pair<Long, ByteArray>>(80)
+    private val callPlaybackLock = Any()
+    private val callAcceptedFrames = java.util.concurrent.atomic.AtomicLong(0)
+    private val callPlaybackGeneration = java.util.concurrent.atomic.AtomicLong(0)
     @Volatile private var callPlaybackRunning = false
     private var previousCallAudioMode: Int? = null
     private var previousCallSpeakerphoneOn: Boolean? = null
     private var statusBarOverlay: View? = null
     private var locationMapOpen = false
+    private var baseStatusBarColor = Color.WHITE
+    private var chatChromeOpen = false
+    private val pageStatusBarColor: Int
+        get() = if (chatChromeOpen) Color.WHITE else baseStatusBarColor
     private var incomingCallPlayer: MediaPlayer? = null
     private var previewAudioPlayer: MediaPlayer? = null
     private var previewAudioResult: MethodChannel.Result? = null
     private var previewAudioFile: File? = null
+    private var previewAudioFocusRequest: AudioFocusRequest? = null
+    private var hasLegacyPreviewAudioFocus = false
+    private val previewAudioFocusListener = AudioManager.OnAudioFocusChangeListener { change ->
+        if (change < 0) runOnUiThread { stopPreviewAudio() }
+    }
     private var incomingCallRingtone: Ringtone? = null
     private var incomingCallVibrator: Vibrator? = null
     private var incomingCallAudioFocusRequest: AudioFocusRequest? = null
@@ -130,7 +142,7 @@ class MainActivity : FlutterActivity() {
         // frame in which they can paint the status bar with their black default.
         window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-        window.statusBarColor = Color.rgb(249, 252, 251)
+        window.statusBarColor = Color.WHITE
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             @Suppress("DEPRECATION")
             window.decorView.systemUiVisibility =
@@ -176,7 +188,7 @@ class MainActivity : FlutterActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, !locationMapOpen)
         window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-        window.statusBarColor = if (locationMapOpen) Color.TRANSPARENT else Color.rgb(249, 252, 251)
+        window.statusBarColor = if (locationMapOpen) Color.TRANSPARENT else pageStatusBarColor
         window.navigationBarColor = Color.TRANSPARENT
         WindowCompat.getInsetsController(window, window.decorView).apply {
             show(WindowInsetsCompat.Type.statusBars())
@@ -191,7 +203,7 @@ class MainActivity : FlutterActivity() {
         )
         if (statusBarBackgroundId != 0) {
             window.decorView.findViewById<View>(statusBarBackgroundId)
-                ?.setBackgroundColor(if (locationMapOpen) Color.TRANSPARENT else Color.rgb(249, 252, 251))
+                ?.setBackgroundColor(if (locationMapOpen) Color.TRANSPARENT else pageStatusBarColor)
         }
         ensureStatusBarOverlay()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -222,7 +234,7 @@ class MainActivity : FlutterActivity() {
                 ),
             )
         }
-        overlay.setBackgroundColor(Color.rgb(249, 252, 251))
+        overlay.setBackgroundColor(pageStatusBarColor)
         overlay.visibility = if (locationMapOpen) View.GONE else View.VISIBLE
         overlay.bringToFront()
     }
@@ -230,6 +242,17 @@ class MainActivity : FlutterActivity() {
     fun setLocationMapChrome(enabled: Boolean) {
         locationMapOpen = enabled
         applySystemBarAppearance()
+    }
+
+    private fun updatePageChromeColors() {
+        // A tab color change must not resize/reorder Flutter's surface or overlay.
+        val color = if (locationMapOpen) Color.TRANSPARENT else pageStatusBarColor
+        window.statusBarColor = color
+        val backgroundId = resources.getIdentifier("statusBarBackground", "id", "android")
+        if (backgroundId != 0) {
+            window.decorView.findViewById<View>(backgroundId)?.setBackgroundColor(color)
+        }
+        statusBarOverlay?.setBackgroundColor(pageStatusBarColor)
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -243,6 +266,8 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "bingo/region_location")
             .setMethodCallHandler(regionLocation)
         localChatDatabase = LocalChatDatabase(this)
+
+        ChatAppearanceStorage(this).register(flutterEngine.dartExecutor.binaryMessenger)
 
         val masterKey = MasterKey.Builder(this)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
@@ -291,6 +316,30 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DEVICE_CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "openNotificationSettings" -> runCatching {
+                        val intent = if (Build.VERSION.SDK_INT >= 26) {
+                            Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, packageName)
+                        } else {
+                            Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                android.net.Uri.parse("package:$packageName"))
+                        }
+                        startActivity(intent)
+                    }.fold({ result.success(null) }, { result.error("settings_unavailable", "无法打开通知设置", null) })
+                    "setChatChrome" -> {
+                        chatChromeOpen = call.argument<Boolean>("enabled") == true
+                        updatePageChromeColors()
+                        result.success(null)
+                    }
+                    "setCommunityChrome" -> {
+                        baseStatusBarColor = if (call.argument<Boolean>("enabled") == true) {
+                            Color.rgb(247, 251, 250)
+                        } else {
+                            Color.WHITE
+                        }
+                        updatePageChromeColors()
+                        result.success(null)
+                    }
                     "openProjectRepository" -> runCatching {
                         startActivity(Intent(Intent.ACTION_VIEW,
                             android.net.Uri.parse("https://github.com/Shy2593666979/Bingo")))
@@ -348,6 +397,7 @@ class MainActivity : FlutterActivity() {
                         }
                     }
                     "pickImage" -> pickImage(result)
+                    "pickStickerImage" -> pickStickerImage(result)
                     "takePhoto" -> takePhoto(result)
                     "playPreviewAudio" -> playPreviewAudio(call.arguments as? ByteArray, result)
                     "stopPreviewAudio" -> {
@@ -365,12 +415,26 @@ class MainActivity : FlutterActivity() {
                         if (audio == null) {
                             result.error("invalid_audio", "Audio must be bytes", null)
                         } else {
-                            if (!callPlaybackQueue.offer(audio)) {
-                                callPlaybackQueue.poll()
-                                callPlaybackQueue.offer(audio)
-                            }
-                            result.success(null)
+                            callAcceptedFrames.addAndGet(audio.size.toLong() / 2)
+                            if (!callPlaybackQueue.offer(callPlaybackGeneration.get() to audio)) {
+                                callAcceptedFrames.addAndGet(-audio.size.toLong() / 2)
+                                result.error("audio_overflow", "通话音频缓冲已满", null)
+                            } else result.success(null)
                         }
+                    }
+                    "finishCallAudio" -> {
+                        val target = callAcceptedFrames.get()
+                        val generation = callPlaybackGeneration.get()
+                        Thread {
+                            val deadline = System.nanoTime() + 90_000_000_000L
+                            while (callPlaybackRunning && generation == callPlaybackGeneration.get() &&
+                                System.nanoTime() < deadline) {
+                                val head = callAudioTrack?.playbackHeadPosition?.toLong()?.and(0xffffffffL) ?: 0L
+                                if (head >= target) break
+                                Thread.sleep(20)
+                            }
+                            runOnUiThread { result.success(null) }
+                        }.apply { isDaemon = true; start() }
                     }
                     "clearCallAudio" -> {
                         clearCallAudio()
@@ -474,6 +538,7 @@ class MainActivity : FlutterActivity() {
                     when (call.method) {
                         "deleteAccountData" -> {
                             localChatDatabase.deleteAccountData(requireNotNull(userId))
+                            ChatAppearanceStorage(this).deleteAccount(userId)
                             result.success(null)
                         }
                         "loadRoleOrder" -> result.success(
@@ -554,6 +619,33 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    private fun pickStickerImage(result: MethodChannel.Result) {
+        if (!beginImageRequest(result)) return
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            type = "image/*"
+            addCategory(Intent.CATEGORY_OPENABLE)
+        }
+        try { startActivityForResult(intent, IMAGE_STICKER_REQUEST) }
+        catch (error: ActivityNotFoundException) {
+            pendingImageResult = null
+            result.error("image_picker_unavailable", "未找到可用的图片选择器", null)
+        }
+    }
+
+    private fun readStickerImage(uri: android.net.Uri): ByteArray {
+        val output = ByteArrayOutputStream()
+        contentResolver.openInputStream(uri)?.use { stream ->
+            val buffer = ByteArray(16384)
+            while (true) {
+                val count = stream.read(buffer)
+                if (count < 0) break
+                require(output.size() + count <= 5 * 1024 * 1024) { "表情图片不能超过 5 MB" }
+                output.write(buffer, 0, count)
+            }
+        } ?: throw IllegalArgumentException("无法读取表情图片")
+        return output.toByteArray()
+    }
+
     private fun takePhoto(result: MethodChannel.Result) {
         if (!beginImageRequest(result)) return
         val cameraDirectory = File(cacheDir, "camera").apply { mkdirs() }
@@ -590,7 +682,7 @@ class MainActivity : FlutterActivity() {
     @Deprecated("Deprecated in Android")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode != IMAGE_PICK_REQUEST && requestCode != IMAGE_CAPTURE_REQUEST) return
+        if (requestCode != IMAGE_PICK_REQUEST && requestCode != IMAGE_CAPTURE_REQUEST && requestCode != IMAGE_STICKER_REQUEST) return
         val result = pendingImageResult ?: return
         pendingImageResult = null
         if (resultCode != Activity.RESULT_OK) {
@@ -605,8 +697,19 @@ class MainActivity : FlutterActivity() {
                     ?: throw IllegalStateException("相机未返回照片")
             } else {
                 val uri = data?.data ?: throw IllegalStateException("相册未返回图片")
-                contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                if (requestCode == IMAGE_STICKER_REQUEST) readStickerImage(uri) else contentResolver.openInputStream(uri)?.use { it.readBytes() }
                     ?: throw IllegalStateException("无法读取所选图片")
+            }
+            if (requestCode == IMAGE_STICKER_REQUEST) {
+                val mime = when {
+                    source.size >= 8 && source[0] == 0x89.toByte() && String(source, 1, 3, Charsets.US_ASCII) == "PNG" -> "image/png"
+                    source.size >= 3 && source[0] == 0xff.toByte() && source[1] == 0xd8.toByte() -> "image/jpeg"
+                    source.size >= 6 && String(source, 0, 3, Charsets.US_ASCII) == "GIF" -> "image/gif"
+                    source.size >= 12 && String(source, 8, 4, Charsets.US_ASCII) == "WEBP" -> "image/webp"
+                    else -> throw IllegalArgumentException("请选择 PNG、JPG、GIF 或 WebP 图片")
+                }
+                result.success(mapOf("bytes" to source, "mime_type" to mime))
+                return
             }
             val bitmap = decodeScaledBitmap(source, 1600)
                 ?: throw IllegalArgumentException("无法解析图片")
@@ -634,6 +737,23 @@ class MainActivity : FlutterActivity() {
             return
         }
         try {
+            val attributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
+            val manager = getSystemService(AudioManager::class.java)
+            val granted = if (Build.VERSION.SDK_INT >= 26) {
+                val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                    .setAudioAttributes(attributes)
+                    .setOnAudioFocusChangeListener(previewAudioFocusListener).build()
+                previewAudioFocusRequest = request
+                manager.requestAudioFocus(request)
+            } else {
+                @Suppress("DEPRECATION")
+                val status = manager.requestAudioFocus(previewAudioFocusListener,
+                    AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                hasLegacyPreviewAudioFocus = status == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+                status
+            }
+            check(granted == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) { "音频正在被其他应用使用" }
             val file = File.createTempFile("bingo-preview-", ".wav", cacheDir)
             file.writeBytes(bytes)
             previewAudioFile = file
@@ -641,9 +761,7 @@ class MainActivity : FlutterActivity() {
             val player = MediaPlayer()
             previewAudioPlayer = player
             player.apply {
-                setAudioAttributes(AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+                setAudioAttributes(attributes)
                 setDataSource(file.absolutePath)
                 setOnCompletionListener { stopPreviewAudio() }
                 setOnErrorListener { _, _, _ ->
@@ -670,6 +788,15 @@ class MainActivity : FlutterActivity() {
         previewAudioPlayer = null
         previewAudioFile?.delete()
         previewAudioFile = null
+        val manager = getSystemService(AudioManager::class.java)
+        if (Build.VERSION.SDK_INT >= 26) {
+            previewAudioFocusRequest?.let { manager.abandonAudioFocusRequest(it) }
+            previewAudioFocusRequest = null
+        } else if (hasLegacyPreviewAudioFocus) {
+            @Suppress("DEPRECATION")
+            manager.abandonAudioFocus(previewAudioFocusListener)
+            hasLegacyPreviewAudioFocus = false
+        }
         previewAudioResult?.success(null)
         previewAudioResult = null
     }
@@ -909,17 +1036,22 @@ class MainActivity : FlutterActivity() {
         }
         callAudioTrack = track
         callPlaybackRunning = true
+        callAcceptedFrames.set(0)
+        callPlaybackGeneration.incrementAndGet()
         callPlaybackQueue.clear()
         track.play()
         callPlaybackThread = Thread {
             while (callPlaybackRunning) {
-                val audio = try {
+                val packet = try {
                     callPlaybackQueue.take()
                 } catch (_: InterruptedException) {
                     break
                 }
-                if (audio.isNotEmpty() && callPlaybackRunning) {
-                    track.write(audio, 0, audio.size, AudioTrack.WRITE_BLOCKING)
+                synchronized(callPlaybackLock) {
+                    val audio = packet.second
+                    if (audio.isNotEmpty() && callPlaybackRunning && packet.first == callPlaybackGeneration.get()) {
+                        track.write(audio, 0, audio.size, AudioTrack.WRITE_BLOCKING)
+                    }
                 }
             }
         }.apply {
@@ -931,14 +1063,16 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun clearCallAudio() {
+        callPlaybackGeneration.incrementAndGet()
         callPlaybackQueue.clear()
-        callAudioTrack?.let { track ->
+        synchronized(callPlaybackLock) { callAudioTrack?.let { track ->
             runCatching {
                 track.pause()
                 track.flush()
+                callAcceptedFrames.set(0)
                 track.play()
             }
-        }
+        } }
     }
 
     private fun setCallSpeaker(enabled: Boolean) {
@@ -954,6 +1088,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun stopCallAudio() {
+        callPlaybackGeneration.incrementAndGet()
         stopAudioCapture()
         callAudio = false
         callPlaybackRunning = false
@@ -1105,6 +1240,7 @@ class MainActivity : FlutterActivity() {
 
     override fun onStop() {
         replyAudio.stop()
+        stopPreviewAudio()
         regionLocation?.cancelForBackground()
         super.onStop()
     }
@@ -1140,6 +1276,7 @@ class MainActivity : FlutterActivity() {
     private companion object {
         const val CHANNEL = "bingo/secure_storage"
         const val DEVICE_CHANNEL = "bingo/device_tools"
+        const val IMAGE_STICKER_REQUEST = 4103
         const val IMAGE_PICK_REQUEST = 4101
         const val IMAGE_CAPTURE_REQUEST = 4102
         const val AUDIO_EVENT_CHANNEL = "bingo/audio_stream"

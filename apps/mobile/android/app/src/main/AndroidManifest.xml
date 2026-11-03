@@ -14,6 +14,7 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
+        android:usesCleartextTraffic="${allowCleartextTraffic}"
         android:icon="@mipmap/ic_launcher"
         android:label="Bingo"
         android:name="${applicationName}"

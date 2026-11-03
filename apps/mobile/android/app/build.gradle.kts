@@ -21,6 +21,8 @@ android {
 
     defaultConfig {
         applicationId = "com.example.bingo"
+        manifestPlaceholders["allowCleartextTraffic"] =
+            providers.environmentVariable("BINGO_ALLOW_CLEARTEXT").getOrElse("false")
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -46,6 +48,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            manifestPlaceholders["allowCleartextTraffic"] = "true"
+        }
         release {
             buildConfigField("String", "AMAP_JS_SECURITY_CODE", "\"\"")
             signingConfig = signingConfigs.getByName("debug")
