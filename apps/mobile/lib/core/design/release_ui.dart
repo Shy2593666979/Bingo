@@ -1,6 +1,34 @@
 import 'package:bingo/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
+class _HeaderTitle extends StatelessWidget {
+  const _HeaderTitle(this.title, {required this.style});
+  final String title;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) => Align(
+      alignment: Alignment.centerLeft,
+      child: Stack(children: [
+        Positioned.fill(
+            bottom: 2,
+            child: IgnorePointer(
+                child: Align(
+                    alignment: Alignment.bottomRight,
+                    child: FractionallySizedBox(
+                        widthFactor: .37,
+                        child: Transform.rotate(
+                            angle: -.05236,
+                            child: Container(
+                                height: 7,
+                                decoration: const BoxDecoration(
+                                    color: Color(0x806DDBA0),
+                                    borderRadius: BorderRadius.all(
+                                        Radius.elliptical(100, 50))))))))),
+        Text(title, style: style),
+      ]));
+}
+
 class ReleasePlainHeader extends StatelessWidget {
   const ReleasePlainHeader(this.title,
       {this.leading, this.actions = const [], super.key});
@@ -16,7 +44,7 @@ class ReleasePlainHeader extends StatelessWidget {
             if (leading != null)
               SizedBox(width: 38, height: 40, child: leading),
             Expanded(
-                child: Text(title,
+                child: _HeaderTitle(title,
                     style: const TextStyle(
                         fontSize: 25,
                         height: 1.3,
@@ -36,7 +64,7 @@ class ReleasePageHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(2, 17, 0, 16),
       child: Row(children: [
         Expanded(
-            child: Text(title,
+            child: _HeaderTitle(title,
                 style: const TextStyle(
                     fontSize: 24, height: 1.3, fontWeight: FontWeight.w600))),
         for (final action in actions)
