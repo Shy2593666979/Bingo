@@ -1,4 +1,5 @@
 import 'package:bingo/core/design/companion_launch_ui.dart';
+import 'package:bingo/core/design/companion_menu_icon.dart';
 import 'dart:async';
 import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/core/design/bingo_icon.dart';
@@ -211,6 +212,7 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
   Widget _heading(String text, VoidCallback? more,
           {String label = '全部 ›',
           int? count,
+          bool refresh = false,
           double top = 27,
           double bottom = 18}) =>
       Padding(
@@ -231,16 +233,26 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
             ])),
             if (more != null)
               TextButton(
-                  onPressed: more,
+                  onPressed: refresh && _recLoading ? null : more,
                   style: TextButton.styleFrom(
                       minimumSize: const Size(44, 26),
                       textStyle: const TextStyle(
                           fontSize: 12, fontWeight: FontWeight.w400),
                       padding: EdgeInsets.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                  child: Text(label,
-                      style: const TextStyle(
-                          fontSize: 12, color: BingoPalette.muted)))
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Text(label,
+                        style: TextStyle(
+                            fontSize: refresh ? 14 : 12,
+                            color: refresh
+                                ? CompanionLaunch.primary
+                                : BingoPalette.muted)),
+                    if (refresh) ...[
+                      const SizedBox(width: 7),
+                      const CompanionMenuIcon(CompanionMenuSymbol.refresh,
+                          size: 20, color: CompanionLaunch.primary),
+                    ],
+                  ]))
           ]));
   void _allPartners() => showModalBottomSheet<void>(
       context: context,
@@ -313,7 +325,10 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
     final compact = CompanionLaunch.compact(context);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _heading('发现搭子', () => unawaited(_changeRecommendation()),
-          top: 16, bottom: 11, label: _recLoading ? '正在换…' : '换一个'),
+          top: 16,
+          bottom: 11,
+          refresh: true,
+          label: _recLoading ? '正在换…' : '换一个'),
       if (share != null && gateway != null)
         Container(
             padding: const EdgeInsets.fromLTRB(5, 9, 7, 9),

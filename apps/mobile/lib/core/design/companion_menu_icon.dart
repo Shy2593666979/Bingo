@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 
-enum CompanionMenuSymbol { share, favorite, appearance, settings, chevron }
+enum CompanionMenuSymbol {
+  share,
+  favorite,
+  appearance,
+  settings,
+  chevron,
+  refresh
+}
 
 /// The approved HTML menu outlines; appearance uses the app-wide palette glyph.
 class CompanionMenuIcon extends StatelessWidget {
@@ -34,6 +41,16 @@ class _MenuOutline extends CustomPainter {
       ..strokeJoin = StrokeJoin.round;
     final path = Path();
     switch (symbol) {
+      case CompanionMenuSymbol.refresh:
+        path
+          ..moveTo(21, 8)
+          ..arcToPoint(const Offset(21.1, 15),
+              radius: const Radius.circular(9),
+              largeArc: true,
+              clockwise: false)
+          ..moveTo(21, 2)
+          ..lineTo(21, 8)
+          ..lineTo(15, 8);
       case CompanionMenuSymbol.share:
         path
           ..moveTo(3, 16)
