@@ -360,7 +360,7 @@ class ReferenceNavigation extends StatelessWidget {
                                       child: SizedBox(
                                           height: 61,
                                           child: Align(
-                                              alignment: Alignment.topCenter,
+                                              alignment: Alignment(0, -.6),
                                               child: Container(
                                                   width: 41,
                                                   height: 41,

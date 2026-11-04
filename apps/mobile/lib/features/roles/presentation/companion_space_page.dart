@@ -50,6 +50,25 @@ class CompanionSpacePage extends StatefulWidget {
 }
 
 class CompanionSpacePageState extends State<CompanionSpacePage> {
+  double _refreshTurns = 0;
+  bool _refreshAnimating = false;
+
+  Future<void> _refreshRecommendation() async {
+    if (_recLoading || _adding != null || _refreshAnimating) return;
+    setState(() {
+      _refreshTurns += 1;
+      _refreshAnimating = true;
+    });
+    try {
+      await Future.wait([
+        _changeRecommendation(),
+        Future<void>.delayed(const Duration(milliseconds: 600)),
+      ]);
+    } finally {
+      if (mounted) setState(() => _refreshAnimating = false);
+    }
+  }
+
   List<RoleOption>? _roles;
   List<ChatGroup> _groups = [];
   List<CommunityShare> _recommendations = [];
@@ -232,27 +251,37 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
               ],
             ])),
             if (more != null)
-              TextButton(
-                  onPressed: refresh && _recLoading ? null : more,
-                  style: TextButton.styleFrom(
-                      minimumSize: const Size(44, 26),
-                      textStyle: const TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.w400),
-                      padding: EdgeInsets.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Text(label,
-                        style: TextStyle(
-                            fontSize: refresh ? 14 : 12,
-                            color: refresh
-                                ? CompanionLaunch.primary
-                                : BingoPalette.muted)),
-                    if (refresh) ...[
-                      const SizedBox(width: 7),
-                      const CompanionMenuIcon(CompanionMenuSymbol.refresh,
-                          size: 20, color: CompanionLaunch.primary),
-                    ],
-                  ]))
+              if (refresh)
+                IconButton(
+                    tooltip: '换一个',
+                    onPressed:
+                        _recLoading || _refreshAnimating || _adding != null
+                            ? null
+                            : more,
+                    style: IconButton.styleFrom(
+                        minimumSize: const Size(32, 26),
+                        padding: EdgeInsets.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                    icon: AnimatedRotation(
+                        turns: _refreshTurns,
+                        duration: const Duration(milliseconds: 600),
+                        curve: Curves.easeInOutCubic,
+                        child: const CompanionMenuIcon(
+                            CompanionMenuSymbol.refresh,
+                            size: 20,
+                            color: CompanionLaunch.primary)))
+              else
+                TextButton(
+                    onPressed: more,
+                    style: TextButton.styleFrom(
+                        minimumSize: const Size(44, 26),
+                        textStyle: const TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w400),
+                        padding: EdgeInsets.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                    child: Text(label,
+                        style: const TextStyle(
+                            fontSize: 12, color: BingoPalette.muted)))
           ]));
   void _allPartners() => showModalBottomSheet<void>(
       context: context,
@@ -324,11 +353,8 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
     final gateway = widget.community;
     final compact = CompanionLaunch.compact(context);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      _heading('发现搭子', () => unawaited(_changeRecommendation()),
-          top: 16,
-          bottom: 11,
-          refresh: true,
-          label: _recLoading ? '正在换…' : '换一个'),
+      _heading('发现搭子', () => unawaited(_refreshRecommendation()),
+          top: 16, bottom: 11, refresh: true),
       if (share != null && gateway != null)
         Container(
             padding: const EdgeInsets.fromLTRB(5, 9, 7, 9),

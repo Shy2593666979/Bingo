@@ -89,12 +89,12 @@ void main() {
                 onSearchChats: () {}))));
     await tester.pumpAndSettle();
     expect(gateway.scopes, ['recommended']);
-    await tester.tap(find.text('换一个'));
+    await tester.tap(find.byTooltip('换一个'));
     await tester.pumpAndSettle();
     expect(find.text('推荐second'), findsOneWidget);
     expect(gateway.installs, 0);
     expect(communityVisits, 0);
-    await tester.tap(find.text('换一个'));
+    await tester.tap(find.byTooltip('换一个'));
     await tester.pumpAndSettle();
     expect(find.text('推荐first'), findsOneWidget);
     final first = find.byKey(const ValueKey('recommend-add-first'));
