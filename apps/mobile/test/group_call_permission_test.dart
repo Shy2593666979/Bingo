@@ -41,7 +41,7 @@ class _Gateway implements GroupCallGateway {
 
 void main() {
   testWidgets(
-      'discussion controls and playback acknowledgements use server state',
+      'natural call needs no activation or limit controls and acknowledges playback',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(360, 780));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -79,20 +79,19 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(gateway.socket.commands.single['playback_results'], true);
-    await tester.tap(find.text('让大家聊聊'));
-    await tester.pump();
-    expect(gateway.socket.commands.last['type'], 'resume_discussion');
+    expect(find.text('让大家聊聊'), findsNothing);
+    expect(find.byType(DropdownButton<int>), findsNothing);
+    expect(gateway.socket.commands, hasLength(1));
     event({
       'type': 'discussion_state',
       'enabled': true,
       'phase': 'discussing',
-      'max_silent_turns': 50,
+      'max_silent_turns': 30,
       'generation': 0
     });
     await tester.pump();
-    expect(find.text('最多50次'), findsOneWidget);
-    await tester.tap(find.text('让大家先停一下'));
-    expect(gateway.socket.commands.last['type'], 'pause_discussion');
+    expect(find.text('最多30次'), findsNothing);
+    expect(find.text('让大家先停一下'), findsNothing);
     event({'type': 'audio_end', 'utterance_id': 'failed-one', 'generation': 0});
     await tester.pump();
     await tester.pump();

@@ -103,8 +103,6 @@ class _GroupCallPageState extends State<GroupCallPage>
   String status = '正在连接…', caption = '', speakerName = '';
   String? speaker;
   int seconds = 0, generation = 0;
-  int discussionLimit = 40;
-  bool discussionEnabled = false;
   String discussionPhase = 'idle';
   bool muted = false, loudspeaker = true, ending = false, allowPop = false;
   bool requestingAudio = false, failed = false;
@@ -158,9 +156,12 @@ class _GroupCallPageState extends State<GroupCallPage>
     if (eventGeneration is int && eventGeneration < generation) return;
     if (type == 'discussion_state') {
       setState(() {
-        discussionEnabled = event['enabled'] == true;
         discussionPhase = event['phase'] as String? ?? 'idle';
-        discussionLimit = event['max_silent_turns'] as int? ?? 40;
+        if (speaker == null) {
+          status = {'discussing', 'winding_down'}.contains(discussionPhase)
+              ? '大家正在聊天'
+              : '正在聆听';
+        }
       });
       return;
     }
@@ -225,7 +226,15 @@ class _GroupCallPageState extends State<GroupCallPage>
               'generation': epoch,
               'status': outcome
             }));
-            if (mounted) setState(() => speaker = null);
+            if (mounted) {
+              setState(() {
+                speaker = null;
+                status =
+                    {'discussing', 'winding_down'}.contains(discussionPhase)
+                        ? '大家正在聊天'
+                        : '正在聆听';
+              });
+            }
           }
         case 'listening':
           setState(() {
@@ -350,66 +359,6 @@ class _GroupCallPageState extends State<GroupCallPage>
                       Text(status,
                           textAlign: TextAlign.center,
                           style: const TextStyle(color: Color(0xFF52746B))),
-                      Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            TextButton.icon(
-                              onPressed: requestingAudio || failed || ending
-                                  ? null
-                                  : () {
-                                      final running = {
-                                        'discussing',
-                                        'winding_down',
-                                        'user_interrupting'
-                                      }.contains(discussionPhase);
-                                      socket?.add(jsonEncode({
-                                        'type': running
-                                            ? 'pause_discussion'
-                                            : 'resume_discussion'
-                                      }));
-                                    },
-                              icon: Icon(
-                                  {
-                                    'discussing',
-                                    'winding_down',
-                                    'user_interrupting'
-                                  }.contains(discussionPhase)
-                                      ? Icons.pause_rounded
-                                      : Icons.forum_outlined,
-                                  size: 18),
-                              label: Text({
-                                'discussing',
-                                'winding_down',
-                                'user_interrupting'
-                              }.contains(discussionPhase)
-                                  ? '让大家先停一下'
-                                  : discussionEnabled
-                                      ? '继续聊'
-                                      : '让大家聊聊'),
-                            ),
-                            const SizedBox(width: 12),
-                            DropdownButton<int>(
-                              value: discussionLimit,
-                              underline: const SizedBox.shrink(),
-                              onChanged: failed || ending
-                                  ? null
-                                  : (value) {
-                                      if (value != null) {
-                                        socket?.add(jsonEncode({
-                                          'type': 'set_discussion_config',
-                                          'max_silent_turns': value
-                                        }));
-                                      }
-                                    },
-                              items: [
-                                for (final value in [30, 40, 50])
-                                  DropdownMenuItem(
-                                      value: value,
-                                      child: Text('最多$value次',
-                                          style: const TextStyle(fontSize: 12)))
-                              ],
-                            ),
-                          ]),
                       const SizedBox(height: 12),
                       SizedBox(
                           height: 100,
