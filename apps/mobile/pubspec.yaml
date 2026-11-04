@@ -35,6 +35,7 @@ flutter:
         - asset: assets/fonts/HarmonyOS_Sans_SC_Black.ttf
           weight: 900
   assets:
+    - assets/branding/bingo_wordmark_e.png
     - assets/images/bingo_logo.webp
     - assets/avatars_square/bestie.webp
     - assets/avatars_square/boyfriend.webp

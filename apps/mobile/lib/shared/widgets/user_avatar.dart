@@ -6,11 +6,19 @@ import 'package:bingo/shared/widgets/avatar_frame.dart';
 
 class UserAvatar extends StatelessWidget {
   const UserAvatar(
-      {this.avatarData, this.username = '', required this.size, super.key});
+      {this.avatarData,
+      this.username = '',
+      required this.size,
+      this.backgroundColor,
+      this.foregroundColor,
+      this.backgroundGradient,
+      super.key});
 
   final String? avatarData;
   final String username;
   final double size;
+  final Color? backgroundColor, foregroundColor;
+  final Gradient? backgroundGradient;
 
   static const initialBackground = Color(0xFFE2EFE8);
   static const initialForeground = Color(0xFF3C6B58);
@@ -50,21 +58,28 @@ class UserAvatar extends StatelessWidget {
   Widget _defaultAvatar() {
     final initial = initialFor(username);
     final tone = toneFor(username);
+    final content = Center(
+        child: initial.isEmpty
+            ? null
+            : Text(initial,
+                textScaler: TextScaler.noScaling,
+                style: TextStyle(
+                    fontSize: size * .42,
+                    fontWeight: FontWeight.w600,
+                    height: 1,
+                    color: foregroundColor ?? tone.foreground)));
     return Semantics(
         label: initial.isEmpty ? '未设置头像' : '${username.trim()}的头像',
         excludeSemantics: true,
-        child: ColoredBox(
-            color: initial.isEmpty ? emptyBackground : tone.background,
-            child: Center(
-                child: initial.isEmpty
-                    ? null
-                    : Text(initial,
-                        textScaler: TextScaler.noScaling,
-                        style: TextStyle(
-                            fontSize: size * .42,
-                            fontWeight: FontWeight.w600,
-                            height: 1,
-                            color: tone.foreground)))));
+        child: backgroundGradient != null && initial.isNotEmpty
+            ? DecoratedBox(
+                decoration: BoxDecoration(gradient: backgroundGradient),
+                child: content)
+            : ColoredBox(
+                color: initial.isEmpty
+                    ? emptyBackground
+                    : backgroundColor ?? tone.background,
+                child: content));
   }
 
   Widget _frame(Widget child) => AvatarFrame(size: size, child: child);

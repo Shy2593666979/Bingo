@@ -58,7 +58,13 @@ void main() {
     const imageData =
         'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jDVsAAAAASUVORK5CYII=';
     await tester.pumpWidget(const MaterialApp(
-        home: UserAvatar(avatarData: imageData, username: '小夏', size: 38)));
+        home: UserAvatar(
+            avatarData: imageData,
+            username: '小夏',
+            size: 38,
+            foregroundColor: Colors.white,
+            backgroundGradient:
+                LinearGradient(colors: [Colors.green, Colors.teal]))));
     await tester.pumpAndSettle();
     expect(find.byType(ClipOval), findsNothing);
     expect(find.byType(ClipRSuperellipse), findsOneWidget);
