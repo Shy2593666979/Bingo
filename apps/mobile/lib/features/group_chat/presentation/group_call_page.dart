@@ -336,26 +336,67 @@ class _GroupCallPageState extends State<GroupCallPage>
                           '${(seconds ~/ 60).toString().padLeft(2, '0')}:${(seconds % 60).toString().padLeft(2, '0')}'),
                       const SizedBox(height: 26),
                       Expanded(
-                          child: GridView.count(
-                              crossAxisCount: 3,
-                              mainAxisSpacing: 12,
-                              crossAxisSpacing: 10,
-                              childAspectRatio: .86,
-                              children: [
-                            for (final member in widget.members)
-                              _tile(
-                                  member.name,
-                                  AssistantAvatar(
-                                      role: member.roleName, size: 66),
-                                  speaker == member.id),
-                            _tile(
-                                widget.group.humanName,
-                                UserAvatar(
-                                    avatarData: widget.userAvatarData,
-                                    username: widget.group.humanName,
-                                    size: 66),
-                                false),
-                          ])),
+                          child: widget.members.length == 3
+                              ? Center(
+                                  child: SingleChildScrollView(
+                                      child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                      Row(children: [
+                                        for (final member
+                                            in widget.members.take(2))
+                                          Expanded(
+                                              child: _tile(
+                                                  member.name,
+                                                  AssistantAvatar(
+                                                      role: member.roleName,
+                                                      size: 66),
+                                                  speaker == member.id)),
+                                      ]),
+                                      const SizedBox(height: 28),
+                                      Row(children: [
+                                        Expanded(
+                                            child: _tile(
+                                                widget.members[2].name,
+                                                AssistantAvatar(
+                                                    role: widget
+                                                        .members[2].roleName,
+                                                    size: 66),
+                                                speaker ==
+                                                    widget.members[2].id)),
+                                        Expanded(
+                                            child: _tile(
+                                                widget.group.humanName,
+                                                UserAvatar(
+                                                    avatarData:
+                                                        widget.userAvatarData,
+                                                    username:
+                                                        widget.group.humanName,
+                                                    size: 66),
+                                                false)),
+                                      ]),
+                                    ])))
+                              : GridView.count(
+                                  crossAxisCount: 3,
+                                  mainAxisSpacing: 12,
+                                  crossAxisSpacing: 10,
+                                  childAspectRatio: .86,
+                                  children: [
+                                      for (final member in widget.members)
+                                        _tile(
+                                            member.name,
+                                            AssistantAvatar(
+                                                role: member.roleName,
+                                                size: 66),
+                                            speaker == member.id),
+                                      _tile(
+                                          widget.group.humanName,
+                                          UserAvatar(
+                                              avatarData: widget.userAvatarData,
+                                              username: widget.group.humanName,
+                                              size: 66),
+                                          false),
+                                    ])),
                       Text(status,
                           textAlign: TextAlign.center,
                           style: const TextStyle(color: Color(0xFF52746B))),
