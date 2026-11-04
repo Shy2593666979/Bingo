@@ -597,10 +597,7 @@ class MessagesPageState extends State<MessagesPage> {
   String _name(_Chat item) => item.role?.displayName ?? item.group!.name;
   Widget _avatar(_Chat item, double size) => item.role != null
       ? AssistantAvatar(role: item.role!.name, size: size)
-      : GroupAvatar(
-          members: item.group!.activeMembers,
-          cover: item.group!.cover,
-          size: size);
+      : GroupAvatar(members: item.group!.activeMembers, size: size);
   Widget _tile(_Chat item, {bool divider = true}) {
     final role = item.role, group = item.group;
     final unread = role?.unreadCount ?? group!.unread;

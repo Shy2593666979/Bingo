@@ -28,7 +28,6 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
   final _selected = <String>{};
   List<RoleOption>? _roles;
   bool _failed = false, _saving = false;
-  String _cover = 'coffee';
   @override
   void initState() {
     super.initState();
@@ -68,7 +67,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
         'name': _name.text.trim(),
         'role_ids': _selected.toList(),
         'description': '一起分享生活、聊聊工作，记录每一个温暖的瞬间。',
-        'cover': _cover,
+        'cover': 'garden',
         'allow_ai_to_ai': true,
         'mentions_enabled': true,
         'proactive_enabled': true
@@ -103,42 +102,16 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
                           Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                  color: BingoPalette.blush,
+                                  color: const Color(0xFFF4FBF7),
                                   borderRadius: BorderRadius.circular(20)),
-                              child: Row(children: [
-                                GroupAvatar.roles(
-                                    _roles!
-                                        .where((r) => _selected.contains(r.id))
-                                        .map((r) => r.name)
-                                        .toList(),
-                                    cover: _cover,
-                                    size: 100),
-                                const Spacer(),
-                                PopupMenuButton<String>(
-                                    tooltip: '更换封面',
-                                    initialValue: _cover,
-                                    onSelected: (v) =>
-                                        setState(() => _cover = v),
-                                    itemBuilder: (_) => [
-                                          for (final (value, text) in [
-                                            ('coffee', '温暖咖啡'),
-                                            ('night', '深夜树洞'),
-                                            ('garden', '搭子小窝')
-                                          ])
-                                            PopupMenuItem(
-                                                value: value, child: Text(text))
-                                        ],
-                                    child: const Padding(
-                                        padding: EdgeInsets.all(14),
-                                        child: Row(children: [
-                                          Icon(Icons.image_outlined, size: 19),
-                                          SizedBox(width: 6),
-                                          Text('更换封面',
-                                              style: TextStyle(fontSize: 12)),
-                                          Icon(Icons.chevron_right_rounded,
-                                              size: 18)
-                                        ])))
-                              ])),
+                              child: Center(
+                                  child: GroupAvatar.roles(
+                                      _roles!
+                                          .where(
+                                              (r) => _selected.contains(r.id))
+                                          .map((r) => r.name)
+                                          .toList(),
+                                      size: 100))),
                           const SizedBox(height: 22),
                           const Text('群聊名称',
                               style: TextStyle(

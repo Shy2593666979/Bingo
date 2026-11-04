@@ -640,6 +640,8 @@ void main() {
     expect(find.text('更多群聊设置'), findsNothing);
     expect(find.text('支持 @ 指定回复'), findsNothing);
     expect(find.text('主动开启话题'), findsNothing);
+    expect(find.byType(PopupMenuButton<String>), findsNothing);
+    expect(find.text('更换封面'), findsNothing);
     for (var i = 4; i < 9; i++) {
       await tester.ensureVisible(find.text('搭子$i'));
       await tester.tap(find.text('搭子$i'));
@@ -652,6 +654,7 @@ void main() {
     await tester.tap(find.text('创建群聊').last);
     await tester.pumpAndSettle();
     expect((gateway.created!['role_ids'] as List).length, 8);
+    expect(gateway.created!['cover'], 'garden');
     expect(gateway.created!['allow_ai_to_ai'], true);
     expect(gateway.created!['mentions_enabled'], true);
     expect(gateway.created!['proactive_enabled'], true);

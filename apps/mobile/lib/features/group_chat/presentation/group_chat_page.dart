@@ -544,7 +544,6 @@ class _GroupChatPageState extends State<GroupChatPage>
                                         size: 29, color: ChatScene.ink)),
                                 GroupAvatar(
                                     members: group?.activeMembers ?? [],
-                                    cover: group?.cover ?? 'garden',
                                     size: 44),
                                 const SizedBox(width: 10),
                                 Expanded(

@@ -5,15 +5,12 @@ import 'package:flutter/material.dart';
 
 /// Keeps the same group identity in the message list and conversation header.
 class GroupAvatar extends StatelessWidget {
-  const GroupAvatar(
-      {required this.members, this.cover = 'garden', this.size = 48, super.key})
+  const GroupAvatar({required this.members, this.size = 48, super.key})
       : roleNames = null;
-  const GroupAvatar.roles(this.roleNames,
-      {this.cover = 'garden', this.size = 48, super.key})
+  const GroupAvatar.roles(this.roleNames, {this.size = 48, super.key})
       : members = const [];
   final List<GroupPerson> members;
   final List<String>? roleNames;
-  final String cover;
   final double size;
   static const _rows = <List<int>>[
     [],
@@ -55,24 +52,20 @@ class GroupAvatar extends StatelessWidget {
           top: (size - height) / 2 + row * (cell + gap),
           width: cell,
           height: cell,
-          child: AssistantAvatar(
-              role: people[personIndex], size: cell, cornerRadius: cell * .08),
+          child: AvatarFrame(
+              size: cell,
+              cornerRadius: cell * .08,
+              color: const Color(0xFFF4FBF7),
+              child: AssistantAvatar(
+                  role: people[personIndex],
+                  size: cell,
+                  cornerRadius: cell * .08)),
         ));
       }
     }
     return AvatarFrame(
         size: size,
-        child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: switch (cover) {
-                    'coffee' => const [Color(0xFFFFF8EC), Color(0xFFF4DFC3)],
-                    'night' => const [Color(0xFFF1F0FF), Color(0xFFDCDCF5)],
-                    _ => const [Color(0xFFF1F5E9), Color(0xFFDDE8D1)]
-                  }),
-            ),
-            child: Stack(children: tiles)));
+        color: const Color(0xFFEDF7F2),
+        child: Stack(children: tiles));
   }
 }

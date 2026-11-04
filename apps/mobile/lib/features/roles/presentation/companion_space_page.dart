@@ -460,8 +460,7 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
       recent.add((
         date: g.lastActivity,
         child: _recentRow(
-            avatar:
-                GroupAvatar(members: g.activeMembers, cover: g.cover, size: 50),
+            avatar: GroupAvatar(members: g.activeMembers, size: 50),
             name: g.name,
             preview:
                 '${g.senderNameFor(g.lastMessage!)}：${g.lastMessage!.content}',
