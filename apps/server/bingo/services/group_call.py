@@ -421,10 +421,7 @@ class GroupCallSession:
             await asyncio.wait_for(self.played.wait(), self.playback_timeout)
         else:
             return self._playback_failed(PlaybackResult.FAILED)
-        result = PlaybackResult(row["status"])
-        if result == PlaybackResult.COMPLETED and generation == self.generation:
-            await asyncio.sleep(1.5)
-        return result
+        return PlaybackResult(row["status"])
 
     def acknowledge(self, utterance, generation=None, status="completed"):
         row = self.playback_record

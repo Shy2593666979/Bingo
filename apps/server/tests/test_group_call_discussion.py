@@ -41,7 +41,7 @@ def fast_sleep(monkeypatch):
     real_sleep = asyncio.sleep
 
     async def sleep(seconds):
-        await real_sleep(0 if seconds in {1.5, 0.45, 0.8} else seconds)
+        await real_sleep(0 if seconds in {0.45, 0.8} else seconds)
 
     monkeypatch.setattr(module.asyncio, "sleep", sleep)
 

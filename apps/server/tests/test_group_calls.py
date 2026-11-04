@@ -41,16 +41,9 @@ def test_ai_handoff_requires_an_invitation_and_broadcast_excludes_self():
 
 
 @pytest.mark.asyncio
-async def test_parallel_preparation_first_ready_and_playback_ack(monkeypatch):
-    import bingo.services.group_call as module
-
+async def test_parallel_preparation_first_ready_and_playback_ack():
     real_sleep = asyncio.sleep
     events, speech = [], Speech()
-
-    async def sleep(seconds):
-        await real_sleep(0 if seconds == 1.5 else seconds)
-
-    monkeypatch.setattr(module.asyncio, "sleep", sleep)
 
     class Model:
         async def complete(self, messages):
