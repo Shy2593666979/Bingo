@@ -357,28 +357,28 @@ class ReferenceNavigation extends StatelessWidget {
                                   excludeSemantics: true,
                                   child: InkWell(
                                       onTap: onCreate,
-                                      child: Column(children: [
-                                        Container(
-                                            width: 41,
-                                            height: 41,
-                                            decoration: const BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                gradient:
-                                                    LinearGradient(colors: [
-                                                  Color(0xFF12C59E),
-                                                  CompanionLaunch.primary,
-                                                ])),
-                                            child: const Icon(Icons.add_rounded,
-                                                color: Colors.white, size: 26)),
-                                        const SizedBox(height: 2),
-                                        Text('创建',
-                                            style: CompanionLaunch.text(
-                                                labelSize,
-                                                color: creating
-                                                    ? CompanionLaunch.primary
-                                                    : const Color(0xFF334D3D),
-                                                height: 1.25)),
-                                      ])))),
+                                      child: SizedBox(
+                                          height: 61,
+                                          child: Center(
+                                              child: Container(
+                                                  width: 41,
+                                                  height: 41,
+                                                  decoration:
+                                                      const BoxDecoration(
+                                                          shape:
+                                                              BoxShape.circle,
+                                                          gradient:
+                                                              LinearGradient(
+                                                                  colors: [
+                                                                Color(
+                                                                    0xFF12C59E),
+                                                                CompanionLaunch
+                                                                    .primary,
+                                                              ])),
+                                                  child: const Icon(
+                                                      Icons.add_rounded,
+                                                      color: Colors.white,
+                                                      size: 26))))))),
                           _item(2, '社区', BingoSymbol.partners, labelSize),
                           _item(3, '我的', BingoSymbol.profile, labelSize),
                         ])))));

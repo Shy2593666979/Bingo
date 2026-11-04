@@ -279,7 +279,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.widgetWithText(TextField, '搜索搭子或聊天记录'), findsOneWidget);
     expect(find.byTooltip('新建'), findsNothing);
-    expect(find.text('创建'), findsOneWidget);
+    expect(find.text('创建'), findsNothing);
     await tester.enterText(find.byType(TextField), '旧搜索');
     await tester.tap(find.text('首页'));
     await tester.pumpAndSettle();

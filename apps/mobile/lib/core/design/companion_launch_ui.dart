@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bingo/core/design/bingo_wordmark.dart';
 
 /// The approved E layout with D colors. Scoped to the four primary screens.
 abstract final class CompanionLaunch {
@@ -22,7 +23,11 @@ abstract final class CompanionLaunch {
           FontWeight weight = FontWeight.w400,
           double height = 1.5}) =>
       TextStyle(
-          fontSize: size, fontWeight: weight, height: height, color: color);
+          fontFamily: 'BingoSans',
+          fontSize: size,
+          fontWeight: weight,
+          height: height,
+          color: color);
 }
 
 class CompanionLaunchHeader extends StatelessWidget {
@@ -41,7 +46,7 @@ class CompanionLaunchHeader extends StatelessWidget {
             padding: EdgeInsets.fromLTRB(
                 horizontalPadding, 17, horizontalPadding, 16),
             child: Row(children: [
-              Image.asset('assets/branding/bingo_wordmark_e.png',
+              BingoWordmark(
                   width: narrow
                       ? 77
                       : compact
@@ -51,9 +56,7 @@ class CompanionLaunchHeader extends StatelessWidget {
                       ? 31
                       : compact
                           ? 33
-                          : 36,
-                  fit: BoxFit.contain,
-                  excludeFromSemantics: true),
+                          : 36),
               SizedBox(width: narrow ? 7 : 9),
               Container(width: 1, height: 22, color: const Color(0xFFD6DFD8)),
               SizedBox(
