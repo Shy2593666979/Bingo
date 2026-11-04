@@ -359,7 +359,8 @@ class ReferenceNavigation extends StatelessWidget {
                                       onTap: onCreate,
                                       child: SizedBox(
                                           height: 61,
-                                          child: Center(
+                                          child: Align(
+                                              alignment: Alignment.topCenter,
                                               child: Container(
                                                   width: 41,
                                                   height: 41,
