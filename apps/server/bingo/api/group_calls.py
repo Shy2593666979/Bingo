@@ -79,17 +79,37 @@ async def group_call(socket: WebSocket, group_id: str):
                     command = json.loads(message.get("text") or "{}")
                 except ValueError:
                     continue
+                if not isinstance(command, dict):
+                    continue
                 kind = command.get("type")
+                if not isinstance(kind, str):
+                    continue
                 if kind == "hangup":
                     status = "ended"
                     return {"type": "websocket.receive", "text": '{"type":"cancel"}'}
                 if kind == "played":
-                    engine.acknowledge(command.get("utterance_id"))
+                    engine.acknowledge(
+                        command.get("utterance_id"),
+                        command.get("generation"),
+                        command.get("status", None if engine.strict_playback else "completed"),
+                    )
                 elif kind == "client_audio_ready" and not engine.started:
+                    engine.strict_playback = command.get("playback_results") is True
                     engine.started = True
-                    engine.task = asyncio.create_task(engine.respond("", greeting=True))
+                    if engine.task is None and not engine.user_speaking:
+                        engine.task = asyncio.create_task(engine.respond("", greeting=True))
                 elif kind == "interrupt":
                     await engine.interrupt()
+                elif kind in {"set_discussion_config", "pause_discussion", "resume_discussion"}:
+                    try:
+                        if kind == "set_discussion_config":
+                            await engine.discussion.configure(command.get("max_silent_turns"))
+                        elif kind == "pause_discussion":
+                            await engine.discussion.pause()
+                        else:
+                            await engine.discussion.resume()
+                    except ValueError as error:
+                        await emit({"type": "command_error", "message": str(error)})
 
         async def send_json(self, event):
             nonlocal status

@@ -6,6 +6,7 @@ group-chat coordination belong here, including the final system message.
 
 import json
 import time
+from dataclasses import asdict
 
 from sqlmodel import select, update
 
@@ -73,7 +74,18 @@ class GroupCallLifecycle:
         self.group_chat.calling_groups.discard(group_id)
         self.call.status = "disconnected" if status == "connected" else status
         self.call.duration_seconds = int(time.monotonic() - self.started) if engine.started else 0
-        self.call.transcript_json = json.dumps(engine.call_log, ensure_ascii=False)
+        self.call.transcript_json = json.dumps(
+            [
+                *engine.call_log,
+                {
+                    "type": "discussion_summary",
+                    "version": 1,
+                    "discussion": asdict(engine.discussion.state),
+                    "metrics": engine.metrics,
+                },
+            ],
+            ensure_ascii=False,
+        )
         result_label = "群聊通话" if engine.started else "群聊电话未接通"
         async with self.database.session_factory() as session:
             session.add(self.call)

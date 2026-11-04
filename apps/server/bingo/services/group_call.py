@@ -6,9 +6,19 @@ import re
 import time
 import uuid
 from contextlib import aclosing
+from enum import StrEnum
 
 from bingo.agent.handoffs import agent_broadcast_targets, normalize_agent_addresses
 from bingo.agent.model_client import ModelMessage
+from bingo.prompts.group_call import DISCUSSION_SPEECH, ENDING, ROLE_SPEECH
+from bingo.services.group_call_discussion import DiscussionController
+
+
+class PlaybackResult(StrEnum):
+    COMPLETED = "completed"
+    INTERRUPTED = "interrupted"
+    TIMEOUT = "timeout"
+    FAILED = "failed"
 
 
 class GroupCallSession:
@@ -31,43 +41,154 @@ class GroupCallSession:
         self.user_speaking = False
         self.closed = False
         self.started = False
+        self.audio_lock = asyncio.Lock()
+        self.retired = set()
+        self.playback_record = None
+        self.awaiting_ack = False
+        self.strict_playback = False
+        self.metrics = {
+            "model_requests": 0,
+            "tts_requests": 0,
+            "audio_bytes": 0,
+            "completed_turns": 0,
+            "playback_failures": 0,
+        }
+        self.call_started = time.monotonic()
+        self.max_call_seconds = 3600
+        self.max_model_requests = 400
+        self.recovery = None
+        self.partial_quiet_seconds = 8
+        self.playback_timeout = 90
+        self.discussion = DiscussionController(self)
+
+    def within_budget(self):
+        return (
+            time.monotonic() - self.call_started < self.max_call_seconds
+            and self.metrics["model_requests"] < self.max_model_requests
+        )
+
+    async def complete(self, messages):
+        if not self.within_budget():
+            raise RuntimeError("Call generation budget exhausted")
+        self.metrics["model_requests"] += 1
+        remaining = self.max_call_seconds - (time.monotonic() - self.call_started)
+        async with asyncio.timeout(min(40, remaining)):
+            return await self.model.complete(messages)
+
+    async def generate_one(self, role, *, required=False, greeting=False, autonomous=False):
+        state = self.discussion.state
+        instruction = "这次请你回应。" if required else "只有有补充价值时才回应，否则仅输出[沉默]。"
+        if autonomous:
+            instruction = DISCUSSION_SPEECH.format(
+                topic=state.topic,
+                summary=state.topic_summary,
+                ending=ENDING if state.phase == "winding_down" else "",
+            )
+        prompt = ROLE_SPEECH.format(
+            nickname=role.nickname,
+            context=self.role_contexts.get(role.id, role.context_prompt),
+            participants="、".join(r.nickname for r in self.roles),
+            instruction=instruction,
+        )
+        result = await self.complete(
+            [
+                ModelMessage(role="system", content=prompt),
+                ModelMessage(
+                    role="user",
+                    content="\n".join(
+                        f"{r['name']}：{r['text']}"
+                        for r in self.history[-(20 if autonomous else 30) :]
+                    )
+                    + ("\n通话刚接通，请简短打个招呼。" if greeting else ""),
+                ),
+            ]
+        )
+        result = result.strip()[:800]
+        return "" if result == "[沉默]" else result
+
+    def retire(self, task):
+        if task and task.done():
+            self._reaped(task)
+        elif task:
+            task.cancel()
+            self.retired.add(task)
+            task.add_done_callback(self._reaped)
+
+    def _reaped(self, task):
+        self.retired.discard(task)
+        if not task.cancelled():
+            task.exception()
 
     async def interrupt(self):
         self.generation += 1
+        generation = self.generation
         self.utterance = None
+        self.awaiting_ack = False
+        if self.playback_record and self.playback_record["status"] == "speaking":
+            self.playback_record["status"] = PlaybackResult.INTERRUPTED
         self.played.set()
-        if self.task:
-            self.task.cancel()
-            await asyncio.gather(self.task, return_exceptions=True)
-            self.task = None
-        await self.emit({"type": "interrupted", "generation": self.generation})
+        task, self.task = self.task, None
+        self.retire(task)
+        await self.emit({"type": "interrupted", "generation": generation})
+        await asyncio.sleep(0)
+        return generation
 
     async def partial(self, text):
+        if self.closed or not text.strip():
+            return
         if text.strip() and not self.user_speaking:
             self.user_speaking = True
-            await self.interrupt()
+            state = self.discussion.state
+            if state.enabled and state.phase != "paused":
+                state.phase = "user_interrupting"
+            generation = await self.interrupt()
+            if generation != self.generation or self.closed:
+                return
         if self.debounce:
             self.debounce.cancel()
+        self.retire(self.recovery)
+        self.recovery = asyncio.create_task(self._recover_partial(self.generation))
+
+    async def _recover_partial(self, generation):
+        await asyncio.sleep(self.partial_quiet_seconds)
+        if generation != self.generation or self.closed:
+            return
+        if self.pending:
+            self.debounce = asyncio.create_task(self._commit(self.generation))
+            return
+        self.user_speaking = False
+        state = self.discussion.state
+        if state.enabled and state.phase == "user_interrupting":
+            self.task = asyncio.create_task(self.discussion.run(generation, state.episode_id))
+        else:
+            await self.emit({"type": "listening", "generation": generation})
 
     async def sentence(self, text):
-        if not text.strip():
+        if self.closed or not any(c.isalnum() for c in text):
             return
         if not self.user_speaking:
             await self.partial(text)
         self.pending.append(text.strip())
+        self.retire(self.recovery)
         if self.debounce:
             self.debounce.cancel()
-        self.debounce = asyncio.create_task(self._commit())
+        self.debounce = asyncio.create_task(self._commit(self.generation))
 
-    async def _commit(self):
+    async def _commit(self, generation=None):
+        generation = self.generation if generation is None else generation
         await asyncio.sleep(0.45)
         text = "".join(self.pending)
+        if self.closed or not text or generation != self.generation:
+            return
         self.pending.clear()
         self.user_speaking = False
         self.history.append({"name": "用户", "text": text, "role_id": None})
         self.call_log.append(self.history[-1])
+        self.discussion.user_committed()
+        episode = self.discussion.state.episode_id
         await self.emit({"type": "user_transcript", "text": text})
-        self.task = asyncio.create_task(self.respond(text))
+        if self.discussion.valid(generation, episode):
+            self.task = asyncio.create_task(self.discussion.handle_user(text, generation, episode))
 
     def targets(self, text, *, exclude=None):
         roles = [r for r in self.roles if r.id != exclude]
@@ -98,45 +219,21 @@ class GroupCallSession:
 
         async def prepare(role, required):
             try:
-                transcript = list(self.history[-30:])
-                prompt = (
-                    f"你是{role.nickname}。{self.role_contexts.get(role.id, role.context_prompt)}\n"
-                    "你正在与真人和其他AI搭子进行多人语音通话。只说自己的话，"
-                    "自然简短，通常一到三句话，不写舞台动作、角色标签和Markdown。"
-                    "不要重复别人。可以用@名字邀请一位在场搭子接话。"
-                    f"在场搭子：{'、'.join(r.nickname for r in self.roles)}。\n"
-                    + (
-                        "这次请你回应。"
-                        if required
-                        else "只有有补充价值时才回应，否则仅输出[沉默]。"
-                    )
-                )
-                async with asyncio.timeout(40):
-                    result = await self.model.complete(
-                        [
-                            ModelMessage(role="system", content=prompt),
-                            ModelMessage(
-                                role="user",
-                                content="\n".join(
-                                    f"{row['name']}：{row['text']}" for row in transcript
-                                )
-                                + ("\n通话刚接通，请简短打个招呼。" if greeting else ""),
-                            ),
-                        ]
-                    )
-                result = result.strip()[:800]
+                result = await self.generate_one(role, required=required, greeting=greeting)
                 if result and result != "[沉默]":
                     await queue.put((role, result))
             except asyncio.CancelledError:
                 raise
             except Exception:
-                await self.emit(
-                    {
-                        "type": "participant_error",
-                        "role_id": role.id,
-                        "message": f"{role.nickname}暂时无法回应",
-                    }
-                )
+                if generation == self.generation and not self.closed:
+                    await self.emit(
+                        {
+                            "type": "participant_error",
+                            "generation": generation,
+                            "role_id": role.id,
+                            "message": f"{role.nickname}暂时无法回应",
+                        }
+                    )
             finally:
                 await queue.put(None)
 
@@ -154,7 +251,9 @@ class GroupCallSession:
                 role, content = item
                 if generation != self.generation or self.closed:
                     return
-                await self.say(role, content, generation)
+                result = await self.say(role, content, generation)
+                if result != PlaybackResult.COMPLETED:
+                    return
                 emitted += 1
                 # A single bounded hand-off round; no unbounded AI conversation.
                 followups, strong = self.targets(content, exclude=role.id)
@@ -170,9 +269,14 @@ class GroupCallSession:
         except asyncio.CancelledError:
             raise
         except Exception:
-            await self.emit(
-                {"type": "participant_error", "message": "本轮通话回复未完成，请继续说话"}
-            )
+            if generation == self.generation and not self.closed:
+                await self.emit(
+                    {
+                        "type": "participant_error",
+                        "generation": generation,
+                        "message": "本轮通话回复未完成，请继续说话",
+                    }
+                )
         finally:
             for task in workers:
                 if not task.done():
@@ -181,10 +285,53 @@ class GroupCallSession:
             if generation == self.generation and not self.closed:
                 await self.emit({"type": "listening", "generation": generation})
 
-    async def say(self, role, text, generation):
+    async def say(self, role, text, generation, *, autonomous=False):
+        async with self.audio_lock:
+            if generation != self.generation or self.closed:
+                return PlaybackResult.INTERRUPTED
+            try:
+                remaining = self.max_call_seconds - (time.monotonic() - self.call_started)
+                async with asyncio.timeout(min(150, max(0.01, remaining))):
+                    return await self._say(role, text, generation, autonomous=autonomous)
+            except TimeoutError:
+                return self._playback_failed(PlaybackResult.TIMEOUT)
+            except asyncio.CancelledError:
+                self._playback_failed(PlaybackResult.INTERRUPTED)
+                raise
+            except Exception:
+                return self._playback_failed(PlaybackResult.FAILED)
+            finally:
+                self.awaiting_ack = False
+                row = self.playback_record
+                if row and row["status"] != "completed" and generation == self.generation:
+                    self.generation += 1
+                    self.utterance = None
+                    await self.emit({"type": "interrupted", "generation": self.generation})
+
+    def _playback_failed(self, result):
+        row = self.playback_record
+        if row and row["status"] == "speaking":
+            row["status"] = result
+            self.metrics["playback_failures"] += 1
+        return result
+
+    async def _say(self, role, text, generation, *, autonomous=False):
         utterance = uuid.uuid4().hex
         self.utterance = utterance
         self.played.clear()
+        self.awaiting_ack = False
+        row = {
+            "name": role.nickname,
+            "role_id": role.id,
+            "text": text,
+            "utterance_id": utterance,
+            "generation": generation,
+            "status": "speaking",
+            "episode_id": self.discussion.state.episode_id,
+            "autonomous": autonomous,
+        }
+        self.playback_record = row
+        self.call_log.append(row)
         await self.emit(
             {
                 "type": "speaker",
@@ -194,17 +341,15 @@ class GroupCallSession:
                 "generation": generation,
             }
         )
-        self.history.append({"name": role.nickname, "role_id": role.id, "text": text})
-        self.call_log.append(self.history[-1])
-        self.history = self.history[-100:]
         audio = False
         audio_started, audio_bytes = None, 0
+        self.metrics["tts_requests"] += 1
         async with aclosing(
             self.speech.message_events(text, role.voice or self.voice_fallback)
         ) as events:
             async for event in events:
                 if generation != self.generation or self.closed:
-                    return
+                    return self._playback_failed(PlaybackResult.INTERRUPTED)
                 if event["type"] == "audio":
                     if audio_started is None:
                         audio_started = time.monotonic()
@@ -212,6 +357,7 @@ class GroupCallSession:
                     audio = True
                     await self.emit({**event, "generation": generation, "utterance_id": utterance})
                     audio_bytes += len(base64.b64decode(event["data"]))
+                    self.metrics["audio_bytes"] += len(base64.b64decode(event["data"]))
                     await asyncio.sleep(
                         max(0, audio_bytes / 48000 - (time.monotonic() - audio_started) - 0.35)
                     )
@@ -223,23 +369,61 @@ class GroupCallSession:
                             "message": "语音暂时不可用",
                         }
                     )
+                    return self._playback_failed(PlaybackResult.FAILED)
         if audio:
+            self.awaiting_ack = True
             await self.emit(
                 {"type": "audio_end", "generation": generation, "utterance_id": utterance}
             )
-            await asyncio.wait_for(self.played.wait(), 90)
-        if generation == self.generation:
+            await asyncio.wait_for(self.played.wait(), self.playback_timeout)
+        else:
+            return self._playback_failed(PlaybackResult.FAILED)
+        result = PlaybackResult(row["status"])
+        if result == PlaybackResult.COMPLETED and generation == self.generation:
             await asyncio.sleep(1.5)
+        return result
 
-    def acknowledge(self, utterance):
-        if utterance == self.utterance:
-            self.played.set()
+    def acknowledge(self, utterance, generation=None, status="completed"):
+        row = self.playback_record
+        if (
+            not row
+            or not self.awaiting_ack
+            or utterance != self.utterance
+            or row["generation"] != self.generation
+            or row["status"] != "speaking"
+            or (generation is not None and generation != self.generation)
+            or (self.strict_playback and generation is None)
+        ):
+            return False
+        if (
+            not isinstance(status, str)
+            or status not in set(PlaybackResult)
+            or (generation is not None and type(generation) is not int)
+        ):
+            return False
+        row["status"] = status
+        if status == PlaybackResult.COMPLETED:
+            self.history.append(dict(row))
+            self.history = self.history[-100:]
+            self.metrics["completed_turns"] += 1
+            self.discussion.on_played(row)
+        else:
+            self.metrics["playback_failures"] += 1
+        self.played.set()
+        return True
 
     async def close(self):
         self.closed = True
+        self.generation += 1
+        self.awaiting_ack = False
+        self.utterance = None
+        self._playback_failed(PlaybackResult.INTERRUPTED)
+        self.played.set()
+        self.discussion.state.phase = "closed"
+        self.retire(self.recovery)
         if self.debounce:
             self.debounce.cancel()
             await asyncio.gather(self.debounce, return_exceptions=True)
-        if self.task:
-            self.task.cancel()
-            await asyncio.gather(self.task, return_exceptions=True)
+        self.retire(self.task)
+        if self.retired:
+            await asyncio.wait(self.retired, timeout=2)

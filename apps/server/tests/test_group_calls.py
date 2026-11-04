@@ -106,7 +106,7 @@ async def test_speech_interrupt_cancels_inflight_model_and_old_audio():
     session.task = asyncio.create_task(session.respond("你好"))
     await asyncio.sleep(0.01)
     await session.partial("等一下")
-    assert cancelled.is_set()
+    await asyncio.wait_for(cancelled.wait(), 0.5)
     assert session.generation == 1
     assert events[-1]["type"] == "interrupted"
     assert not any(e["type"] == "audio" for e in events)
@@ -190,3 +190,46 @@ def test_group_media_persist_access_and_model_context(group_app):  # noqa: F811
     assert any(
         m.get("attachment", {}).get("type") == "location" for m in rows if m.get("attachment")
     )
+
+
+def test_discussion_commands_validate_and_persist_summary(group_app, monkeypatch):  # noqa: F811
+    import json
+
+    from bingo.api import group_calls
+
+    client, ((headers, _), _), roles, _ = group_app
+    group = create(client, headers, roles[:2])
+    client.app.state.settings.asr.api_key = "test"
+    client.app.state.settings.realtime_call.api_key = "test"
+
+    async def proxy(self, bridge, **kwargs):
+        await bridge.send_json({"type": "ready"})
+        await bridge.receive()
+
+    monkeypatch.setattr(group_calls.RealtimeAsrProxy, "run", proxy)
+    url = P + f"/groups/{group['id']}/calls/stream?role_id={roles[0]['id']}"
+    with client.websocket_connect(url, headers=headers) as ws:
+        assert ws.receive_json()["type"] == "ready"
+        ws.send_json({"type": "set_discussion_config", "max_silent_turns": True})
+        assert ws.receive_json()["type"] == "command_error"
+        ws.send_json({"type": "set_discussion_config", "max_silent_turns": 50})
+        state = ws.receive_json()
+        assert state["type"] == "discussion_state" and state["max_silent_turns"] == 50
+        ws.send_json({"type": "resume_discussion"})
+        assert ws.receive_json()["type"] == "command_error"
+        ws.send_json({"type": "pause_discussion"})
+        assert ws.receive_json()["type"] == "interrupted"
+        assert ws.receive_json()["phase"] == "paused"
+        ws.send_json({"type": "hangup"})
+        assert ws.receive_json()["type"] == "ended"
+
+    async def saved():
+        async with client.app.state.database.session_factory() as session:
+            call = (await session.exec(select(GroupCall))).one()
+            summary = json.loads(call.transcript_json)[-1]
+            assert summary["type"] == "discussion_summary"
+            assert summary["discussion"]["phase"] == "closed"
+            assert summary["discussion"]["max_silent_turns"] == 50
+            assert summary["metrics"]["model_requests"] == 0
+
+    client.portal.call(saved)
