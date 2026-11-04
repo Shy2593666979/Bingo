@@ -433,7 +433,13 @@ class MainActivity : FlutterActivity() {
                                 if (head >= target) break
                                 Thread.sleep(20)
                             }
-                            runOnUiThread { result.success(null) }
+                            val head = callAudioTrack?.playbackHeadPosition?.toLong()?.and(0xffffffffL) ?: 0L
+                            val outcome = when {
+                                generation != callPlaybackGeneration.get() || !callPlaybackRunning -> "interrupted"
+                                target > 0L && head >= target -> "completed"
+                                else -> "timeout"
+                            }
+                            runOnUiThread { result.success(mapOf("status" to outcome)) }
                         }.apply { isDaemon = true; start() }
                     }
                     "clearCallAudio" -> {
