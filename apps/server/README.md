@@ -12,15 +12,18 @@ uv run python -m bingo
 推送通知默认关闭。关于个推和小米/OPPO/vivo 离线通道的配置，请参阅 [`../../docs/push.md`](../../docs/push.md)。
 
 群聊电话仍使用 `/groups/{group_id}/calls/stream`。客户端在 `client_audio_ready` 中发送
-`playback_results: true` 后可使用自主讨论；旧客户端继续使用普通回应，不启用自主循环。
+`playback_results: true` 后即自动使用自然多人接话；旧客户端保留有界回应以兼容旧播放回执。
 新客户端的 `played` 必须携带 `utterance_id`、`generation` 和真实播放 `status`
 （`completed`、`interrupted`、`timeout`、`failed`）。只有完成播放才写入已听历史并计数。
 
-自主讨论支持 `resume_discussion`、`pause_discussion` 和
-`{"type":"set_discussion_config","max_silent_turns":40}`；上限只接受 30、40、50。
-服务端通过 `discussion_state` 返回状态。有效用户转写开启新讨论段并重置连续计数；
-partial 只打断，不清零。无最终转写时，连续 8 秒没有新的 partial 才尝试恢复；显式暂停不自动恢复。
-降低上限不追溯撤销已开始的一句，但不会再安排超出新上限的下一句。自然结束后保持通话。
+群聊电话默认就是自然多人交流，无需用户开启讨论模式，也没有轮数选择控件。
+开发者通过 `config/config.yaml` 的 `group_call.max_silent_turns` 配置连续发言上限，默认 30。
+客户端不能修改这个配置；旧版试验性的设置、暂停和继续控制命令会被拒绝。
+用户可以直接表达心情、提问、提出辩题、暂停或换话题，搭子自然回应。
+服务端通过 `discussion_state` 返回内部状态。有效用户转写开启新段并重置连续计数；
+partial 只打断，不清零。无最终转写时，连续 8 秒没有新的 partial 才尝试恢复。
+明确要求先安静后，不会因误识别 partial 自动恢复；用户再次正常说话时自然回应。
+没有新内容或达到连续上限后回到监听，通话保持连接。
 
 当前保护边界为单讨论段 20 分钟、单通电话自动生成时间 60 分钟、模型请求 400 次；
 用户插话不会重置整通电话的预算。调度、角色生成、摘要和意图识别都计入请求数。

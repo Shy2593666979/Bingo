@@ -163,7 +163,13 @@ class SocialRuntimeSettings(BaseModel):
     generation_timeout_seconds: float = Field(default=45, ge=1, le=120)
 
 
+class GroupCallSettings(BaseModel):
+    # Developer-owned limit; never a client preference or WebSocket command.
+    max_silent_turns: int = Field(default=30, ge=1, le=100, strict=True)
+
+
 class Settings(BaseModel):
+    group_call: GroupCallSettings = Field(default_factory=GroupCallSettings)
     social_agent_runtime: SocialRuntimeSettings = Field(default_factory=SocialRuntimeSettings)
     maps: MapsSettings = Field(default_factory=MapsSettings)
     app: AppSettings = Field(default_factory=AppSettings)

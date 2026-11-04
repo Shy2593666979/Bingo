@@ -23,7 +23,16 @@ class PlaybackResult(StrEnum):
 
 class GroupCallSession:
     def __init__(
-        self, *, roles, model, speech, emit, history=(), voice_fallback="", role_contexts=None
+        self,
+        *,
+        roles,
+        model,
+        speech,
+        emit,
+        history=(),
+        voice_fallback="",
+        role_contexts=None,
+        max_silent_turns=30,
     ):
         self.roles = roles
         self.model, self.speech, self.emit = model, speech, emit
@@ -60,6 +69,40 @@ class GroupCallSession:
         self.partial_quiet_seconds = 8
         self.playback_timeout = 90
         self.discussion = DiscussionController(self)
+        self.discussion.state.max_silent_turns = max_silent_turns
+
+    def start(self, *, strict_playback):
+        if self.started or self.closed:
+            return
+        self.started = True
+        self.strict_playback = strict_playback
+        self.discussion.state.enabled = strict_playback
+        if self.task is None and not self.user_speaking:
+            self.task = asyncio.create_task(
+                self.open_conversation() if strict_playback else self.respond("", greeting=True)
+            )
+
+    async def open_conversation(self):
+        generation, episode = self.generation, self.discussion.state.episode_id
+        state = self.discussion.state
+        latest_user = next(
+            (r["text"] for r in reversed(self.history) if r.get("role_id") is None), ""
+        )
+        state.topic = (
+            latest_user or "和用户及在场朋友自然聊聊近况，照顾用户感受，没新内容就等用户说话"
+        )
+        await self.discussion.notify()
+        if not self.roles:
+            return
+        content = await self.generate_one(self.roles[0], required=True, greeting=True)
+        if not self.discussion.valid(generation, episode):
+            return
+        if content:
+            result = await self.say(self.roles[0], content, generation, autonomous=True)
+            if result != PlaybackResult.COMPLETED:
+                return
+        if self.discussion.valid(generation, episode):
+            await self.discussion.run(generation, episode)
 
     def within_budget(self):
         return (

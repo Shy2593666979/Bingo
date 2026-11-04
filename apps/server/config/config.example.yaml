@@ -1,3 +1,7 @@
+group_call:
+  # 开发者设置：用户最后一次有效参与后，AI 最多连续自主发言的次数。
+  max_silent_turns: 30
+
 app:
   name: Bingo
   environment: development

@@ -45,6 +45,9 @@ class TurnScheduler:
             for r in roles
         ]
         fallback = random.choices(roles, weights=weights, k=1)[0]
+        if latest and latest.get("role_id") is None and state.ai_silent_turns == 0:
+            # A new user contribution deserves a direct response, including emotions and questions.
+            return TurnDecision("speak", fallback.id)
         result = json_object(
             await engine.complete(
                 [

@@ -62,6 +62,7 @@ async def group_call(socket: WebSocket, group_id: str):
         emit=emit,
         history=history,
         voice_fallback=settings.realtime_call.voice,
+        max_silent_turns=settings.group_call.max_silent_turns,
     )
 
     class AsrBridge:
@@ -94,22 +95,16 @@ async def group_call(socket: WebSocket, group_id: str):
                         command.get("status", None if engine.strict_playback else "completed"),
                     )
                 elif kind == "client_audio_ready" and not engine.started:
-                    engine.strict_playback = command.get("playback_results") is True
-                    engine.started = True
-                    if engine.task is None and not engine.user_speaking:
-                        engine.task = asyncio.create_task(engine.respond("", greeting=True))
+                    engine.start(strict_playback=command.get("playback_results") is True)
                 elif kind == "interrupt":
                     await engine.interrupt()
                 elif kind in {"set_discussion_config", "pause_discussion", "resume_discussion"}:
-                    try:
-                        if kind == "set_discussion_config":
-                            await engine.discussion.configure(command.get("max_silent_turns"))
-                        elif kind == "pause_discussion":
-                            await engine.discussion.pause()
-                        else:
-                            await engine.discussion.resume()
-                    except ValueError as error:
-                        await emit({"type": "command_error", "message": str(error)})
+                    await emit(
+                        {
+                            "type": "command_error",
+                            "message": "请直接通过语音聊天或暂停，发言上限由开发者配置",
+                        }
+                    )
 
         async def send_json(self, event):
             nonlocal status

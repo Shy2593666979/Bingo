@@ -213,13 +213,11 @@ def test_discussion_commands_validate_and_persist_summary(group_app, monkeypatch
         ws.send_json({"type": "set_discussion_config", "max_silent_turns": True})
         assert ws.receive_json()["type"] == "command_error"
         ws.send_json({"type": "set_discussion_config", "max_silent_turns": 50})
-        state = ws.receive_json()
-        assert state["type"] == "discussion_state" and state["max_silent_turns"] == 50
+        assert ws.receive_json()["type"] == "command_error"
         ws.send_json({"type": "resume_discussion"})
         assert ws.receive_json()["type"] == "command_error"
         ws.send_json({"type": "pause_discussion"})
-        assert ws.receive_json()["type"] == "interrupted"
-        assert ws.receive_json()["phase"] == "paused"
+        assert ws.receive_json()["type"] == "command_error"
         ws.send_json({"type": "hangup"})
         assert ws.receive_json()["type"] == "ended"
 
@@ -229,7 +227,7 @@ def test_discussion_commands_validate_and_persist_summary(group_app, monkeypatch
             summary = json.loads(call.transcript_json)[-1]
             assert summary["type"] == "discussion_summary"
             assert summary["discussion"]["phase"] == "closed"
-            assert summary["discussion"]["max_silent_turns"] == 50
+            assert summary["discussion"]["max_silent_turns"] == 30
             assert summary["metrics"]["model_requests"] == 0
 
     client.portal.call(saved)

@@ -2,7 +2,9 @@ import asyncio
 import time
 
 import pytest
+from pydantic import ValidationError
 
+from bingo.config import GroupCallSettings
 from bingo.services.group_call import GroupCallSession, PlaybackResult
 from bingo.services.group_call_scheduler import TurnDecision
 from tests.test_group_calls import Speech, role
@@ -71,7 +73,7 @@ def session(*, ack=True, outcome="completed", model=None, scheduler=None):
 async def test_exact_completed_turn_limit_and_current_context(limit, fast_sleep):
     engine, events = session()
     state = engine.discussion.state
-    await engine.discussion.configure(limit)
+    state.max_silent_turns = GroupCallSettings(max_silent_turns=limit).max_silent_turns
     await engine.discussion.run(0, 0)
     assert state.ai_silent_turns == state.call_total_ai_turns == limit
     assert state.phase == "idle" and state.stop_reason == "turn_limit"
@@ -199,12 +201,12 @@ async def test_natural_finish_yields_and_silence_do_not_fill_the_quota(fast_slee
 @pytest.mark.asyncio
 async def test_limits_budget_and_stale_summary(fast_sleep):
     engine, _ = session()
-    for invalid in [True, 35, "40", None, [], 40.0]:
-        with pytest.raises(ValueError):
-            await engine.discussion.configure(invalid)
+    assert engine.discussion.state.max_silent_turns == 30
+    for invalid in [True, 0, 101, "40", None, [], 40.0]:
+        with pytest.raises(ValidationError):
+            GroupCallSettings(max_silent_turns=invalid)
     state = engine.discussion.state
     state.ai_silent_turns = 35
-    await engine.discussion.configure(30)
     await engine.discussion.run(0, 0)
     assert state.ai_silent_turns == 35 and engine.metrics["model_requests"] == 0
     engine.discussion.user_committed()
@@ -224,12 +226,14 @@ async def test_limits_budget_and_stale_summary(fast_sleep):
 
 
 @pytest.mark.asyncio
-async def test_legacy_client_cannot_start_autonomous_mode(fast_sleep):
+async def test_legacy_client_keeps_compatible_bounded_response(fast_sleep):
     engine, events = session(scheduler=Scheduler(["finish"]))
-    engine.strict_playback = False
-    with pytest.raises(ValueError):
-        await engine.discussion.resume()
-    assert not any(e["type"] == "speaker" for e in events)
+    engine.started = False
+    engine.start(strict_playback=False)
+    await engine.task
+    assert not engine.discussion.state.enabled
+    assert not engine.discussion.scheduler.seen
+    assert engine.discussion.state.ai_silent_turns == 0
     await engine.close()
 
 
@@ -268,9 +272,9 @@ async def test_start_switch_topic_and_resume_preserve_call_statistics(fast_sleep
     engine, _ = session(scheduler=Scheduler(["finish"] * 3))
     state = engine.discussion.state
     state.enabled = False
-    engine.history.append({"name": "用户", "role_id": None, "text": "你们聊聊结婚，我听着"})
-    await engine.discussion.handle_user("你们聊聊结婚，我听着", 0, 0)
-    assert state.enabled and "结婚" in state.topic
+    engine.history.append({"name": "用户", "role_id": None, "text": "最近心情不太好"})
+    await engine.discussion.handle_user("最近心情不太好", 0, 0)
+    assert state.enabled and state.phase == "idle"
 
     class Topic(Model):
         async def complete(self, messages):
@@ -282,20 +286,27 @@ async def test_start_switch_topic_and_resume_preserve_call_statistics(fast_sleep
     await engine.discussion.handle_user("别聊结婚了，改聊工作", 0, state.episode_id)
     assert state.topic == "工作" and state.call_total_ai_turns == 27
     await engine.discussion.pause()
-    await engine.discussion.resume()
-    await engine.task
+    engine.discussion.user_committed()
+    await engine.discussion.handle_user("最近心情不太好", engine.generation, state.episode_id)
+    assert state.phase == "idle"
     assert state.call_total_ai_turns == 27 and state.ai_silent_turns == 0
     await engine.close()
 
 
 @pytest.mark.asyncio
-async def test_concurrent_resume_has_only_one_valid_driver(fast_sleep):
+async def test_call_ready_automatically_starts_once_without_controls(fast_sleep):
     engine, events = session(scheduler=Scheduler(["finish"]))
-    await asyncio.gather(engine.discussion.resume(), engine.discussion.resume())
+    engine.started = False
+    engine.start(strict_playback=True)
+    first = engine.task
+    engine.start(strict_playback=True)
+    assert engine.task is first
     await engine.task
-    assert engine.discussion.state.episode_id == 1
+    assert engine.discussion.state.enabled
+    assert engine.discussion.state.episode_id == 0
+    assert engine.discussion.state.max_silent_turns == 30
     assert len(engine.discussion.scheduler.seen) == 1
-    assert not any(e["type"] == "speaker" for e in events)
+    assert len([e for e in events if e["type"] == "speaker"]) == 1
     await engine.close()
 
 
@@ -309,4 +320,24 @@ async def test_episode_deadline_during_playback_clears_audio_and_returns_to_list
     assert engine.discussion.state.ai_silent_turns == 0
     assert any(e["type"] == "interrupted" for e in events)
     assert events[-1]["type"] == "listening"
+    await engine.close()
+
+
+@pytest.mark.parametrize(
+    "text", ["最近心情不太好", "帮我想想明天早餐吃什么", "你们辩论一下经济和感情哪个重要"]
+)
+@pytest.mark.asyncio
+async def test_every_user_contribution_enters_natural_conversation_without_opt_in(text, fast_sleep):
+    engine, events = session(scheduler=Scheduler(["speak", "finish"]))
+    state = engine.discussion.state
+    state.enabled = False
+    state.phase = "paused"
+    state.topic = ""
+    engine.history.append({"name": "用户", "role_id": None, "text": text})
+    engine.discussion.user_committed()
+    await engine.discussion.handle_user(text, 0, state.episode_id)
+    assert state.enabled and state.topic == text
+    assert state.ai_silent_turns == 1
+    assert any(e["type"] == "speaker" for e in events)
+    assert not any(e["type"] == "command_error" for e in events)
     await engine.close()

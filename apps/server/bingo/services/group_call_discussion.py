@@ -15,7 +15,7 @@ class DiscussionState:
     enabled: bool = False
     phase: str = "idle"
     topic: str = ""
-    max_silent_turns: int = 40
+    max_silent_turns: int = 30
     ai_silent_turns: int = 0
     call_total_ai_turns: int = 0
     episode_id: int = 0
@@ -62,13 +62,6 @@ class DiscussionController:
             self.state.last_speaker_id = row["role_id"]
             self.state.recent_speakers = (self.state.recent_speakers + [row["role_id"]])[-12:]
 
-    async def configure(self, limit):
-        if type(limit) is not int or limit not in {30, 40, 50}:
-            raise ValueError("自主发言上限只能是30、40或50")
-        self.state.max_silent_turns = limit
-        # An already-started utterance may finish; no new utterance exceeds the new limit.
-        await self.notify()
-
     async def pause(self):
         self.state.phase = "paused"
         self.state.stop_reason = "user_paused"
@@ -80,43 +73,17 @@ class DiscussionController:
         if generation == self.engine.generation and not self.engine.closed:
             await self.notify()
 
-    async def resume(self):
-        if not self.engine.strict_playback:
-            raise ValueError("请更新客户端后使用自主讨论")
-        if not self.engine.started or self.engine.closed:
-            raise ValueError("通话尚未准备好")
-        generation = await self.engine.interrupt()
-        if generation != self.engine.generation or self.engine.closed:
-            return
-        self.engine.retire(self.engine.debounce)
-        self.engine.retire(self.engine.recovery)
-        self.engine.pending.clear()
-        self.engine.user_speaking = False
-        self.state.enabled = True
-        self.state.phase = "discussing"
-        self.state.topic = self.state.topic or "自由聊聊最近的生活"
-        self.user_committed()
-        self.engine.task = asyncio.create_task(
-            self.run(self.engine.generation, self.state.episode_id)
-        )
-
     async def handle_user(self, text, generation, episode):
         state = self.state
         if not self.valid(generation, episode):
             return
+        if not self.engine.strict_playback:
+            await self.engine.respond(text)
+            return
+        # Natural conversation is the call's default behavior, never a user-enabled mode.
+        state.enabled = True
         if re.search(r"^(?:你们|大家)?(?:先)?(?:停一下|暂停|别说了|别聊了|不要说话|别说)", text):
-            action = "pause"
-            topic = ""
-        elif not re.search(r"不要|不能|不许|别", text) and re.search(
-            r"(?:你们|大家).*(?:自己聊|自由聊|自由讨论|聊聊|接着聊|继续聊)", text
-        ):
-            action, topic = "start", text
-        elif re.search(r"^(?:继续|接着聊|恢复讨论)[吧呀啊。！! ]*$", text):
-            action, topic = "start", ""
-        elif not state.enabled and not re.search(
-            r"你们|大家|他们|自由|自己|继续|停|暂停|接着|讨论|聊聊|聊吧", text
-        ):
-            action, topic = "normal", ""
+            action, topic = "pause", ""
         else:
             try:
                 result = json_object(
@@ -124,44 +91,27 @@ class DiscussionController:
                         [
                             ModelMessage(role="system", content=USER_INTENT),
                             ModelMessage(
-                                role="user",
-                                content=f"自主讨论已启用：{state.enabled}，状态：{state.phase}\n用户：{text}",
+                                role="user", content=f"当前话题：{state.topic}\n用户：{text}"
                             ),
                         ]
                     )
                 )
-                action = result.get("action", "continue" if state.enabled else "normal")
+                action = "pause" if result.get("action") == "pause" else "continue"
                 topic = result.get("topic", "")
-                if not isinstance(action, str) or action not in {
-                    "start",
-                    "continue",
-                    "pause",
-                    "normal",
-                }:
-                    action = "continue" if state.enabled else "normal"
             except Exception:
-                action, topic = ("continue" if state.enabled else "normal"), ""
+                action, topic = "continue", ""
         if not self.valid(generation, episode):
             return
         if action == "pause":
             state.phase, state.stop_reason = "paused", "user_paused"
             await self.notify()
             return
-        if action == "start" and self.engine.strict_playback:
-            state.enabled = True
-        if isinstance(topic, str) and topic.strip() and state.enabled:
+        if isinstance(topic, str) and topic.strip():
             state.topic = topic.strip()[:800]
             state.topic_summary = ""
             self.summary_at = state.call_total_ai_turns
-        if state.enabled and (state.phase != "paused" or action == "start"):
-            state.topic = state.topic or text[:800]
-            await self.run(generation, episode)
-        else:
-            if action == "start":
-                await self.engine.emit(
-                    {"type": "participant_error", "message": "请更新客户端后使用自主讨论"}
-                )
-            await self.engine.respond(text)
+        state.topic = state.topic or text[:800]
+        await self.run(generation, episode)
 
     async def summarize(self, generation, episode):
         state = self.state
