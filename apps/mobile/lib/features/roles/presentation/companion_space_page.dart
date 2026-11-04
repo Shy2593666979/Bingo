@@ -209,9 +209,12 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
   }
 
   Widget _heading(String text, VoidCallback? more,
-          {String label = '全部 ›', int? count}) =>
+          {String label = '全部 ›',
+          int? count,
+          double top = 27,
+          double bottom = 18}) =>
       Padding(
-          padding: const EdgeInsets.only(top: 24, bottom: 16),
+          padding: EdgeInsets.only(top: top, bottom: bottom),
           child: Row(children: [
             Expanded(
                 child: Row(children: [
@@ -230,7 +233,7 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
               TextButton(
                   onPressed: more,
                   style: TextButton.styleFrom(
-                      minimumSize: const Size(44, 32),
+                      minimumSize: const Size(44, 26),
                       textStyle: const TextStyle(
                           fontSize: 12, fontWeight: FontWeight.w400),
                       padding: EdgeInsets.zero,
@@ -310,7 +313,7 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
     final compact = CompanionLaunch.compact(context);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _heading('发现搭子', () => unawaited(_changeRecommendation()),
-          label: _recLoading ? '正在换…' : '换一个'),
+          top: 16, bottom: 11, label: _recLoading ? '正在换…' : '换一个'),
       if (share != null && gateway != null)
         Container(
             padding: const EdgeInsets.fromLTRB(5, 9, 7, 9),
@@ -535,7 +538,7 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
                     _discover(),
                     InkWell(
                         onTap: widget.onMessages,
-                        child: _heading('最近聊天', null)),
+                        child: _heading('最近聊天', null, top: 14, bottom: 5)),
                     ..._recentChats(),
                     if (_recentChats().isEmpty)
                       Padding(
