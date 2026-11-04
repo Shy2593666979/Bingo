@@ -148,8 +148,12 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
               initialTab: tab)));
 
   Widget _row(String title,
-          {VoidCallback? onTap, Widget? trailing, String? subtitle}) =>
+          {VoidCallback? onTap,
+          Widget? trailing,
+          String? subtitle,
+          IconData? icon}) =>
       ListTile(
+          leading: icon == null ? null : Icon(icon, size: 23),
           title: Text(title, style: const TextStyle(fontSize: 15)),
           subtitle: subtitle == null
               ? null
@@ -250,7 +254,9 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
                     const SizedBox(height: 13),
                     H2Group(children: [
                       if (widget.appearanceStore != null)
-                        _row('聊天外观', onTap: () => _appearance(2)),
+                        _row('聊天外观',
+                            icon: Icons.palette_outlined,
+                            onTap: () => _appearance(2)),
                       _row('清空聊天记录', onTap: _clear)
                     ]),
                     const SizedBox(height: 13),

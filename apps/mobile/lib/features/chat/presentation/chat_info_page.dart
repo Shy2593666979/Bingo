@@ -180,7 +180,9 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                 ]),
                 if (widget.appearanceStore != null)
                   _group([
-                    _row('聊天外观', onTap: () => _appearance(2)),
+                    _row('聊天外观',
+                        icon: Icons.palette_outlined,
+                        onTap: () => _appearance(2)),
                   ]),
                 if (widget.controller.userId != null)
                   _group([
@@ -229,23 +231,30 @@ Widget _group(List<Widget> rows) => Container(
       ]
     ]));
 
-Widget _row(String title, {VoidCallback? onTap, Widget? trailing}) => Material(
-    color: Colors.white,
-    child: InkWell(
-        onTap: onTap,
-        child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 57),
-            child: Padding(
-                padding: const EdgeInsets.fromLTRB(0, 10, 16, 10),
-                child: Row(children: [
-                  Expanded(
-                      child: Text(title,
-                          style: const TextStyle(fontSize: 16, color: _ink))),
-                  const SizedBox(width: 12),
-                  trailing ??
-                      const Icon(Icons.chevron_right_rounded,
-                          size: 24, color: Color(0xFFA7AFAA)),
-                ])))));
+Widget _row(String title,
+        {VoidCallback? onTap, Widget? trailing, IconData? icon}) =>
+    Material(
+        color: Colors.white,
+        child: InkWell(
+            onTap: onTap,
+            child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 57),
+                child: Padding(
+                    padding: const EdgeInsets.fromLTRB(0, 10, 16, 10),
+                    child: Row(children: [
+                      if (icon != null) ...[
+                        Icon(icon, size: 23, color: _ink),
+                        const SizedBox(width: 14),
+                      ],
+                      Expanded(
+                          child: Text(title,
+                              style:
+                                  const TextStyle(fontSize: 16, color: _ink))),
+                      const SizedBox(width: 12),
+                      trailing ??
+                          const Icon(Icons.chevron_right_rounded,
+                              size: 24, color: Color(0xFFA7AFAA)),
+                    ])))));
 
 Widget _toggle(String title, bool value, ValueChanged<bool>? onChanged,
         Color accent) =>

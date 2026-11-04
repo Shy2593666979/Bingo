@@ -1,4 +1,5 @@
 import 'package:bingo/core/design/companion_launch_ui.dart';
+import 'package:bingo/core/design/companion_menu_icon.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/community/data/community_gateway.dart';
@@ -81,22 +82,24 @@ class ReferenceMyPageState extends State<ReferenceMyPage> {
                     CompanionLaunch.text(16, color: const Color(0xFF647E6B))),
           ])));
 
-  Widget _menu(IconData icon, String title, VoidCallback onTap) => InkWell(
-      onTap: onTap,
-      child: Container(
-          constraints: const BoxConstraints(minHeight: 63),
-          decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: CompanionLaunch.line))),
-          child: Row(children: [
-            Icon(icon, size: 25, color: const Color(0xFF284A33)),
-            const SizedBox(width: 21),
-            Expanded(
-                child: Text(title,
-                    style: CompanionLaunch.text(
-                        CompanionLaunch.compact(context) ? 18 : 19))),
-            const Icon(Icons.chevron_right_rounded,
-                size: 19, color: Color(0xFF91A895)),
-          ])));
+  Widget _menu(CompanionMenuSymbol icon, String title, VoidCallback onTap) =>
+      InkWell(
+          onTap: onTap,
+          child: Container(
+              constraints: const BoxConstraints(minHeight: 63),
+              decoration: const BoxDecoration(
+                  border:
+                      Border(bottom: BorderSide(color: CompanionLaunch.line))),
+              child: Row(children: [
+                CompanionMenuIcon(icon),
+                const SizedBox(width: 21),
+                Expanded(
+                    child: Text(title,
+                        style: CompanionLaunch.text(
+                            CompanionLaunch.compact(context) ? 18 : 19))),
+                const CompanionMenuIcon(CompanionMenuSymbol.chevron,
+                    size: 16, color: Color(0xFF91A895)),
+              ])));
 
   @override
   Widget build(BuildContext context) {
@@ -162,8 +165,10 @@ class ReferenceMyPageState extends State<ReferenceMyPage> {
                                               style: CompanionLaunch.text(
                                                   compact ? 25 : 27,
                                                   weight: FontWeight.w700))),
-                                      const Icon(Icons.chevron_right_rounded,
-                                          size: 19, color: Color(0xFF6E8C77)),
+                                      const CompanionMenuIcon(
+                                          CompanionMenuSymbol.chevron,
+                                          size: 19,
+                                          color: Color(0xFF6E8C77)),
                                     ]))),
                             const SizedBox(height: 20),
                             Padding(
@@ -185,12 +190,13 @@ class ReferenceMyPageState extends State<ReferenceMyPage> {
                             const SizedBox(height: 18),
                             const Divider(
                                 height: 1, color: CompanionLaunch.line),
-                            _menu(Icons.edit_outlined, '我的分享', widget.onShares),
-                            _menu(Icons.star_border_rounded, '我的收藏',
+                            _menu(CompanionMenuSymbol.share, '我的分享',
+                                widget.onShares),
+                            _menu(CompanionMenuSymbol.favorite, '我的收藏',
                                 widget.onFavorites),
-                            _menu(Icons.chat_bubble_outline_rounded, '聊天外观',
+                            _menu(CompanionMenuSymbol.appearance, '聊天外观',
                                 widget.onAppearance ?? widget.onSettings),
-                            _menu(Icons.settings_outlined, '设置',
+                            _menu(CompanionMenuSymbol.settings, '设置',
                                 widget.onSettings),
                             const SizedBox(height: 24),
                           ])),
