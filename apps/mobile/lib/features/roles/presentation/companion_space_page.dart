@@ -7,7 +7,7 @@ import 'package:bingo/core/widgets/unread_badge.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/community/data/community_gateway.dart';
-import 'package:bingo/features/roles/presentation/discovery_companion_card.dart';
+import 'package:bingo/features/community/presentation/community_widgets.dart';
 import 'package:bingo/features/group_chat/data/group_gateway.dart';
 import 'package:bingo/features/roles/data/local_role_order_store.dart';
 import 'package:bingo/features/stickers/sticker.dart';
@@ -218,7 +218,7 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
               Flexible(
                   child: Text(text,
                       style: const TextStyle(
-                          fontSize: 17, fontWeight: FontWeight.w700))),
+                          fontSize: 17, fontWeight: FontWeight.w600))),
               if (count != null) ...[
                 const SizedBox(width: 7),
                 Text('$count',
@@ -251,13 +251,11 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
               padding: const EdgeInsets.symmetric(horizontal: 9),
               foregroundColor:
                   primary ? BingoPalette.primaryText : BingoPalette.ink,
-              backgroundColor: primary
-                  ? const Color(0xFFE6FAEF)
-                  : Colors.white.withValues(alpha: .7),
+              backgroundColor: primary ? const Color(0xFFF1FCF8) : Colors.white,
               side: BorderSide(
                   color: primary ? const Color(0xFFA9E3D5) : BingoPalette.line),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
+                  borderRadius: BorderRadius.circular(10)),
               textStyle:
                   const TextStyle(fontSize: 14, fontWeight: FontWeight.w400)));
 
@@ -327,12 +325,49 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
       _heading('发现搭子', () => unawaited(_changeRecommendation()),
           label: _recLoading ? '正在换…' : '换一个'),
       if (share != null && gateway != null)
-        DiscoveryCompanionCard(
-            share: share,
-            gateway: gateway,
-            onDetail: () => _openRecommendation(share),
-            onAdd: _adding != null ? null : () => _install(share),
-            adding: _adding == share.id)
+        Padding(
+            padding: const EdgeInsets.only(bottom: 22),
+            child: Row(children: [
+              InkWell(
+                  onTap: () => _openRecommendation(share),
+                  child: SharedCompanionAvatar(
+                      share: share, gateway: gateway, size: 58)),
+              const SizedBox(width: 13),
+              Expanded(
+                  child: InkWell(
+                      onTap: () => _openRecommendation(share),
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(share.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontSize: 15, fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 5),
+                            Text(share.introduction,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    height: 1.7,
+                                    color: BingoPalette.muted))
+                          ]))),
+              const SizedBox(width: 8),
+              OutlinedButton(
+                  key: ValueKey('recommend-add-${share.id}'),
+                  onPressed: _adding != null ? null : () => _install(share),
+                  style: OutlinedButton.styleFrom(
+                      foregroundColor: BingoPalette.primary,
+                      backgroundColor: const Color(0xFFF0FBF6),
+                      side: const BorderSide(color: Color(0xFFC8EEE1)),
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      minimumSize: const Size(58, 36),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(7))),
+                  child: Text(_adding == share.id ? '添加中' : '＋ 添加',
+                      style: const TextStyle(fontSize: 12)))
+            ]))
       else
         Padding(
             padding: const EdgeInsets.only(bottom: 18),
@@ -355,6 +390,7 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
                   child: Text(_recFailed ? '重试' : '去看看',
                       style: const TextStyle(fontSize: 12)))
             ])),
+      const Divider(height: 1, color: BingoPalette.line)
     ]);
   }
 
@@ -456,21 +492,17 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
   }
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-      decoration: const BoxDecoration(
-          gradient: RadialGradient(
-              center: Alignment(-.08, -.4),
-              radius: 1.2,
-              colors: [Color(0xFFDEF9EB), Color(0xFFF2FCF8)])),
+  Widget build(BuildContext context) => ColoredBox(
+      color: Colors.white,
       child: SafeArea(
           bottom: false,
           child: RefreshIndicator(
               onRefresh: refresh,
               child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
+                  padding: const EdgeInsets.fromLTRB(22, 0, 22, 24),
                   children: [
-                    ReleasePlainHeader('陪伴空间', accent: true, actions: [
+                    ReleasePlainHeader('陪伴空间', actions: [
                       IconButton(
                           tooltip: '查找聊天',
                           onPressed: widget.onSearchChats,
@@ -500,18 +532,11 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
                           child: const Text('创建自己的第一位搭子'))
                     else
                       _partners(),
-                    const SizedBox(height: 7),
+                    const SizedBox(height: 22),
+                    const Divider(height: 1, color: BingoPalette.line),
                     _discover(),
                     _heading('最近的聊天', widget.onMessages),
-                    if (_recentChats().isNotEmpty)
-                      Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: .86),
-                              border:
-                                  Border.all(color: Colors.white, width: 1.5),
-                              borderRadius: BorderRadius.circular(27)),
-                          child: Column(children: _recentChats())),
+                    ..._recentChats(),
                     if (_recentChats().isEmpty)
                       Padding(
                           padding: const EdgeInsets.all(14),

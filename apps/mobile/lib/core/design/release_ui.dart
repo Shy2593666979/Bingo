@@ -3,11 +3,10 @@ import 'package:flutter/material.dart';
 
 class ReleasePlainHeader extends StatelessWidget {
   const ReleasePlainHeader(this.title,
-      {this.leading, this.actions = const [], this.accent = false, super.key});
+      {this.leading, this.actions = const [], super.key});
   final String title;
   final Widget? leading;
   final List<Widget> actions;
-  final bool accent;
   @override
   Widget build(BuildContext context) => SizedBox(
       height: 70,
@@ -17,26 +16,12 @@ class ReleasePlainHeader extends StatelessWidget {
             if (leading != null)
               SizedBox(width: 38, height: 40, child: leading),
             Expanded(
-                child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Stack(children: [
-                      if (accent)
-                        Positioned(
-                            right: 0,
-                            bottom: 2,
-                            width: 42,
-                            height: 7,
-                            child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                    color: const Color(0x806DDBA0),
-                                    borderRadius: BorderRadius.circular(20)))),
-                      Text(title,
-                          style: const TextStyle(
-                              fontSize: 25,
-                              height: 1.3,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: -.7)),
-                    ]))),
+                child: Text(title,
+                    style: const TextStyle(
+                        fontSize: 25,
+                        height: 1.3,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -.7))),
             for (final action in actions)
               SizedBox(width: 38, height: 40, child: action),
           ])));
