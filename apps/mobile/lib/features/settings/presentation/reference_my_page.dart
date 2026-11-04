@@ -1,12 +1,8 @@
-import 'package:bingo/core/design/release_ui.dart';
-import 'package:bingo/core/theme/app_theme.dart';
-import 'package:bingo/core/design/reference_design.dart';
+import 'package:bingo/core/design/companion_launch_ui.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/community/data/community_gateway.dart';
 import 'package:bingo/features/group_chat/data/group_gateway.dart';
-import 'package:bingo/shared/widgets/assistant_avatar.dart';
-import 'package:bingo/core/design/bingo_surface.dart';
 import 'package:bingo/shared/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 
@@ -27,12 +23,14 @@ class ReferenceMyPage extends StatefulWidget {
       required this.onPartners,
       this.onMessages,
       this.onGroups,
+      this.onAppearance,
       super.key});
   final UserProfile profile;
   final RoleGateway roles;
   final GroupGateway groups;
   final CommunityGateway community;
   final Future<void> Function() onEdit, onSettings, onCreate;
+  final Future<void> Function()? onAppearance;
   final VoidCallback onShares, onFavorites, onPartners;
   final VoidCallback? onMessages;
   final VoidCallback? onGroups;
@@ -45,8 +43,7 @@ class ReferenceMyPage extends StatefulWidget {
 class ReferenceMyPageState extends State<ReferenceMyPage> {
   List<RoleOption> _roles = [];
   List<ChatGroup> _groups = [];
-  List<CommunityShare> _shares = [];
-  int _favorites = 0;
+  int _shareCount = 0;
   bool _failed = false;
   @override
   void initState() {
@@ -59,14 +56,11 @@ class ReferenceMyPageState extends State<ReferenceMyPage> {
       final roles = await widget.roles.listRoles();
       final groups = await widget.groups.listGroups();
       final shares = await widget.community.listCommunity(scope: 'mine');
-      final favorites =
-          await widget.community.listCommunity(scope: 'favorites');
       if (mounted) {
         setState(() {
           _roles = roles;
           _groups = groups;
-          _shares = shares.items;
-          _favorites = favorites.total ?? favorites.items.length;
+          _shareCount = shares.total ?? shares.items.length;
           _failed = false;
         });
       }
@@ -75,292 +69,134 @@ class ReferenceMyPageState extends State<ReferenceMyPage> {
     }
   }
 
-  Widget _heading(String title, int count, VoidCallback tap) => Row(children: [
-        Expanded(
-            child: Row(children: [
-          Flexible(
-              child: Text(title,
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w600))),
-          const SizedBox(width: 7),
-          Text('$count',
-              style: const TextStyle(fontSize: 12, color: BingoPalette.muted)),
-        ])),
-        TextButton(
-            onPressed: tap,
-            style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                minimumSize: const Size(44, 40),
-                textStyle:
-                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
-                foregroundColor: BingoPalette.muted),
-            child: const Text('全部 ›', style: TextStyle(fontSize: 12))),
-      ]);
-
   Widget _stat(String label, int count, VoidCallback onTap) => Expanded(
       child: InkWell(
           onTap: onTap,
-          child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Column(children: [
-                Text('$count',
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 4),
-                Text(label,
-                    style: const TextStyle(fontSize: 12, color: refMuted)),
-              ]))));
+          child: Column(children: [
+            Text('$count',
+                style: CompanionLaunch.text(23, weight: FontWeight.w700)),
+            const SizedBox(height: 2),
+            Text(label,
+                style:
+                    CompanionLaunch.text(16, color: const Color(0xFF647E6B))),
+          ])));
 
-  Widget _menuRow(IconData icon, String title, VoidCallback onTap,
-          {int? count}) =>
-      ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-          minLeadingWidth: 20,
-          horizontalTitleGap: 14,
-          leading: Icon(icon, size: 20, color: BingoPalette.primary),
-          title: Text(title, style: const TextStyle(fontSize: 13)),
-          trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-            if (count != null) ...[
-              Text('$count',
-                  style: const TextStyle(fontSize: 12, color: refMuted)),
-              const SizedBox(width: 8)
-            ],
-            const Icon(Icons.chevron_right_rounded, size: 20, color: refMuted),
-          ]),
-          onTap: onTap);
+  Widget _menu(IconData icon, String title, VoidCallback onTap) => InkWell(
+      onTap: onTap,
+      child: Container(
+          constraints: const BoxConstraints(minHeight: 63),
+          decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: CompanionLaunch.line))),
+          child: Row(children: [
+            Icon(icon, size: 25, color: const Color(0xFF284A33)),
+            const SizedBox(width: 21),
+            Expanded(
+                child: Text(title,
+                    style: CompanionLaunch.text(
+                        CompanionLaunch.compact(context) ? 18 : 19))),
+            const Icon(Icons.chevron_right_rounded,
+                size: 19, color: Color(0xFF91A895)),
+          ])));
 
   @override
-  Widget build(BuildContext context) => ColoredBox(
-      color: BingoPalette.ice,
-      child: SafeArea(
-          bottom: false,
-          child: RefreshIndicator(
-              onRefresh: refresh,
-              child: ListView(
-                  padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
-                  children: [
-                    ReleasePageHeader('我的', actions: [
-                      IconButton(
-                          tooltip: '设置',
-                          onPressed: widget.onSettings,
-                          icon: const Icon(Icons.settings_outlined, size: 23)),
-                    ]),
-                    const SizedBox(height: 12),
-                    BingoSurface(
-                        radius: 15,
-                        padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
-                        child: Column(children: [
-                          InkWell(
-                              onTap: widget.onEdit,
-                              borderRadius: BorderRadius.circular(12),
-                              child: Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 4),
-                                  child: Row(children: [
-                                    UserAvatar(
-                                        avatarData:
-                                            widget.profile.userAvatarData,
-                                        username: widget.profile.username ?? '',
-                                        size: 56),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                        child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                          Text(
+  Widget build(BuildContext context) {
+    final compact = CompanionLaunch.compact(context);
+    return DecoratedBox(
+        decoration: CompanionLaunch.background,
+        child: SafeArea(
+            bottom: false,
+            child: RefreshIndicator(
+                onRefresh: refresh,
+                child: ListView(
+                    padding: EdgeInsets.zero,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      const CompanionLaunchHeader('我的'),
+                      Padding(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: compact ? 23 : 27),
+                          child: Column(children: [
+                            const SizedBox(height: 30),
+                            InkWell(
+                                onTap: widget.onEdit,
+                                borderRadius: BorderRadius.circular(23),
+                                child: Padding(
+                                    padding: EdgeInsets.only(
+                                        left: compact ? 12 : 16),
+                                    child: Row(children: [
+                                      Stack(clipBehavior: Clip.none, children: [
+                                        UserAvatar(
+                                            avatarData:
+                                                widget.profile.userAvatarData,
+                                            username:
+                                                widget.profile.username ?? '',
+                                            size: compact ? 80 : 88,
+                                            foregroundColor: Colors.white,
+                                            backgroundGradient:
+                                                const LinearGradient(
+                                                    begin: Alignment.topLeft,
+                                                    end: Alignment.bottomRight,
+                                                    colors: [
+                                                  Color(0xFF32C89B),
+                                                  CompanionLaunch.primary
+                                                ])),
+                                        if (widget.profile.userAvatarData ==
+                                            null)
+                                          const Positioned(
+                                              right: -15,
+                                              top: -9,
+                                              child: SizedBox(
+                                                  width: 29,
+                                                  height: 29,
+                                                  child: CustomPaint(
+                                                      painter:
+                                                          _ProfileRays()))),
+                                      ]),
+                                      SizedBox(width: compact ? 23 : 27),
+                                      Expanded(
+                                          child: Text(
                                               widget.profile.username ??
                                                   'Bingo 用户',
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                  fontSize: 21,
-                                                  fontWeight: FontWeight.w600)),
-                                          const SizedBox(height: 6),
-                                          const Text('记录每一份陪伴',
-                                              style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: refMuted)),
-                                        ])),
-                                    const SizedBox(width: 6),
-                                    const Text('编辑资料 ›',
-                                        style: TextStyle(
-                                            fontSize: 11, color: refMuted)),
-                                  ]))),
-                          const SizedBox(height: 18),
-                          const Divider(height: 1, color: BingoPalette.line),
-                          Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              child: Row(children: [
-                                _stat('搭子', _roles.length, widget.onPartners),
-                                const SizedBox(
-                                    height: 30,
-                                    child: VerticalDivider(
-                                        color: BingoPalette.line)),
-                                _stat('分享', _shares.length, widget.onShares),
-                                const SizedBox(
-                                    height: 30,
-                                    child: VerticalDivider(
-                                        color: BingoPalette.line)),
-                                _stat(
-                                    '群聊',
-                                    _groups.length,
-                                    widget.onGroups ??
-                                        () => _showGroups(context)),
-                              ])),
-                        ])),
-                    if (_failed)
-                      TextButton(
-                          onPressed: refresh,
-                          child: const Text('部分信息加载失败，点击重试')),
-                    const SizedBox(height: 14),
-                    BingoSurface(
-                        radius: 15,
-                        padding: const EdgeInsets.fromLTRB(12, 4, 12, 14),
-                        child: Column(children: [
-                          _heading('我的搭子', _roles.length, widget.onPartners),
-                          const SizedBox(height: 6),
-                          SizedBox(
-                              height: 60 +
-                                  MediaQuery.textScalerOf(context).scale(12) *
-                                      1.5,
-                              child: ListView(
-                                  scrollDirection: Axis.horizontal,
-                                  children: [
-                                    for (final role in _roles)
-                                      Padding(
-                                          padding:
-                                              const EdgeInsets.only(right: 15),
-                                          child: InkWell(
-                                              onTap: () =>
-                                                  widget.onRole(role.id),
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                              child: SizedBox(
-                                                  width: 55,
-                                                  child: Column(children: [
-                                                    AssistantAvatar(
-                                                        role: role.name,
-                                                        size: 52),
-                                                    const SizedBox(height: 6),
-                                                    Text(role.displayName,
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                        style: const TextStyle(
-                                                            fontSize: 12,
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .w500)),
-                                                  ])))),
-                                    InkWell(
-                                        onTap: widget.onCreate,
-                                        borderRadius: BorderRadius.circular(10),
-                                        child: SizedBox(
-                                            width: 55,
-                                            child: Column(children: [
-                                              Container(
-                                                  width: 55,
-                                                  height: 52,
-                                                  decoration: BoxDecoration(
-                                                      color: BingoPalette.blush,
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              14)),
-                                                  child: const Icon(
-                                                      Icons.add_rounded,
-                                                      color: refMint,
-                                                      size: 25)),
-                                              const SizedBox(height: 6),
-                                              const Text('创建搭子',
-                                                  maxLines: 1,
-                                                  style: TextStyle(
-                                                      fontSize: 12,
-                                                      color: refMuted)),
-                                            ]))),
-                                  ])),
-                        ])),
-                    const SizedBox(height: 14),
-                    BingoSurface(
-                        radius: 15,
-                        padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-                        child: Column(children: [
-                          _heading('我的分享', _shares.length, widget.onShares),
-                          if (_shares.isEmpty)
-                            Row(children: [
-                              const Expanded(
-                                  child: Text('把这份陪伴分享给大家',
-                                      style: TextStyle(
-                                          fontSize: 12, color: refMuted))),
+                                              style: CompanionLaunch.text(
+                                                  compact ? 25 : 27,
+                                                  weight: FontWeight.w700))),
+                                      const Icon(Icons.chevron_right_rounded,
+                                          size: 19, color: Color(0xFF6E8C77)),
+                                    ]))),
+                            const SizedBox(height: 20),
+                            Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 2, horizontal: 9),
+                                child: Row(children: [
+                                  _stat('搭子', _roles.length, widget.onPartners),
+                                  _stat('分享', _shareCount, widget.onShares),
+                                  _stat(
+                                      '群聊',
+                                      _groups.length,
+                                      widget.onGroups ??
+                                          () => _showGroups(context)),
+                                ])),
+                            if (_failed)
                               TextButton(
-                                  onPressed: widget.onShares,
-                                  child: const Text('去分享',
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600))),
-                            ])
-                          else
-                            for (final share in _shares.take(2))
-                              ListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  onTap: () => widget.onShare(share.id),
-                                  leading: AssistantAvatar(
-                                      role: _roles
-                                          .where((r) =>
-                                              r.displayName == share.name)
-                                          .firstOrNull
-                                          ?.name,
-                                      size: 44),
-                                  title: Text(share.name,
-                                      style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600)),
-                                  subtitle: Text(share.introduction,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                          fontSize: 12, color: refMuted)),
-                                  trailing: const Icon(
-                                      Icons.chevron_right_rounded,
-                                      size: 20,
-                                      color: refMuted)),
-                        ])),
-                    const SizedBox(height: 14),
-                    BingoSurface(
-                        radius: 15,
-                        padding: EdgeInsets.zero,
-                        child: Column(children: [
-                          _menuRow(Icons.star_border_rounded, '我的收藏',
-                              widget.onFavorites,
-                              count: _favorites),
-                          const Divider(
-                              height: 1,
-                              indent: 16,
-                              endIndent: 16,
-                              color: BingoPalette.line),
-                          _menuRow(Icons.history_rounded, '聊天记录',
-                              widget.onMessages ?? () => _showGroups(context)),
-                          const Divider(
-                              height: 1,
-                              indent: 16,
-                              endIndent: 16,
-                              color: BingoPalette.line),
-                          _menuRow(
-                              Icons.settings_outlined, '设置', widget.onSettings),
-                        ])),
-                    const Padding(
-                        padding: EdgeInsets.only(top: 18),
-                        child: Row(children: [
-                          Icon(Icons.shield_outlined,
-                              size: 15, color: BingoPalette.muted),
-                          SizedBox(width: 7),
-                          Expanded(
-                              child: Text('陪伴属于你，隐私也由你掌握。',
-                                  style: TextStyle(
-                                      fontSize: 11,
-                                      color: BingoPalette.muted))),
-                        ])),
-                  ]))));
+                                  onPressed: refresh,
+                                  child: const Text('部分信息加载失败，点击重试')),
+                            const SizedBox(height: 18),
+                            const Divider(
+                                height: 1, color: CompanionLaunch.line),
+                            _menu(Icons.edit_outlined, '我的分享', widget.onShares),
+                            _menu(Icons.star_border_rounded, '我的收藏',
+                                widget.onFavorites),
+                            _menu(Icons.chat_bubble_outline_rounded, '聊天外观',
+                                widget.onAppearance ?? widget.onSettings),
+                            _menu(Icons.settings_outlined, '设置',
+                                widget.onSettings),
+                            const SizedBox(height: 24),
+                          ])),
+                    ]))));
+  }
+
   void _showGroups(BuildContext context) => showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -379,4 +215,20 @@ class ReferenceMyPageState extends State<ReferenceMyPage> {
                     widget.onGroup(group);
                   })
           ])));
+}
+
+class _ProfileRays extends CustomPainter {
+  const _ProfileRays();
+  @override
+  void paint(Canvas canvas, Size size) {
+    final pen = Paint()
+      ..color = const Color(0xFF8EDAB6)
+      ..strokeWidth = 5
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(const Offset(7, 3), const Offset(3, 12), pen);
+    canvas.drawLine(const Offset(21, 14), const Offset(13, 18), pen);
+  }
+
+  @override
+  bool shouldRepaint(_ProfileRays oldDelegate) => false;
 }

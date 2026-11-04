@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:bingo/core/design/companion_launch_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:bingo/core/design/bingo_icon.dart';
 import 'package:bingo/core/theme/app_theme.dart';
@@ -329,82 +330,91 @@ class ReferenceNavigation extends StatelessWidget {
   final bool creating;
   final int unread;
   @override
-  Widget build(BuildContext context) => ClipRRect(
-      borderRadius: BorderRadius.zero,
-      child: ColoredBox(
-          color: BingoPalette.surface,
-          child: SafeArea(
-              top: false,
-              child: SizedBox(
-                  height: 75,
-                  child: Row(children: [
-                    _item(0, '首页', BingoSymbol.home),
-                    _item(1, '聊天', BingoSymbol.chat),
-                    Expanded(
-                        child: Semantics(
-                            label: '创建中心',
-                            excludeSemantics: true,
-                            button: true,
-                            child: InkWell(
-                                onTap: onCreate,
-                                child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    children: [
-                                      const SizedBox(height: 8),
-                                      Container(
-                                          width: 44,
-                                          height: 44,
-                                          decoration: BoxDecoration(
-                                              color: BingoPalette.primary,
-                                              borderRadius:
-                                                  BorderRadius.circular(22)),
-                                          child: const Icon(Icons.add_rounded,
-                                              color: Colors.white, size: 24)),
-                                    ])))),
-                    _item(2, '社区', BingoSymbol.partners),
-                    _item(3, '我的', BingoSymbol.profile),
-                  ])))));
-  Widget _item(int index, String title, BingoSymbol symbol) => Expanded(
-      child: Semantics(
-          button: true,
-          selected: selected == index && !creating,
-          child: InkWell(
-              onTap: () => onSelected(index),
-              child:
-                  Column(mainAxisAlignment: MainAxisAlignment.start, children: [
-                const SizedBox(height: 12),
-                Badge(
-                    isLabelVisible: index == 1 && unread > 0,
-                    backgroundColor: const Color(0xFFFF4D4F),
-                    label: Text(unread > 99 ? '99+' : '$unread'),
-                    child: index == 3
-                        ? Icon(Icons.person_outline_rounded,
-                            color: selected == index && !creating
-                                ? refMint
-                                : BingoPalette.muted,
-                            size: 23)
-                        : BingoIcon(symbol,
-                            selected: false,
-                            color: selected == index && !creating
-                                ? refMint
-                                : BingoPalette.muted,
-                            size: 23)),
-                const SizedBox(height: 4),
-                Text(title,
-                    style: TextStyle(
-                        fontSize: 10,
-                        height: 1.5,
-                        color: selected == index && !creating
-                            ? refMint
-                            : refMuted)),
-                const SizedBox(height: 3),
-                Container(
-                    width: 11,
-                    height: 0,
-                    decoration: BoxDecoration(
-                        color: selected == index && !creating
-                            ? refMint
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(3))),
-              ]))));
+  Widget build(BuildContext context) {
+    final compact = CompanionLaunch.compact(context);
+    final labelSize = compact ? 13.0 : 15.0;
+    final extraLabelHeight =
+        (MediaQuery.textScalerOf(context).scale(labelSize) - labelSize) * 1.25;
+    return DecoratedBox(
+        decoration: const BoxDecoration(
+            color: Colors.white,
+            border: Border(top: BorderSide(color: CompanionLaunch.line))),
+        child: SafeArea(
+            top: false,
+            child: SizedBox(
+                height: (compact ? 73 : 78) + extraLabelHeight,
+                child: Padding(
+                    padding: const EdgeInsets.fromLTRB(15, 6, 15, 6),
+                    child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _item(0, '首页', BingoSymbol.home, labelSize),
+                          _item(1, '聊天', BingoSymbol.chat, labelSize),
+                          Expanded(
+                              child: Semantics(
+                                  label: '创建中心',
+                                  button: true,
+                                  excludeSemantics: true,
+                                  child: InkWell(
+                                      onTap: onCreate,
+                                      child: Column(children: [
+                                        Container(
+                                            width: 41,
+                                            height: 41,
+                                            decoration: const BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                gradient:
+                                                    LinearGradient(colors: [
+                                                  Color(0xFF12C59E),
+                                                  CompanionLaunch.primary,
+                                                ])),
+                                            child: const Icon(Icons.add_rounded,
+                                                color: Colors.white, size: 26)),
+                                        const SizedBox(height: 2),
+                                        Text('创建',
+                                            style: CompanionLaunch.text(
+                                                labelSize,
+                                                color: creating
+                                                    ? CompanionLaunch.primary
+                                                    : const Color(0xFF334D3D),
+                                                height: 1.25)),
+                                      ])))),
+                          _item(2, '社区', BingoSymbol.partners, labelSize),
+                          _item(3, '我的', BingoSymbol.profile, labelSize),
+                        ])))));
+  }
+
+  Widget _item(int index, String title, BingoSymbol symbol, double labelSize) {
+    final active = selected == index && !creating;
+    final color = active ? CompanionLaunch.primary : const Color(0xFF334D3D);
+    return Expanded(
+        child: Semantics(
+            button: true,
+            selected: active,
+            child: InkWell(
+                onTap: () => onSelected(index),
+                child: Padding(
+                    padding: const EdgeInsets.only(top: 3),
+                    child: Column(children: [
+                      Badge(
+                          isLabelVisible: index == 1 && unread > 0,
+                          backgroundColor: const Color(0xFFFF4D4F),
+                          label: Text(unread > 99 ? '99+' : '$unread'),
+                          child: index == 3
+                              ? Icon(
+                                  active
+                                      ? Icons.person_rounded
+                                      : Icons.person_outline_rounded,
+                                  color: color,
+                                  size: 27)
+                              : BingoIcon(symbol,
+                                  color: color,
+                                  size: 27,
+                                  selected: index == 0 && active)),
+                      const SizedBox(height: 6),
+                      Text(title,
+                          style: CompanionLaunch.text(labelSize,
+                              color: color, height: 1.25)),
+                    ])))));
+  }
 }

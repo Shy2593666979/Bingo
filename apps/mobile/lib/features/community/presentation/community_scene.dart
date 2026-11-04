@@ -1,5 +1,4 @@
-import 'package:bingo/core/design/bingo_surface.dart';
-import 'package:bingo/core/design/release_ui.dart';
+import 'package:bingo/core/design/companion_launch_ui.dart';
 import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/features/community/data/community_gateway.dart';
 import 'package:bingo/features/community/presentation/community_widgets.dart';
@@ -48,48 +47,31 @@ class _CommunitySceneState extends State<CommunityScene> {
   static const _categories = ['全部', '陪伴', '朋友', '成长', '生活'];
 
   @override
-  Widget build(BuildContext context) => ColoredBox(
-      color: BingoPalette.ice,
+  Widget build(BuildContext context) => DecoratedBox(
+      decoration: CompanionLaunch.background,
       child: SafeArea(
           bottom: false,
           child: RefreshIndicator(
               onRefresh: widget.onRefresh,
               child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
+                  padding: EdgeInsets.zero,
                   children: [
-                    ReleasePageHeader('社区', actions: [
+                    CompanionLaunchHeader('社区', actions: [
                       IconButton(
                           tooltip: '搜索社区',
                           onPressed: () =>
                               setState(() => _searching = !_searching),
-                          icon: const Icon(Icons.search_rounded, size: 23)),
-                      IconButton(
-                          tooltip: '分享搭子',
-                          onPressed: widget.onPublish,
-                          icon: const Icon(Icons.person_add_alt_1_outlined,
-                              size: 23)),
+                          icon: const Icon(Icons.search_rounded, size: 26)),
                     ]),
-                    if (_searching)
-                      Padding(
-                          padding: const EdgeInsets.only(bottom: 14),
-                          child: TextField(
-                              controller: widget.search,
-                              onChanged: (value) {
-                                setState(() => _category = 0);
-                                widget.onSearch(value);
-                              },
-                              decoration: const InputDecoration(
-                                  hintText: '搜索分享、搭子或用户',
-                                  prefixIcon:
-                                      Icon(Icons.search_rounded, size: 20)))),
-                    const SizedBox(height: 10),
-                    ReleaseSegmentedTabs(
-                        tabs: const [
+                    CompanionLaunchTabs(
+                        tabs: [
                           (value: 5, label: '推荐'),
                           (value: 0, label: '最新'),
-                          (value: 2, label: '我的收藏'),
-                          (value: 3, label: '我的分享')
+                          (
+                            value: widget.tab == 3 ? 3 : 2,
+                            label: widget.tab == 3 ? '我的分享' : '收藏'
+                          ),
                         ],
                         selected: widget.tab == 1 ? 5 : widget.tab,
                         onSelected: (value) {
@@ -98,16 +80,40 @@ class _CommunitySceneState extends State<CommunityScene> {
                           widget.search.clear();
                           widget.onTab(value);
                         }),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                        height: 34,
-                        child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: _categories.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(width: 8),
-                            itemBuilder: (_, index) => _categoryChip(index))),
-                    const SizedBox(height: 16),
+                    if (_searching)
+                      Padding(
+                          padding: const EdgeInsets.fromLTRB(18, 8, 18, 10),
+                          child: Column(children: [
+                            TextField(
+                                controller: widget.search,
+                                onChanged: (value) {
+                                  setState(() => _category = 0);
+                                  widget.onSearch(value);
+                                },
+                                decoration: const InputDecoration(
+                                    hintText: '搜索分享、搭子或用户',
+                                    prefixIcon:
+                                        Icon(Icons.search_rounded, size: 20))),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                                height: 34,
+                                child: ListView.separated(
+                                    scrollDirection: Axis.horizontal,
+                                    itemCount: _categories.length,
+                                    separatorBuilder: (_, __) =>
+                                        const SizedBox(width: 8),
+                                    itemBuilder: (_, index) =>
+                                        _categoryChip(index))),
+                            Align(
+                                alignment: Alignment.centerRight,
+                                child: Tooltip(
+                                    message: '分享搭子',
+                                    child: TextButton.icon(
+                                        onPressed: widget.onPublish,
+                                        icon: const Icon(Icons.edit_outlined,
+                                            size: 18),
+                                        label: const Text('分享搭子')))),
+                          ])),
                     if (widget.loading)
                       const Padding(
                           padding: EdgeInsets.all(35),
@@ -130,10 +136,10 @@ class _CommunitySceneState extends State<CommunityScene> {
                               : '分享陪伴的故事，也发现合拍的搭子。',
                           onAction: widget.tab == 2 ? null : widget.onPublish)
                     else ...[
-                      for (final share in widget.items)
-                        Padding(
-                            padding: const EdgeInsets.only(bottom: 14),
-                            child: _post(share)),
+                      for (final share in widget.items) ...[
+                    Padding(padding: EdgeInsets.zero, child: _post(share)),
+                        Container(height: 8, color: CompanionLaunch.tint),
+                      ],
                       if (widget.hasMore)
                         TextButton(
                             onPressed: widget.onMore,
@@ -168,164 +174,191 @@ class _CommunitySceneState extends State<CommunityScene> {
                             selected ? FontWeight.w600 : FontWeight.w400)))));
   }
 
-  Widget _post(CommunityShare share) => BingoSurface(
-      radius: 15,
-      key: ValueKey('community-share-${share.id}'),
-      onTap: () => widget.onDetail(share),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          UserAvatar(username: share.authorName, size: 31),
-          const SizedBox(width: 9),
-          Expanded(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                Text(share.authorName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 2),
-                Text('${_relative(share.createdAt)} · 分享搭子',
-                    style: const TextStyle(
-                        fontSize: 10, color: BingoPalette.muted)),
-              ])),
-        ]),
-        const SizedBox(height: 15),
-        Text(share.title.isEmpty ? '分享我的搭子 · ${share.name}' : share.title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-                fontSize: 16, fontWeight: FontWeight.w600, height: 1.55)),
-        const SizedBox(height: 7),
-        Text(share.introduction,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-                fontSize: 12, height: 1.85, color: BingoPalette.muted)),
-        if (share.hasImages) ...[
-          const SizedBox(height: 13),
-          ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: AspectRatio(
-                  aspectRatio: 16 / 9,
-                  child: SharedPostImage(
-                      share: share,
-                      gateway: widget.gateway,
-                      index: 0,
-                      fallback: CompanionPortrait(
-                          share: share, gateway: widget.gateway)))),
-        ],
-        const SizedBox(height: 13),
-        Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-                color: BingoPalette.ice,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: BingoPalette.line)),
-            child: Row(children: [
-              SharedCompanionAvatar(
-                  share: share, gateway: widget.gateway, size: 48),
-              const SizedBox(width: 11),
-              Expanded(
+  Widget _post(CommunityShare share) {
+    final compact = CompanionLaunch.compact(context);
+    final installed = share.installedRoleId != null;
+    final available =
+        !widget.installing.contains(share.id) && share.status == 'published';
+    return Material(
+        key: ValueKey('community-share-${share.id}'),
+        color: Colors.white,
+        child: Padding(
+            padding: EdgeInsets.fromLTRB(
+                compact ? 17 : 22, 12, compact ? 17 : 22, 12),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                UserAvatar(
+                    username: share.authorName,
+                    size: 40,
+                    backgroundColor: share.authorName.hashCode.isEven
+                        ? const Color(0xFF28BA6D)
+                        : const Color(0xFF7BCC50),
+                    foregroundColor: Colors.white),
+                const SizedBox(width: 13),
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text(share.authorName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: CompanionLaunch.text(compact ? 17 : 18,
+                              weight: FontWeight.w700)),
+                      Text(_relative(share.createdAt),
+                          style: CompanionLaunch.text(12,
+                              color: const Color(0xFF8A9C8D))),
+                    ])),
+                IconButton(
+                    tooltip: '查看分享',
+                    onPressed: () => widget.onDetail(share),
+                    icon: const Icon(Icons.more_horiz, size: 22)),
+              ]),
+              const SizedBox(height: 13),
+              InkWell(
+                  onTap: () => widget.onDetail(share),
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                    Row(children: [
-                      Flexible(
-                          child: Text(share.name,
-                              maxLines: 1,
+                        if (share.title.isNotEmpty) ...[
+                          Text(share.title,
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.w600))),
-                      const SizedBox(width: 6),
-                      Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 3, vertical: 1),
-                          decoration: BoxDecoration(
-                              border:
-                                  Border.all(color: const Color(0xFFD4E5DD)),
-                              borderRadius: BorderRadius.circular(3)),
-                          child: const Text('AI',
-                              style: TextStyle(
-                                  fontSize: 8, color: Color(0xFF87AA9D)))),
-                    ]),
-                    const SizedBox(height: 5),
-                    Text(
-                        [
-                          if (share.roleType?.isNotEmpty ?? false)
-                            share.roleType!,
-                          ...share.traits.take(1)
-                        ].join(' · '),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontSize: 11, color: BingoPalette.muted)),
+                              style: CompanionLaunch.text(compact ? 16 : 18,
+                                  weight: FontWeight.w600)),
+                          const SizedBox(height: 5),
+                        ],
+                        Text(share.introduction,
+                            maxLines: 4,
+                            overflow: TextOverflow.ellipsis,
+                            style: CompanionLaunch.text(compact ? 16 : 18,
+                                height: 1.5)),
+                      ])),
+              if (share.hasImages) ...[
+                const SizedBox(height: 13),
+                ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: AspectRatio(
+                        aspectRatio: 16 / 9,
+                        child: SharedPostImage(
+                            share: share,
+                            gateway: widget.gateway,
+                            index: 0,
+                            fallback: CompanionPortrait(
+                                share: share, gateway: widget.gateway)))),
+              ],
+              const SizedBox(height: 12),
+              Container(
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFFF0FBF5),
+                      border: Border.all(color: const Color(0xFFE3F2E8)),
+                      borderRadius: BorderRadius.circular(16)),
+                  child: Row(children: [
+                    Expanded(
+                        child: InkWell(
+                            onTap: () => widget.onDetail(share),
+                            borderRadius: BorderRadius.circular(14),
+                            child: Row(children: [
+                              SharedCompanionAvatar(
+                                  share: share,
+                                  gateway: widget.gateway,
+                                  size: compact ? 66 : 80),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                  child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                    Text(share.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: CompanionLaunch.text(
+                                            compact ? 17 : 19,
+                                            weight: FontWeight.w700)),
+                                    if (share.roleType?.isNotEmpty == true)
+                                      Text(share.roleType!,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: CompanionLaunch.text(11,
+                                              color: const Color(0xFF398761))),
+                                    Text(companionShareDescription(share),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: CompanionLaunch.text(
+                                            compact ? 12 : 14,
+                                            color: const Color(0xFF54705B),
+                                            height: 1.4)),
+                                  ])),
+                            ]))),
+                    const SizedBox(width: 8),
+                    if (installed)
+                      TextButton(
+                          key: ValueKey('community-install-${share.id}'),
+                          onPressed:
+                              available ? () => widget.onInstall(share) : null,
+                          child:
+                              const Text('已添加', style: TextStyle(fontSize: 12)))
+                    else
+                      CompanionLaunchButton(
+                          key: ValueKey('community-install-${share.id}'),
+                          label: widget.installing.contains(share.id)
+                              ? '正在添加…'
+                              : '添加搭子',
+                          onPressed:
+                              available ? () => widget.onInstall(share) : null),
                   ])),
-              const Icon(Icons.chevron_right_rounded,
-                  size: 18, color: Color(0xFF9AAA9F)),
-            ])),
-        const SizedBox(height: 13),
-        Row(children: [
-          Expanded(
-              child: Wrap(spacing: 8, runSpacing: 5, children: [
-            _action(
-                share.liked
-                    ? Icons.favorite_rounded
-                    : Icons.favorite_border_rounded,
-                share.likeCount,
-                () => widget.onLike(share),
-                '点赞',
-                share.liked ? BingoPalette.rose : BingoPalette.muted),
-          ])),
-          const SizedBox(width: 8),
-          OutlinedButton(
-              key: ValueKey('community-install-${share.id}'),
-              onPressed: widget.installing.contains(share.id) ||
-                      share.status != 'published'
-                  ? null
-                  : () => widget.onInstall(share),
-              style: OutlinedButton.styleFrom(
-                  foregroundColor: share.installedRoleId == null
-                      ? BingoPalette.primaryText
-                      : BingoPalette.muted,
-                  backgroundColor: share.installedRoleId == null
-                      ? const Color(0xFFF2FCF8)
-                      : const Color(0xFFF2F5F4),
-                  side: BorderSide(
-                      color: share.installedRoleId == null
-                          ? const Color(0xFFB7E5D8)
-                          : BingoPalette.line),
-                  minimumSize: const Size(0, 34),
-                  padding: const EdgeInsets.symmetric(horizontal: 11),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                  textStyle: const TextStyle(fontSize: 11)),
-              child: Text(widget.installing.contains(share.id)
-                  ? '正在添加…'
-                  : share.installedRoleId == null
-                      ? '+ 添加搭子'
-                      : '已添加')),
-        ]),
-      ]));
+              const SizedBox(height: 9),
+              Row(children: [
+                _social(
+                    share.liked
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
+                    '点赞 ${_count(share.likeCount)}',
+                    () => widget.onLike(share),
+                    active: share.liked),
+                _social(
+                    Icons.chat_bubble_outline_rounded,
+                    '评论 ${_count(share.commentCount)}',
+                    () => widget.onDetail(share)),
+                _social(
+                    share.favorite
+                        ? Icons.bookmark_rounded
+                        : Icons.bookmark_border_rounded,
+                    share.favorite ? '已收藏' : '收藏',
+                    () => widget.onFavorite(share),
+                    active: share.favorite,
+                    right: true),
+              ]),
+            ])));
+  }
 
-  Widget _action(IconData icon, int count, VoidCallback onTap, String label,
-          Color color) =>
-      Semantics(
-          label: '$label $count',
-          button: true,
-          child: InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(6),
-              child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 7, horizontal: 1),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(icon, size: 16, color: color),
-                    const SizedBox(width: 4),
-                    Text(_count(count),
-                        style: TextStyle(fontSize: 10, color: color))
-                  ]))));
+  Widget _social(IconData icon, String label, VoidCallback onTap,
+          {bool active = false, bool right = false}) =>
+      Expanded(
+          child: Align(
+              alignment: right ? Alignment.centerRight : Alignment.centerLeft,
+              child: InkWell(
+                  onTap: onTap,
+                  borderRadius: BorderRadius.circular(6),
+                  child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(icon,
+                                size: 20,
+                                color: active
+                                    ? CompanionLaunch.primary
+                                    : const Color(0xFF294B34)),
+                            const SizedBox(width: 6),
+                            Text(label,
+                                style: CompanionLaunch.text(12,
+                                    color: active
+                                        ? CompanionLaunch.primary
+                                        : const Color(0xFF718574))),
+                          ]))))));
+
   String _count(int value) => value >= 10000
       ? '${(value / 10000).toStringAsFixed(1)}万'
       : value >= 1000

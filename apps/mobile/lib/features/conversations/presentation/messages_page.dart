@@ -1,5 +1,4 @@
-import 'package:bingo/core/design/bingo_surface.dart';
-import 'package:bingo/core/design/release_ui.dart';
+import 'package:bingo/core/design/companion_launch_ui.dart';
 import 'package:bingo/core/widgets/bingo_confirm_dialog.dart';
 import 'package:bingo/core/widgets/unread_badge.dart';
 import 'package:bingo/core/theme/app_theme.dart';
@@ -46,6 +45,7 @@ class MessagesPage extends StatefulWidget {
 class MessagesPageState extends State<MessagesPage> {
   List<RoleOption> _roles = [];
   List<ChatGroup> _groups = [];
+  bool _showSearch = false;
   bool _loading = true,
       _failed = false,
       _opening = false,
@@ -83,7 +83,12 @@ class MessagesPageState extends State<MessagesPage> {
     refresh();
   }
 
-  void _focusSearch() => _searchFocus.requestFocus();
+  void _focusSearch() {
+    setState(() => _showSearch = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _searchFocus.requestFocus();
+    });
+  }
 
   void onlyGroups() {
     showChats();
@@ -353,48 +358,52 @@ class MessagesPageState extends State<MessagesPage> {
     ]..sort((a, b) => b.date.compareTo(a.date));
     final pinned = items.where((item) => item.pin).toList();
     final recent = items.where((item) => !item.pin).toList();
-    return ColoredBox(
-        color: BingoPalette.ice,
+    return DecoratedBox(
+        decoration: CompanionLaunch.background,
         child: SafeArea(
             bottom: false,
             child: Column(children: [
               Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
-                  child: ReleasePageHeader('消息', actions: [
-                    IconButton(
-                        tooltip: '搜索聊天',
-                        onPressed: _focusSearch,
-                        icon: const Icon(Icons.search_rounded, size: 23)),
-                    if (widget.showCreateAction)
-                      IconButton(
-                          key: _newButtonKey,
-                          tooltip: '新建',
-                          onPressed: _newMenu,
-                          icon: const Icon(Icons.add_rounded, size: 24)),
-                  ])),
+                  padding: const EdgeInsets.fromLTRB(15, 0, 15, 0),
+                  child: CompanionLaunchHeader('消息',
+                      horizontalPadding: 0,
+                      actions: [
+                        IconButton(
+                            tooltip: '搜索聊天',
+                            onPressed: _focusSearch,
+                            icon: const Icon(Icons.search_rounded, size: 23)),
+                        if (widget.showCreateAction)
+                          IconButton(
+                              key: _newButtonKey,
+                              tooltip: '新建',
+                              onPressed: _newMenu,
+                              icon: const Icon(Icons.add_circle_outline_rounded,
+                                  size: 26)),
+                      ])),
+              if (_showSearch || _query.isNotEmpty)
+                Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 10, 18, 14),
+                    child: TextField(
+                        controller: _searchController,
+                        focusNode: _searchFocus,
+                        onChanged: (value) =>
+                            setState(() => _query = value.trim()),
+                        style: const TextStyle(fontSize: 13),
+                        decoration: const InputDecoration(
+                            hintText: '搜索搭子或聊天记录',
+                            prefixIconConstraints:
+                                BoxConstraints(minWidth: 40, minHeight: 40),
+                            hintStyle: TextStyle(
+                                fontSize: 13,
+                                height: 1.5,
+                                color: BingoPalette.muted),
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 12),
+                            prefixIcon: Icon(Icons.search_rounded, size: 20)))),
               Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 10, 18, 14),
-                  child: TextField(
-                      controller: _searchController,
-                      focusNode: _searchFocus,
-                      onChanged: (value) =>
-                          setState(() => _query = value.trim()),
-                      style: const TextStyle(fontSize: 13),
-                      decoration: const InputDecoration(
-                          hintText: '搜索搭子或聊天记录',
-                          prefixIconConstraints:
-                              BoxConstraints(minWidth: 40, minHeight: 40),
-                          hintStyle: TextStyle(
-                              fontSize: 13,
-                              height: 1.5,
-                              color: BingoPalette.muted),
-                          isDense: true,
-                          contentPadding: EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 12),
-                          prefixIcon: Icon(Icons.search_rounded, size: 20)))),
-              Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  child: ReleaseSegmentedTabs(
+                  padding: EdgeInsets.zero,
+                  child: CompanionLaunchTabs(
                       tabs: const [
                         (value: 0, label: '全部'),
                         (value: 1, label: '单聊'),
@@ -407,7 +416,7 @@ class MessagesPageState extends State<MessagesPage> {
                   child: RefreshIndicator(
                       onRefresh: refresh,
                       child: ListView(
-                          padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
+                          padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
                           physics: const AlwaysScrollableScrollPhysics(),
                           children: [
                             if (_loading)
@@ -458,12 +467,8 @@ class MessagesPageState extends State<MessagesPage> {
                                 if (_pinsExpanded) _listGroup(pinned),
                               ],
                               if (recent.isNotEmpty) ...[
-                                const Padding(
-                                    padding: EdgeInsets.fromLTRB(4, 19, 4, 10),
-                                    child: Text('最近消息',
-                                        style: TextStyle(
-                                            fontSize: 11,
-                                            color: BingoPalette.muted))),
+                                if (pinned.isNotEmpty)
+                                  const SizedBox(height: 8),
                                 _listGroup(recent),
                               ],
                             ],
@@ -471,13 +476,10 @@ class MessagesPageState extends State<MessagesPage> {
             ])));
   }
 
-  Widget _listGroup(List<_Chat> items) => BingoSurface(
-      radius: 15,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      child: Column(children: [
+  Widget _listGroup(List<_Chat> items) => Column(children: [
         for (var i = 0; i < items.length; i++)
           _tile(items[i], divider: i < items.length - 1)
-      ]));
+      ]);
 
   Future<void> _newMenu() async {
     final box = _newButtonKey.currentContext?.findRenderObject() as RenderBox?;
@@ -622,7 +624,7 @@ class MessagesPageState extends State<MessagesPage> {
                             bottom: BorderSide(color: BingoPalette.line))
                         : null),
                 child: Row(children: [
-                  _avatar(item, 48),
+                  _avatar(item, CompanionLaunch.compact(context) ? 59 : 64),
                   const SizedBox(width: 12),
                   Expanded(
                       child: Column(

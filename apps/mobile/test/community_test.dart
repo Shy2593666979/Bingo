@@ -137,7 +137,8 @@ class _ChatGateway implements ChatGateway {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   for (final width in [320.0, 360.0]) {
-    testWidgets('H2 profile portrait strip fits at $width with larger text',
+    testWidgets(
+        'launch profile menu and statistics fit at $width with larger text',
         (tester) async {
       tester.view.physicalSize = Size(width, 850);
       tester.view.devicePixelRatio = 1;
@@ -166,7 +167,9 @@ void main() {
                   onCreate: () async {},
                   onPartners: () {}))));
       await tester.pumpAndSettle();
-      expect(find.text('我的搭子'), findsOneWidget);
+      expect(find.text('搭子'), findsOneWidget);
+      expect(find.text('聊天外观'), findsOneWidget);
+      expect(find.text('我的收藏'), findsOneWidget);
       expect(find.text('属于你的陪伴空间'), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
@@ -232,20 +235,20 @@ void main() {
     await tester.tap(find.byTooltip('搜索社区'));
     await tester.pumpAndSettle();
     expect(find.byType(TextField), findsOneWidget);
+    expect(find.byTooltip('分享搭子'), findsOneWidget);
     await tester.tap(find.byTooltip('搜索社区'));
     await tester.pumpAndSettle();
     expect(find.byType(TextField), findsNothing);
     expect(find.text('群聊模板'), findsNothing);
     expect(find.text('加入群聊'), findsNothing);
-    expect(find.byTooltip('分享搭子'), findsOneWidget);
-    expect(find.text('我的分享'), findsOneWidget);
+    expect(find.byTooltip('分享搭子'), findsNothing);
     expect(find.text('Bingo 搭子'), findsNothing);
-    expect(find.text('分享我的搭子 · 星野'), findsWidgets);
+    expect(find.text('一起看星星，聊聊今天的小事。'), findsWidgets);
     expect(find.text('小林'), findsWidgets);
-    expect(find.text('+ 添加搭子'), findsWidgets);
-    await tester.tap(find.text('我的收藏'));
+    expect(find.text('添加搭子'), findsWidgets);
+    await tester.tap(find.text('收藏').first);
     await tester.pumpAndSettle();
-    expect(find.text('我的收藏'), findsOneWidget);
+    expect(find.text('收藏'), findsWidgets);
     expect(find.text('热门搭子'), findsNothing);
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
@@ -276,11 +279,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.widgetWithText(TextField, '搜索搭子或聊天记录'), findsOneWidget);
     expect(find.byTooltip('新建'), findsNothing);
-    expect(find.text('创建'), findsNothing);
+    expect(find.text('创建'), findsOneWidget);
     await tester.enterText(find.byType(TextField), '旧搜索');
     await tester.tap(find.text('首页'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('全部 ›').last);
+    await tester.tap(find.text('最近聊天'));
     await tester.pumpAndSettle();
     expect(
         tester.widget<TextField>(find.byType(TextField)).controller!.text, '');
@@ -288,7 +291,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('社区').last);
     await tester.pumpAndSettle();
-    expect(find.text('我的分享'), findsOneWidget);
+    expect(find.text('推荐'), findsOneWidget);
+    expect(find.text('收藏'), findsWidgets);
     expect(find.text('发现更多有趣的 AI 搭子～'), findsNothing);
     expect(find.text('发现搭子'), findsNothing);
     await tester.tap(find.bySemanticsLabel('创建中心'));

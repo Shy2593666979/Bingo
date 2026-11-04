@@ -273,6 +273,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                     await _openProfileSetup(context, profile);
                   },
                   onSettings: () => _openSettings(context),
+                  onAppearance: () async {
+                    await Navigator.of(context).push<void>(MaterialPageRoute(
+                        builder: (_) => AppearancePage(store: _appearance)));
+                  },
                   onMessages: () {
                     _onTabReady(
                         1, () => _conversationsKey.currentState?.showChats());

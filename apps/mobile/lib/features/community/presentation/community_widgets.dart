@@ -9,6 +9,15 @@ const communityMuted = BingoPalette.muted;
 const communityAccent = BingoPalette.primary;
 const communityBackground = BingoPalette.ice;
 
+String companionShareDescription(CommunityShare share) {
+  final description = share.persona?['description'];
+  if (description is String && description.trim().isNotEmpty) {
+    return description.trim();
+  }
+  return share.traits.isNotEmpty
+      ? share.traits.take(2).join('，') : share.introduction;
+}
+
 class SharedCompanionAvatar extends StatelessWidget {
   const SharedCompanionAvatar(
       {required this.share, required this.gateway, this.size = 72, super.key});
