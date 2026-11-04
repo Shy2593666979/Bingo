@@ -58,7 +58,7 @@ class GroupProactiveTopics:
                         user,
                         GroupSend(
                             client_message_id=f"proactive-{now.isoformat()}",
-                            content="如果现在有值得聊的话题，和大家自然地聊一会儿；没有就安静陪伴。",
+                            content="自然接住大家之前的交流，选择贴近生活的话题；没有新内容就保持安静。",
                         ),
                         system=True,
                     )

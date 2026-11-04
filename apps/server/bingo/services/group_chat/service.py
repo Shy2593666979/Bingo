@@ -44,8 +44,10 @@ from .scheduling import GroupParticipation
 from .shared import (
     delete_group_data,
     event,
+    internal_topic,
     message_json,
     owned,
+    public_messages,
     valid_roles,
 )
 from .speaking import GroupSpeaker
@@ -217,7 +219,7 @@ class GroupChatService:
             latest = (
                 await session.exec(
                     select(GroupMessage)
-                    .where(GroupMessage.group_id == group_id)
+                    .where(GroupMessage.group_id == group_id, public_messages())
                     .order_by(GroupMessage.seq.desc())
                     .limit(1)
                 )
@@ -350,7 +352,9 @@ class GroupChatService:
     async def messages(self, group_id, user_id, before=None, limit=100):
         async with self.database.session_factory() as session:
             await owned(session, group_id, user_id)
-            statement = select(GroupMessage).where(GroupMessage.group_id == group_id)
+            statement = select(GroupMessage).where(
+                GroupMessage.group_id == group_id, public_messages()
+            )
             if before:
                 statement = statement.where(GroupMessage.seq < before)
             rows = (
@@ -382,6 +386,8 @@ class GroupChatService:
             target = await session.get(GroupMessage, message_id)
             if not target or target.group_id != group_id:
                 raise ServiceError(404, "原消息已不可用")
+            if target.sender_type == "system" and target.sender_name == "群话题":
+                raise ServiceError(404, "原消息已不可用")
             rows = (
                 await session.exec(
                     select(GroupMessage)
@@ -389,6 +395,7 @@ class GroupChatService:
                         GroupMessage.group_id == group_id,
                         GroupMessage.seq >= max(1, target.seq - 15),
                         GroupMessage.seq <= target.seq + 15,
+                        public_messages(),
                     )
                     .order_by(GroupMessage.seq)
                 )
@@ -530,9 +537,13 @@ class GroupChatService:
                 response_targets=response_targets,
                 max_ai_messages=run.max_ai_messages,
             )
-            await event(
-                session, run, "message_saved", message=message_json(message, run.client_message_id)
-            )
+            if not system:
+                await event(
+                    session,
+                    run,
+                    "message_saved",
+                    message=message_json(message, run.client_message_id),
+                )
             await session.commit()
         for previous in old:
             if task := self.tasks.get(previous.id):
@@ -557,7 +568,11 @@ class GroupChatService:
                 )
             ).all()
             return {
-                "events": [json.loads(row.event_json) for row in rows],
+                "events": [
+                    data
+                    for row in rows
+                    if not internal_topic((data := json.loads(row.event_json)).get("message") or {})
+                ],
                 "status": run.status,
                 "last_event_seq": rows[-1].event_seq if rows else after,
                 "has_more": bool(rows and rows[-1].event_seq < run.next_event_seq),

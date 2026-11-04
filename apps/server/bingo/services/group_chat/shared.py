@@ -23,6 +23,19 @@ class StaleRun(Exception):
     pass
 
 
+def public_messages():
+    """Proactive scheduling instructions are context, never conversation content."""
+    return ~((GroupMessage.sender_type == "system") & (GroupMessage.sender_name == "群话题"))
+
+
+def internal_topic(message):
+    return (
+        isinstance(message, dict)
+        and message.get("sender_type") == "system"
+        and message.get("sender_name") == "群话题"
+    )
+
+
 def message_json(message, client_message_id=None):
     return {
         key: getattr(message, key)
