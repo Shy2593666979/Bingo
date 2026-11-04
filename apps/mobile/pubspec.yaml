@@ -20,20 +20,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  fonts:
-    - family: BingoSans
-      fonts:
-        - asset: assets/fonts/HarmonyOS_Sans_SC_Regular.ttf
-        - asset: assets/fonts/HarmonyOS_Sans_SC_Medium.ttf
-          weight: 500
-        - asset: assets/fonts/HarmonyOS_Sans_SC_Medium.ttf
-          weight: 600
-        - asset: assets/fonts/HarmonyOS_Sans_SC_Bold.ttf
-          weight: 700
-        - asset: assets/fonts/HarmonyOS_Sans_SC_Bold.ttf
-          weight: 800
-        - asset: assets/fonts/HarmonyOS_Sans_SC_Black.ttf
-          weight: 900
   assets:
     - assets/branding/bingo_wordmark_e.png
     - assets/images/bingo_logo.webp

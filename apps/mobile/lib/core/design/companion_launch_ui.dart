@@ -22,11 +22,7 @@ abstract final class CompanionLaunch {
           FontWeight weight = FontWeight.w400,
           double height = 1.5}) =>
       TextStyle(
-          fontFamily: 'BingoSans',
-          fontSize: size,
-          fontWeight: weight,
-          height: height,
-          color: color);
+          fontSize: size, fontWeight: weight, height: height, color: color);
 }
 
 class CompanionLaunchHeader extends StatelessWidget {
