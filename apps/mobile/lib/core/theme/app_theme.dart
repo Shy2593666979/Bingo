@@ -101,6 +101,7 @@ ThemeData buildBingoTheme() {
     surfaceContainerHigh: BingoPalette.blush,
   );
   final base = ThemeData(
+    fontFamily: 'BingoSans',
     colorScheme: colors,
     useMaterial3: true,
   );
@@ -116,7 +117,10 @@ ThemeData buildBingoTheme() {
       elevation: 0,
       centerTitle: false,
       titleTextStyle: const TextStyle(
-          fontSize: 19, fontWeight: FontWeight.w800, color: BingoPalette.ink),
+          fontFamily: 'BingoSans',
+          fontSize: 19,
+          fontWeight: FontWeight.w800,
+          color: BingoPalette.ink),
       foregroundColor: colors.onSurface,
       systemOverlayStyle: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -167,9 +171,15 @@ ThemeData buildBingoTheme() {
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       titleTextStyle: const TextStyle(
-          fontSize: 18, fontWeight: FontWeight.w700, color: BingoPalette.ink),
-      contentTextStyle:
-          const TextStyle(fontSize: 14, height: 1.6, color: BingoPalette.muted),
+          fontFamily: 'BingoSans',
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: BingoPalette.ink),
+      contentTextStyle: const TextStyle(
+          fontFamily: 'BingoSans',
+          fontSize: 14,
+          height: 1.6,
+          color: BingoPalette.muted),
     ),
     cardTheme: CardThemeData(
       color: BingoPalette.surface.withValues(alpha: 0.96),

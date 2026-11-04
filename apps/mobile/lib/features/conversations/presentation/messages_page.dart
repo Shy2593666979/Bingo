@@ -599,6 +599,7 @@ class MessagesPageState extends State<MessagesPage> {
       ? AssistantAvatar(role: item.role!.name, size: size)
       : GroupAvatar(members: item.group!.activeMembers, size: size);
   Widget _tile(_Chat item, {bool divider = true}) {
+    final compact = CompanionLaunch.compact(context);
     final role = item.role, group = item.group;
     final unread = role?.unreadCount ?? group!.unread;
     final muted = role?.muted ?? group!.muted;
@@ -614,7 +615,7 @@ class MessagesPageState extends State<MessagesPage> {
             onTap: () => _open(item),
             onLongPress: () => _actions(item),
             child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                padding: const EdgeInsets.symmetric(vertical: 6),
                 decoration: BoxDecoration(
                     border: divider
                         ? const Border(
@@ -632,28 +633,26 @@ class MessagesPageState extends State<MessagesPage> {
                               child: Text(_name(item),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                      color: refInk))),
+                                  style: CompanionLaunch.text(compact ? 17 : 18,
+                                      weight: FontWeight.w700))),
                           if (group != null) ...[
                             const SizedBox(width: 6),
                             const BingoIcon(BingoSymbol.group,
                                 size: 17, color: BingoPalette.muted)
                           ]
                         ]),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 2),
                         Text(ChatSticker.preview(preview),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                fontSize: 12, color: BingoPalette.muted))
+                            style: CompanionLaunch.text(compact ? 14 : 16,
+                                color: CompanionLaunch.muted))
                       ])),
                   const SizedBox(width: 8),
                   Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                     Text(_time(item.date),
-                        style: const TextStyle(
-                            fontSize: 11, color: BingoPalette.muted)),
+                        style: CompanionLaunch.text(compact ? 12 : 14,
+                            color: CompanionLaunch.muted)),
                     if (unread > 0) ...[
                       const SizedBox(height: 7),
                       UnreadBadge(count: unread)

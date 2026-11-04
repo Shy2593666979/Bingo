@@ -450,7 +450,7 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
                               size: 17, color: BingoPalette.muted)
                         ]
                       ]),
-                      const SizedBox(height: 5),
+                      const SizedBox(height: 2),
                       Text(ChatSticker.preview(preview),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
