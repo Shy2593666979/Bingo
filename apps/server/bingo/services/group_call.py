@@ -12,6 +12,7 @@ from bingo.agent.handoffs import agent_broadcast_targets, normalize_agent_addres
 from bingo.agent.model_client import ModelMessage
 from bingo.prompts.group_call import DISCUSSION_SPEECH, ENDING, ROLE_SPEECH
 from bingo.services.group_call_discussion import DiscussionController
+from bingo.services.group_call_prefetch import PreparedSpeech
 
 
 class PlaybackResult(StrEnum):
@@ -61,6 +62,8 @@ class GroupCallSession:
             "audio_bytes": 0,
             "completed_turns": 0,
             "playback_failures": 0,
+            "prefetch_requests": 0,
+            "prefetched_audio_turns": 0,
         }
         self.call_started = time.monotonic()
         self.max_call_seconds = 3600
@@ -98,10 +101,8 @@ class GroupCallSession:
         if not self.discussion.valid(generation, episode):
             return
         if content:
-            result = await self.say(self.roles[0], content, generation, autonomous=True)
-            if result != PlaybackResult.COMPLETED:
-                return
-        if self.discussion.valid(generation, episode):
+            await self.discussion.run(generation, episode, initial=(self.roles[0], content))
+        elif self.discussion.valid(generation, episode):
             await self.discussion.run(generation, episode)
 
     def within_budget(self):
@@ -118,8 +119,11 @@ class GroupCallSession:
         async with asyncio.timeout(min(40, remaining)):
             return await self.model.complete(messages)
 
-    async def generate_one(self, role, *, required=False, greeting=False, autonomous=False):
-        state = self.discussion.state
+    async def generate_one(
+        self, role, *, required=False, greeting=False, autonomous=False, history=None, state=None
+    ):
+        state = self.discussion.state if state is None else state
+        history = self.history if history is None else history
         instruction = "这次请你回应。" if required else "只有有补充价值时才回应，否则仅输出[沉默]。"
         if autonomous:
             instruction = DISCUSSION_SPEECH.format(
@@ -139,8 +143,7 @@ class GroupCallSession:
                 ModelMessage(
                     role="user",
                     content="\n".join(
-                        f"{r['name']}：{r['text']}"
-                        for r in self.history[-(20 if autonomous else 30) :]
+                        f"{r['name']}：{r['text']}" for r in history[-(20 if autonomous else 30) :]
                     )
                     + ("\n通话刚接通，请简短打个招呼。" if greeting else ""),
                 ),
@@ -164,6 +167,7 @@ class GroupCallSession:
 
     async def interrupt(self):
         self.generation += 1
+        self.discussion.cancel_prefetch()
         generation = self.generation
         self.utterance = None
         self.awaiting_ack = False
@@ -328,14 +332,23 @@ class GroupCallSession:
             if generation == self.generation and not self.closed:
                 await self.emit({"type": "listening", "generation": generation})
 
-    async def say(self, role, text, generation, *, autonomous=False):
+    def speech_events(self, role, text):
+        self.metrics["tts_requests"] += 1
+        return self.speech.message_events(text, role.voice or self.voice_fallback)
+
+    def prepare_speech(self, role, text):
+        return PreparedSpeech(self.speech_events(role, text), self.retire)
+
+    async def say(self, role, text, generation, *, autonomous=False, prepared_audio=None):
         async with self.audio_lock:
             if generation != self.generation or self.closed:
                 return PlaybackResult.INTERRUPTED
             try:
                 remaining = self.max_call_seconds - (time.monotonic() - self.call_started)
                 async with asyncio.timeout(min(150, max(0.01, remaining))):
-                    return await self._say(role, text, generation, autonomous=autonomous)
+                    return await self._say(
+                        role, text, generation, autonomous=autonomous, prepared_audio=prepared_audio
+                    )
             except TimeoutError:
                 return self._playback_failed(PlaybackResult.TIMEOUT)
             except asyncio.CancelledError:
@@ -358,7 +371,7 @@ class GroupCallSession:
             self.metrics["playback_failures"] += 1
         return result
 
-    async def _say(self, role, text, generation, *, autonomous=False):
+    async def _say(self, role, text, generation, *, autonomous=False, prepared_audio=None):
         utterance = uuid.uuid4().hex
         self.utterance = utterance
         self.played.clear()
@@ -386,10 +399,10 @@ class GroupCallSession:
         )
         audio = False
         audio_started, audio_bytes = None, 0
-        self.metrics["tts_requests"] += 1
-        async with aclosing(
-            self.speech.message_events(text, role.voice or self.voice_fallback)
-        ) as events:
+        if prepared_audio and prepared_audio.first_audio_ready:
+            self.metrics["prefetched_audio_turns"] += 1
+        source = prepared_audio.events() if prepared_audio else self.speech_events(role, text)
+        async with aclosing(source) as events:
             async for event in events:
                 if generation != self.generation or self.closed:
                     return self._playback_failed(PlaybackResult.INTERRUPTED)
@@ -455,6 +468,7 @@ class GroupCallSession:
     async def close(self):
         self.closed = True
         self.generation += 1
+        self.discussion.cancel_prefetch()
         self.awaiting_ack = False
         self.utterance = None
         self._playback_failed(PlaybackResult.INTERRUPTED)

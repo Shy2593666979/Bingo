@@ -3,10 +3,12 @@
 import asyncio
 import re
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
+from types import SimpleNamespace
 
 from bingo.agent.model_client import ModelMessage
 from bingo.prompts.group_call import SUMMARY, USER_INTENT
+from bingo.services.group_call_prefetch import PreparedTurn
 from bingo.services.group_call_scheduler import TurnScheduler, json_object
 
 
@@ -35,6 +37,62 @@ class DiscussionController:
         self.max_episode_seconds = 20 * 60
         self.max_yields = 2
         self.summary_at = 0
+        self.prefetch = None
+
+    def cancel_prefetch(self, generation=None, episode=None):
+        entry = self.prefetch
+        if entry is None or (generation is not None and entry[:2] != (generation, episode)):
+            return
+        self.prefetch = None
+        task = entry[2]
+        if task.done() and not task.cancelled():
+            try:
+                task.result().cancel()
+            except Exception:
+                pass
+        self.engine.retire(task)
+
+    def turn_context(self, current=None):
+        state = replace(self.state, recent_speakers=list(self.state.recent_speakers))
+        history = list(self.engine.history)
+        if current:
+            role, text = current
+            history.append({"name": role.nickname, "role_id": role.id, "text": text})
+            state.ai_silent_turns += 1
+            state.call_total_ai_turns += 1
+            state.last_speaker_id = role.id
+            state.recent_speakers = (state.recent_speakers + [role.id])[-12:]
+        remaining = state.max_silent_turns - state.ai_silent_turns
+        state.phase = "winding_down" if remaining <= 5 else "discussing"
+        return SimpleNamespace(
+            roles=self.engine.roles,
+            history=history,
+            targets=self.engine.targets,
+            complete=self.engine.complete,
+        ), state
+
+    async def prepare_turn(self, generation, episode, context):
+        # Summarize only confirmed history; the pending speaker exists solely in
+        # this immutable generation context, not in shared memory or counters.
+        await self.summarize(generation, episode)
+        if not self.valid(generation, episode):
+            return PreparedTurn("finish")
+        view, state = context
+        state.topic_summary = self.state.topic_summary
+        decision = await self.scheduler.next_turn(view, state)
+        if not self.valid(generation, episode) or decision.action != "speak":
+            return PreparedTurn(decision.action)
+        role = next((r for r in view.roles if r.id == decision.speaker_id), None)
+        if role is None:
+            raise ValueError("Unknown speaker")
+        content = await self.engine.generate_one(
+            role, autonomous=True, history=view.history, state=state
+        )
+        if not self.valid(generation, episode):
+            return PreparedTurn("finish")
+        if not content or any(content == r["text"] for r in view.history[-6:]):
+            return PreparedTurn("speak", role)
+        return PreparedTurn("speak", role, content, self.engine.prepare_speech(role, content))
 
     def valid(self, generation, episode):
         return (
@@ -118,6 +176,7 @@ class DiscussionController:
         if state.call_total_ai_turns - self.summary_at < 8:
             return
         rows = self.engine.history[-16:]
+        covered_turns = state.call_total_ai_turns
         text = await self.engine.complete(
             [
                 ModelMessage(role="system", content=SUMMARY),
@@ -130,11 +189,12 @@ class DiscussionController:
         )
         if self.valid(generation, episode):
             state.topic_summary = text.strip()[:1200]
-            self.summary_at = state.call_total_ai_turns
+            self.summary_at = covered_turns
 
-    async def run(self, generation, episode):
+    async def run(self, generation, episode, *, initial=None):
         state, engine = self.state, self.engine
         yields = errors = 0
+        ready = PreparedTurn("speak", *initial) if initial else None
         if not self.valid(generation, episode):
             return
         state.phase = "discussing"
@@ -147,22 +207,31 @@ class DiscussionController:
                     if remaining <= 0:
                         state.stop_reason = "turn_limit"
                         break
-                    if not engine.within_budget():
+                    if not engine.within_budget() and ready is None and self.prefetch is None:
                         state.stop_reason = "call_budget"
                         break
                     state.phase = "winding_down" if remaining <= 5 else "discussing"
                     await self.notify()
                     try:
-                        await self.summarize(generation, episode)
+                        if ready is None:
+                            pending = self.prefetch
+                            if pending is not None and pending[:2] == (generation, episode):
+                                try:
+                                    ready = await pending[2]
+                                finally:
+                                    if self.prefetch is pending:
+                                        self.prefetch = None
+                            else:
+                                ready = await self.prepare_turn(
+                                    generation, episode, self.turn_context()
+                                )
                         if not self.valid(generation, episode):
                             return
-                        decision = await self.scheduler.next_turn(engine, state)
-                        if not self.valid(generation, episode):
-                            return
-                        if decision.action == "finish":
+                        if ready.action == "finish":
                             state.stop_reason = "natural_finish"
                             break
-                        if decision.action == "yield":
+                        if ready.action == "yield":
+                            ready = None
                             yields += 1
                             if yields > self.max_yields:
                                 state.stop_reason = "silence"
@@ -170,13 +239,10 @@ class DiscussionController:
                             await asyncio.sleep(0.8)
                             continue
                         yields = 0
-                        role = next((r for r in engine.roles if r.id == decision.speaker_id), None)
-                        if role is None:
-                            raise ValueError("Unknown speaker")
-                        content = await engine.generate_one(role, autonomous=True)
-                        if not self.valid(generation, episode):
-                            return
+                        role, content = ready.role, ready.content
                         if not content or any(content == r["text"] for r in engine.history[-6:]):
+                            ready.cancel()
+                            ready = None
                             state.no_content_streak += 1
                             state.last_speaker_id = role.id
                             if state.no_content_streak >= 2:
@@ -184,7 +250,30 @@ class DiscussionController:
                                 break
                             continue
                         state.no_content_streak = 0
-                        outcome = await engine.say(role, content, generation, autonomous=True)
+                        if remaining > 1 and engine.within_budget():
+                            engine.metrics["prefetch_requests"] += 1
+                            context = self.turn_context((role, content))
+                            self.prefetch = (
+                                generation,
+                                episode,
+                                asyncio.create_task(
+                                    self.prepare_turn(generation, episode, context)
+                                ),
+                            )
+                        if ready.audio and ready.audio.failed:
+                            ready.audio.cancel()
+                            ready.audio = None
+                        try:
+                            outcome = await engine.say(
+                                role,
+                                content,
+                                generation,
+                                autonomous=True,
+                                prepared_audio=ready.audio,
+                            )
+                        finally:
+                            ready.cancel()
+                            ready = None
                         if outcome != "completed":
                             state.stop_reason = f"playback_{outcome}"
                             if (
@@ -215,6 +304,9 @@ class DiscussionController:
             ):
                 state.stop_reason = "duration_limit"
         finally:
+            self.cancel_prefetch(generation, episode)
+            if ready:
+                ready.cancel()
             if self.valid(generation, episode) or (
                 episode == state.episode_id
                 and not engine.closed
