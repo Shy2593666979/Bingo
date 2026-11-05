@@ -84,7 +84,6 @@ flutter:
     - assets/onboarding/senior_brother.m4a
     - assets/onboarding/senior_sister.m4a
     - assets/onboarding/teacher.m4a
-    - assets/onboarding/chairman.m4a
 
 flutter_launcher_icons:
   android: true

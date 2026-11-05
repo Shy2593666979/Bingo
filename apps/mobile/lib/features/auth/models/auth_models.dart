@@ -94,6 +94,7 @@ class RoleOption {
       this.personality,
       String? speakingStyle,
       String? background,
+      bool? identityEditable,
       this.prompt = '',
       this.avatarData,
       this.avatarAsset,
@@ -114,7 +115,8 @@ class RoleOption {
       this.unreadCount = 0,
       this.archived = false})
       : _speakingStyle = speakingStyle,
-        _background = background;
+        _background = background,
+        _identityEditable = identityEditable;
 
   final String id;
   final String name;
@@ -123,6 +125,8 @@ class RoleOption {
   final String? roleType;
   final String? personality;
   final String? _speakingStyle, _background;
+  final bool? _identityEditable;
+  bool get identityEditable => _identityEditable ?? !builtin;
   String get speakingStyle => _speakingStyle ?? personality ?? '温柔体贴';
   String get background => _background ?? prompt;
   List<String> get personalityTags => traits;
@@ -161,6 +165,7 @@ class RoleOption {
       personality: json['personality'] as String?,
       speakingStyle: json['speaking_style'] as String?,
       background: json['background'] as String?,
+      identityEditable: json['identity_editable'] as bool?,
       prompt: json['prompt'] as String? ?? '',
       avatarData: json['avatar_data'] as String?,
       avatarAsset: _avatarAsset(json['avatar_asset'] as String?),

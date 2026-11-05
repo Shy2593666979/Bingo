@@ -267,6 +267,29 @@ void main() {
     expect(gateway.savedBackground, '住在海边，喜欢读书');
   });
 
+  testWidgets(
+      'community copy keeps its voice when the source is not a default companion',
+      (tester) async {
+    final gateway = _RoleGateway();
+    const role = RoleOption(
+        id: 'community-copy',
+        name: '老雷',
+        builtin: false,
+        roleType: '董事长',
+        background: '一位虚构的董事长。',
+        speakingStyle: '幽默风趣',
+        voiceSourceId: 'hidden-community-source');
+    await tester.pumpWidget(MaterialApp(
+        home:
+            RoleEditorPage(gateway: gateway, roles: const [role], role: role)));
+    expect(find.text('当前音色：老雷'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, '保存修改'));
+    await tester.pumpAndSettle();
+    expect(gateway.savedName, '老雷');
+    expect(gateway.savedVoice, 'community-copy');
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('built-in partners can edit personality but not shared identity',
       (tester) async {
     final gateway = _RoleGateway();

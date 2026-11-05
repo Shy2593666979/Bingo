@@ -35,7 +35,7 @@ class _RoleEditorPageState extends State<RoleEditorPage>
   late final TextEditingController _speakingStyle;
   late final TextEditingController _description;
   late final TextEditingController _roleType;
-  bool get _builtin => widget.role?.builtin ?? false;
+  bool get _builtin => widget.role != null && !widget.role!.identityEditable;
   static const _personalities = [
     '温柔体贴',
     '理性严谨',
@@ -76,6 +76,11 @@ class _RoleEditorPageState extends State<RoleEditorPage>
     _voiceId = _builtin
         ? widget.role!.id
         : widget.role?.voiceSourceId ?? widget.roles.firstOrNull?.id;
+    if (!_builtin &&
+        widget.role?.hasVoice == true &&
+        !widget.roles.any((role) => role.id == _voiceId)) {
+      _voiceId = widget.role!.id;
+    }
     _cloned = widget.role?.hasClonedVoice ?? false;
   }
 
@@ -725,7 +730,7 @@ class _RoleEditorPageState extends State<RoleEditorPage>
                                                 padding:
                                                     EdgeInsets.only(top: 10),
                                                 child: Text(
-                                                    '说话风格仅对你生效，官方搭子的其他人物资料保持一致。',
+                                                    '说话风格仅对你生效，共享搭子的其他人物资料保持一致。',
                                                     style: TextStyle(
                                                         fontSize: 11,
                                                         color: BingoPalette
