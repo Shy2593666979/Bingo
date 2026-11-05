@@ -5,7 +5,7 @@ import json
 
 def character_context(role) -> str:
     background = role.background if role.background is not None else role.prompt
-    relationship = role.name if role.owner_id is None else role.role_type
+    relationship = role.relationship
     return (
         f"人物名称：{role.nickname}\n"
         f"人物关系：{relationship or '陪伴伙伴，没有固定的角色身份'}\n"

@@ -119,7 +119,7 @@ def welcome_prompt(user, role, members, preference=None):
         "用户": {"昵称": user.username, "性别": user.gender, "年龄": age},
         "你": {
             "名字": role.nickname,
-            "关系": role.name if role.owner_id is None else role.role_type or "陪伴伙伴",
+            "关系": role.relationship or "陪伴伙伴",
             "人设": role.context_prompt,
             "说话风格": speaking_style_for(role, user.personality, preference),
             "性格标签": json.loads(role.traits_json),

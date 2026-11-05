@@ -142,17 +142,5 @@
     "channels": 1,
     "codec": "AAC-LC",
     "bitrate": 96000
-  },
-  {
-    "code": "chairman",
-    "duration_seconds": 15.12,
-    "source_bytes": 725804,
-    "output_bytes": 147184,
-    "output_sha256": "4ac4f3d482e825da6fa6fb70d5c5799ad8ac213954aacd07471c746d9d530c5b",
-    "pcm_correlation": 0.999828,
-    "sample_rate": 24000,
-    "channels": 1,
-    "codec": "AAC-LC",
-    "bitrate": 96000
   }
 ]

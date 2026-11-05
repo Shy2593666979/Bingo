@@ -21,7 +21,7 @@ from bingo.db.models import (
 from bingo.db.repositories import ConversationRepository, RoleRepository
 from bingo.db.time import beijing_now
 from bingo.roles import role_id
-from bingo.roles.catalog import default_personality
+from bingo.roles.catalog import BUILTIN_NICKNAMES, default_personality
 from bingo.roles.persona import speaking_style_for
 from bingo.schemas.chat import ConversationResponse
 from bingo.schemas.roles import ClonePayload, RolePayload
@@ -40,14 +40,12 @@ def role_response(
         "name": role.visible_name,
         "nickname": role.nickname,
         "character_name": role.nickname,
-        "relationship": role.name if role.owner_id is None else role.role_type or "",
+        "relationship": role.relationship,
         "speaking_style": speaking_style or speaking_style_for(role, personality),
         "background": role.background if role.background is not None else role.prompt,
         "personality_tags": json.loads(role.traits_json),
-        "role_type": role.name
-        if role.owner_id is None
-        else role.role_type
-        if role.role_type is not None
+        "role_type": role.relationship
+        if role.role_type is not None or role.code in BUILTIN_NICKNAMES
         else "自定义角色",
         "personality": personality,
         "description": role.description,
@@ -55,7 +53,8 @@ def role_response(
         "prompt": role.prompt,
         "avatar_data": role.avatar_data,
         "avatar_asset": role.avatar,
-        "builtin": role.owner_id is None,
+        "builtin": role.owner_id is None and role.code in BUILTIN_NICKNAMES,
+        "identity_editable": role.owner_id is not None,
         "enabled": role.enabled,
         "has_voice": bool(role.voice),
         "has_cloned_voice": bool(role.owned_voice),
@@ -82,7 +81,7 @@ async def apply_payload(session, user, role: Role, payload: RolePayload) -> None
     available = (
         await session.exec(
             select(Role).where(
-                Role.deleted.is_(False), Role.owner_id.is_(None) | (Role.owner_id == user.id)
+                Role.deleted.is_(False), RoleRepository.scope(user.id)
             )
         )
     ).all()

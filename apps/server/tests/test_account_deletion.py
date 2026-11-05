@@ -25,6 +25,7 @@ from bingo.db.models import (
 from bingo.db.time import beijing_now
 from bingo.main import create_app
 from bingo.roles import BUILTIN_ROLES
+from bingo.roles.community_catalog import COMMUNITY_CHARACTERS
 from bingo.services import account_deletion
 from tests.api_support import api_payload
 
@@ -252,7 +253,7 @@ def test_deletes_own_data_revokes_sessions_and_preserves_other_accounts(
         )
         assert database.execute("SELECT COUNT(*) FROM roles WHERE owner_id IS NULL").fetchone()[
             0
-        ] == len(BUILTIN_ROLES)
+        ] == len(BUILTIN_ROLES) + len(COMMUNITY_CHARACTERS)
         assert database.execute("SELECT content FROM messages").fetchall() == [("keep",)]
         cleanups = database.execute(
             "SELECT user_id, role_id, kind, sample, sample_token FROM voice_jobs"

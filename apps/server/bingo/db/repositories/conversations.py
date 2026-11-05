@@ -10,6 +10,7 @@ from bingo.db.models import (
     RolePreference,
     User,
 )
+from bingo.roles.catalog import BUILTIN_NICKNAMES
 from bingo.roles.persona import speaking_style_for
 from bingo.services.exceptions import ServiceError
 
@@ -71,7 +72,9 @@ class ConversationRepository:
         return user.model_copy(
             update={
                 "role_id": role.id,
-                "role": role.visible_name,
+                "role": role.relationship
+                if role.owner_id is None and role.code not in BUILTIN_NICKNAMES
+                else role.visible_name,
                 "assistant_name": role.nickname,
                 "personality": speaking_style_for(role, user.personality, preference),
             }

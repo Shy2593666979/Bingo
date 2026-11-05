@@ -136,7 +136,7 @@ async def publish(session, user: User, payload: ShareCreate):
         "personality_tags": role_info["personality_tags"],
         "relationship": role_info["relationship"],
         "description": role.description,
-        "role_type": role.name if role.owner_id is None else role.role_type,
+        "role_type": role.relationship,
         "personality": role_info["personality"] or "温柔体贴",
         "categories": json.loads(role.categories_json),
         "traits": json.loads(role.traits_json),
@@ -280,7 +280,9 @@ async def install(session, user, identifier):
         ).all()
     )
     builtin_roles = (
-        await session.exec(select(Role).where(Role.owner_id.is_(None)))
+        await session.exec(select(Role).where(
+            Role.owner_id.is_(None), RoleRepository.scope(user.id)
+        ))
     ).all()
     names.update(value for role in builtin_roles for value in (role.name, role.nickname))
     name = snapshot["name"]

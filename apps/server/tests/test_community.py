@@ -15,6 +15,7 @@ from bingo.db.models.community import (
     CommunityReport,
 )
 from bingo.main import create_app
+from bingo.roles.community_catalog import community_share_id
 from tests.api_support import api_payload
 
 PREFIX = "/api/v1"
@@ -184,17 +185,17 @@ def test_home_recommendations_filter_before_pagination_and_advance_after_install
         return api_payload(response)
 
     first = recommended()
-    assert first["total"] == 3
+    assert first["total"] == 4
     assert first["items"][0]["id"] == shares[0]["id"]
     assert first["next_offset"] == 1
     copied = api_payload(client.post(path + f"/{shares[0]['id']}/install", headers=bob))
     assert copied["id"] != shares[0]["id"]
     second = recommended()
-    assert second["total"] == 2
+    assert second["total"] == 3
     assert second["items"][0]["id"] == shares[2]["id"]
     # Deleted copies remain in install history and are not reintroduced as new.
     client.delete(PREFIX + f"/roles/{copied['id']}", headers=bob)
-    assert recommended()["total"] == 2
+    assert recommended()["total"] == 3
 
 
 def publish(client, headers, role, key="request-key-0001", introduction="一起看星星的搭子"):
@@ -413,7 +414,16 @@ def test_permissions_idempotency_favorites_reports_and_pagination(community):
         )
     )
     assert len({item["id"] for item in first["items"] + second["items"]}) == 4
-    assert second["next_offset"] is None
+    assert second["next_offset"] == 4
+    third = api_payload(
+        client.get(
+            PREFIX + "/community/characters",
+            headers=bob,
+            params={"limit": 2, "offset": second["next_offset"]},
+        )
+    )
+    assert [item["id"] for item in third["items"]] == [community_share_id("chairman")]
+    assert third["next_offset"] is None
     assert (
         api_payload(
             client.get(PREFIX + "/community/characters", headers=bob, params={"q": "100%"})

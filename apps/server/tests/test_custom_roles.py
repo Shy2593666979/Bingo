@@ -73,7 +73,6 @@ def test_builtin_default_personalities_apply_to_chat_context(client):
         "学长": "沉稳克制",
         "树洞搭子": "温柔体贴",
         "运动搭子": "积极活泼",
-        "董事长": "幽默风趣",
     }
     roles = api_payload(client.get("/api/v1/roles"))
     user_id = api_payload(client.get("/api/v1/me"))["id"]
@@ -106,7 +105,6 @@ def test_builtin_nicknames_preserve_role_identity(client):
         "学长": "景川",
         "树洞搭子": "木木",
         "运动搭子": "乐乐",
-        "董事长": "老雷",
     }
     roles = api_payload(client.get("/api/v1/roles"))
     assert [role["name"] for role in roles] == [
@@ -122,7 +120,6 @@ def test_builtin_nicknames_preserve_role_identity(client):
         "学长",
         "树洞搭子",
         "运动搭子",
-        "董事长",
     ]
     assert {role["name"]: role["nickname"] for role in roles} == expected
     for role in roles:

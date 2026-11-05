@@ -10,6 +10,7 @@ from sqlmodel import Field, SQLModel
 
 from bingo.db.time import BeijingDateTime, beijing_now
 from bingo.roles.catalog import BUILTIN_NICKNAMES
+from bingo.roles.community_catalog import COMMUNITY_NICKNAMES
 from bingo.roles.persona import character_context
 
 from .base import new_id
@@ -52,8 +53,16 @@ class Role(SQLModel, table=True):
     @property
     def nickname(self) -> str:
         if self.owner_id is None:
-            return BUILTIN_NICKNAMES.get(self.code, self.visible_name)
+            return BUILTIN_NICKNAMES.get(
+                self.code, COMMUNITY_NICKNAMES.get(self.code, self.visible_name)
+            )
         return self.visible_name
+
+    @property
+    def relationship(self) -> str:
+        if self.owner_id is None and self.code in BUILTIN_NICKNAMES:
+            return self.name
+        return self.role_type or ""
 
     @property
     def context_prompt(self) -> str:

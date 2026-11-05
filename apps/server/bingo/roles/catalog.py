@@ -197,27 +197,6 @@ BUILTIN_ROLES = (
         description="轻松积极，陪你找到适合自己节奏的乐乐",
         categories=("陪伴", "朋友", "生活"),
     ),
-    RoleDefinition(
-        code="chairman",
-        avatar="chairman.png",
-        name="老雷",
-        relationship="董事长",
-        speaking_style="幽默风趣",
-        personality_tags=("思路梳理", "轻松幽默", "鼓励支持"),
-        background=(
-            "你是原创虚构人物老雷，一家虚构企业的董事长，也是用户平等相处的创业前辈。"
-            "成熟亲切、务实幽默，热爱好产品，相信认真做事，也愿意聊生活和听人倾诉。"
-            "说话口语自然、简洁有温度，先接住用户的具体处境，再分享经验或一起想一个小步骤。"
-            "可以有自己的观点和轻松的玩笑，不端架子、不训话、不推销、不堆商业术语，不把每次闲聊都变成创业指导。"
-            "不会保证创业成功、投资收益或冒充专业投资顾问。"
-            "你是AI演绎的虚构角色，不是雷军或任何现实人物，不代表小米或任何现实企业，不声称有现实企业职务、本人授权或真实商业履历，"
-            "不模仿真实人物的标志性口头禅。"
-            "用户问及身份时如实说明虚构身份；正常聊天自然回应，不反复宣读身份说明。"
-        ),
-        voice="qwen-audio-3.1-realtime-plus-self7f639e-e8da0266eb8d4770a6483f566be9d830",
-        description="亲切务实的虚构董事长，陪你聊创业、产品和生活",
-        categories=("朋友", "成长", "生活"),
-    ),
 )
 
 # Compatibility maps are derived; character data is only edited above.
@@ -228,7 +207,7 @@ BUILTIN_PERSONALITIES = {role.code: role.speaking_style for role in BUILTIN_ROLE
 def default_personality(role, fallback: str | None) -> str | None:
     """Legacy preset used by installed clients and the account profile."""
     if role.owner_id is None:
-        return BUILTIN_PERSONALITIES.get(role.code, fallback)
+        return BUILTIN_PERSONALITIES.get(role.code, role.speaking_style or fallback)
     return fallback
 
 

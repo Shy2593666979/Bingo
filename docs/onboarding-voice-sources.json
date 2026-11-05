@@ -82,12 +82,5 @@
     "text_sha256": "f64d0ec32a2737e1cc824ef8aa3789dbc00bebeb709c8a6a3ec20395105e9cc5",
     "wav_sha256": "b58c7a4c398be26bb1e8136d8134a7a2ed1f0195c8cab8f35fe01824e9cb54d1",
     "seconds": 9.44
-  },
-  {
-    "code": "chairman",
-    "voice_fingerprint": "0db5d7164ca9fce1a4e3533d320cc3e2bbff8a9f842160c986ca63f99905707e",
-    "text_sha256": "b9af17f02d2369ce161e5d647353274a28f81eebcc0cb85ad183ac56f19dfdda",
-    "wav_sha256": "7618562e50f9d3242aa0826cc58a97e9fd59fcb40631d967ae1d344bc197d97a",
-    "seconds": 15.12
   }
 ]

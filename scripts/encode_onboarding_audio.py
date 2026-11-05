@@ -40,8 +40,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--ffmpeg", required=True)
     args = parser.parse_args()
-    records = [encode(args.ffmpeg, source) for source in sorted(DIRECTORY.glob("*.wav"))]
     introductions = json.loads((DIRECTORY / "roles.json").read_text(encoding="utf-8"))
+    records = [encode(args.ffmpeg, DIRECTORY / f"{row['code']}.wav") for row in introductions]
     assert {row["code"] for row in records} == {row["code"] for row in introductions}
     (ROOT / "docs/mobile-audio-optimization.json").write_text(
         json.dumps(records, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

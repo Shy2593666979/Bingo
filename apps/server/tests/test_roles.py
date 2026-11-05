@@ -132,7 +132,7 @@ async def test_existing_role_table_is_upgraded_and_seeded_with_voices(tmp_path: 
         async with database.session_factory() as session:
             roles = await RoleRepository(session).list_enabled()
             voices = {role.code: role.voice for role in roles}
-            assert len(roles) == len(BUILTIN_ROLES) == 13
+            assert len(roles) == len(BUILTIN_ROLES) == 12
             added = {
                 role.code: role
                 for role in roles
@@ -165,6 +165,7 @@ async def test_existing_role_table_is_upgraded_and_seeded_with_voices(tmp_path: 
 async def test_chairman_is_seeded_once_with_portrait_and_independent_voice(tmp_path):
     import base64
 
+    from bingo.roles.community_catalog import COMMUNITY_CHARACTERS
     from bingo.services.roles import role_response
 
     database = Database(f"sqlite+aiosqlite:///{tmp_path / 'chairman.db'}")
@@ -173,20 +174,24 @@ async def test_chairman_is_seeded_once_with_portrait_and_independent_voice(tmp_p
         await database.initialize()
         async with database.session_factory() as session:
             roles = await RoleRepository(session).list_enabled()
-            chairmen = [role for role in roles if role.code == "chairman"]
-            assert len(chairmen) == 1
-            role = chairmen[0]
+            from bingo.db.models import Role
+
+            assert all(role.code != "chairman" for role in roles)
+            role = await session.get(Role, role_id("chairman"))
             assert role.id == role_id("chairman")
-            assert role.nickname == "老雷"
-            assert role.name == "董事长"
+            character = COMMUNITY_CHARACTERS[0].character
+            assert role.nickname == character.name
+            assert role.relationship == character.relationship
             assert role.owner_id is None
             assert role.voice.startswith("qwen-audio-3.1-realtime-plus-self7f639e-")
-            assert "虚构" in role.description and "不是雷军或任何现实人物" in role.prompt
+            assert role.description == character.description
+            assert role.prompt == character.background
             assert role.opening_line == ""
             response = role_response(role)
-            assert response["builtin"] and response["has_voice"]
-            assert response["role_type"] == "董事长"
-            assert response["nickname"] == "老雷"
+            assert not response["builtin"] and response["has_voice"]
+            assert not response["identity_editable"]
+            assert response["role_type"] == character.relationship
+            assert response["nickname"] == character.name
             header, encoded = response["avatar_data"].split(",", 1)
             assert header == "data:image/webp;base64"
             assert base64.b64decode(encoded).startswith(b"RIFF")

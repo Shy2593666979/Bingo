@@ -81,7 +81,7 @@ def test_seven_fields_round_trip_and_feed_chat_context(client):
 
 
 def test_builtin_style_is_private_and_legacy_updates_still_work(client):
-    role = next(r for r in api_payload(client.get("/api/v1/roles")) if r["nickname"] == "老雷")
+    role = next(r for r in api_payload(client.get("/api/v1/roles")) if r["nickname"] == "小田老师")
     changed = api_payload(
         client.put(
             f"/api/v1/roles/{role['id']}",
@@ -95,7 +95,7 @@ def test_builtin_style_is_private_and_legacy_updates_still_work(client):
         )
     )
     assert changed["speaking_style"] == "简洁直白，像朋友一样交流。"
-    assert changed["character_name"] == "老雷" and changed["relationship"] == "董事长"
+    assert changed["character_name"] == "小田老师" and changed["relationship"] == "老师"
     assert changed["background"] == role["background"]
     assert changed["personality_tags"] == role["personality_tags"]
     other = api_payload(
@@ -115,12 +115,12 @@ def test_builtin_style_is_private_and_legacy_updates_still_work(client):
             },
         )
     )
-    assert next(r for r in other_roles if r["id"] == role["id"])["speaking_style"] == "幽默风趣"
+    assert next(r for r in other_roles if r["id"] == role["id"])["speaking_style"] == "理性严谨"
     legacy = api_payload(
         client.put(
             f"/api/v1/roles/{role['id']}",
             json={
-                "name": "董事长",
+                "name": "老师",
                 "prompt": "旧客户端兼容",
                 "personality": "沉稳克制",
             },

@@ -15,6 +15,7 @@ from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bingo.db.models import MorningGreeting, Role, User
+from bingo.db.seeds.community import seed_community_characters
 from bingo.db.time import BEIJING_TIMEZONE
 from bingo.roles import BUILTIN_ROLES, role_id
 from bingo.roles.catalog import BUILTIN_NICKNAMES, BUILTIN_RELATION_ALIASES
@@ -51,6 +52,7 @@ class Database:
             await connection.run_sync(_upgrade_group_v2)
             await connection.run_sync(_upgrade_morning_greetings)
             await connection.run_sync(_upgrade_device_actions)
+            await connection.run_sync(seed_community_characters)
 
     async def dispose(self) -> None:
         await self.engine.dispose()
