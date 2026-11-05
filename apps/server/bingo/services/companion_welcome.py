@@ -10,7 +10,7 @@ from datetime import date, timedelta
 from sqlmodel import select, update
 
 from bingo.agent.model_client import ModelMessage
-from bingo.db.models import Conversation, Message, Role, User
+from bingo.db.models import Conversation, Message, Role, RolePreference, User
 from bingo.db.models.groups import MAX_GROUP_AI_MEMBERS, ChatGroup, GroupMember, GroupMessage
 from bingo.db.models.welcome import WelcomeJob
 from bingo.db.repositories import ConversationRepository
@@ -50,34 +50,53 @@ async def create_welcome_chats(user, session, roles):
                 )
             )
     grouped = {role.id for role in roles[:MAX_GROUP_AI_MEMBERS]} if group else set()
-    repository = ConversationRepository(session, user.id)
     for role in roles:
-        conversation = await repository.get_or_create(None, role.id)
-        if (
-            await session.exec(
-                select(Message.id).where(Message.conversation_id == conversation.id).limit(1)
+        await enqueue_role_welcome(
+            user, session, role, group_id=group.id if role.id in grouped else None
+        )
+
+
+async def enqueue_role_welcome(user, session, role, *, group_id=None):
+    """Join the caller's transaction; generate once after a completed addition."""
+    if role.deleted or not role.enabled:
+        return
+    await session.flush()
+    existing = (
+        await session.exec(
+            select(WelcomeJob.id).where(
+                WelcomeJob.user_id == user.id, WelcomeJob.role_id == role.id
             )
-        ).first() is not None:
-            continue
-        conversation.title = f"和{role.nickname}的聊天"
-        job = WelcomeJob(
-            user_id=user.id,
-            role_id=role.id,
-            conversation_id=conversation.id,
-            message_id="",
-            group_id=group.id if role.id in grouped else None,
         )
-        message = await repository.add_message(
-            conversation.id,
-            "assistant",
-            "",
-            assistant_role=role.visible_name,
-            role_id=role.id,
-            run_id=f"welcome-{job.id}",
-            status="streaming",
+    ).first()
+    if existing is not None:
+        return
+    repository = ConversationRepository(session, user.id)
+    conversation = await repository.get_or_create(None, role.id)
+    if (
+        await session.exec(
+            select(Message.id).where(Message.conversation_id == conversation.id).limit(1)
         )
-        job.message_id = message.id
-        session.add(job)
+    ).first() is not None:
+        return
+    conversation.title = f"和{role.nickname}的聊天"
+    job = WelcomeJob(
+        user_id=user.id,
+        role_id=role.id,
+        conversation_id=conversation.id,
+        message_id="",
+        group_id=group_id,
+    )
+    message = await repository.add_message(
+        conversation.id,
+        "assistant",
+        "",
+        assistant_role=role.visible_name,
+        role_id=role.id,
+        run_id=f"welcome-{job.id}",
+        status="streaming",
+    )
+    job.message_id = message.id
+    session.add(job)
 
 
 async def welcome_status(session, user_id):
@@ -90,7 +109,7 @@ async def welcome_status(session, user_id):
     }
 
 
-def welcome_prompt(user, role, members):
+def welcome_prompt(user, role, members, preference=None):
     age = None
     if user.birthday:
         birth = date.fromisoformat(user.birthday)
@@ -102,7 +121,7 @@ def welcome_prompt(user, role, members):
             "名字": role.nickname,
             "关系": role.name if role.owner_id is None else role.role_type or "陪伴伙伴",
             "人设": role.context_prompt,
-            "说话风格": speaking_style_for(role, user.personality),
+            "说话风格": speaking_style_for(role, user.personality, preference),
             "性格标签": json.loads(role.traits_json),
         },
         "群内搭子": members,
@@ -246,7 +265,8 @@ class CompanionWelcomeService:
                             )
                         ).all()
                     ]
-                prompt = welcome_prompt(user, role, members)
+                preference = await session.get(RolePreference, (user.id, role.id))
+                prompt = welcome_prompt(user, role, members, preference)
                 cached = job.result_json
             result = (
                 json.loads(cached)
@@ -361,8 +381,11 @@ class CompanionWelcomeService:
 
 async def retry_welcome(session, user_id):
     """Requeue only failed greetings owned by this user."""
-    jobs = (await session.exec(select(WelcomeJob).where(
-        WelcomeJob.user_id == user_id, WelcomeJob.status == "failed"))).all()
+    jobs = (
+        await session.exec(
+            select(WelcomeJob).where(WelcomeJob.user_id == user_id, WelcomeJob.status == "failed")
+        )
+    ).all()
     for job in jobs:
         message = await session.get(Message, job.message_id)
         if message and not message.content:

@@ -27,7 +27,7 @@ class RolePayload(BaseModel):
     )
     personality: str | None = Field(default=None, max_length=30)
     description: str | None = Field(default=None, max_length=200)
-    opening_line: str | None = Field(default=None, max_length=300)
+    opening_line: str | None = Field(default=None, max_length=300, deprecated=True)
 
     @field_validator("description", "opening_line")
     @classmethod

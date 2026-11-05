@@ -15,7 +15,6 @@ class RoleDefinition:
     background: str
     voice: str
     description: str = ""
-    opening_line: str = ""
     categories: tuple[str, ...] = ("陪伴", "朋友")
 
 
@@ -34,7 +33,6 @@ BUILTIN_ROLES = (
         background="以女朋友身份陪伴用户。",
         voice="longanqian_v3.1",
         description="亲密、体贴的女性伴侣",
-        opening_line="",
         categories=("陪伴", "恋人", "治愈"),
     ),
     RoleDefinition(
@@ -47,7 +45,6 @@ BUILTIN_ROLES = (
         background="以男朋友身份陪伴用户。",
         voice="qwen-audio-3.1-realtime-plus-selfvoice2-d25f4b945c284a3385381230a2bb2052",
         description="亲密、可靠的男性伴侣",
-        opening_line="",
         categories=("陪伴", "恋人", "治愈"),
     ),
     RoleDefinition(
@@ -60,7 +57,6 @@ BUILTIN_ROLES = (
         background="以同事身份协助用户。",
         voice="qwen-audio-3.1-realtime-plus-colleague-e15e8a990b8b4c5a93d8398f4940a2bf",
         description="可靠且有边界感的工作伙伴",
-        opening_line="",
         categories=("朋友", "生活", "成长"),
     ),
     RoleDefinition(
@@ -73,7 +69,6 @@ BUILTIN_ROLES = (
         background="以老师身份清晰、耐心地指导用户。",
         voice="qwen-audio-3.1-realtime-plus-teacher-2cb84548a0b8422da7257b1ce45dee5f",
         description="耐心讲解并帮助用户成长",
-        opening_line="",
         categories=("陪伴", "成长"),
     ),
     RoleDefinition(
@@ -90,7 +85,6 @@ BUILTIN_ROLES = (
         ),
         voice="qwen-audio-3.1-realtime-plus-parent-f2ede4bdbe904877857b6b3bb9d69c81",
         description="成熟亲切，愿意陪你聊生活、分享经验的陈叔",
-        opening_line="",
         categories=("陪伴", "生活", "治愈"),
     ),
     RoleDefinition(
@@ -103,7 +97,6 @@ BUILTIN_ROLES = (
         background="以弟弟身份自然交流。活泼亲近，有自己的小想法，喜欢分享日常和有趣的事。围绕兄弟姐妹的相处方式互动，不把自己说成用户的儿子或女儿。",
         voice="qwen-audio-3.1-realtime-plus-child-b2aef779e6c84042b1697a93d5182e81",
         description="活泼亲近，喜欢分享日常和趣事的弟弟星星",
-        opening_line="",
         categories=("陪伴", "朋友", "成长"),
     ),
     RoleDefinition(
@@ -121,7 +114,6 @@ BUILTIN_ROLES = (
         ),
         voice="longanwen_v3.1",
         description="有主见、懂分寸，陪你分享生活的小晴",
-        opening_line="来啦！今天是有好消息，还是想找个人一起吐槽？我都认真听。",
         categories=("陪伴", "朋友", "生活"),
     ),
     RoleDefinition(
@@ -138,7 +130,6 @@ BUILTIN_ROLES = (
         ),
         voice="longjielidou_v3.1",
         description="松弛幽默，遇事愿意一起想办法的阿野",
-        opening_line="我在呢。今天想随便聊两句，还是有件事想一起琢磨？",
         categories=("朋友", "生活", "陪伴"),
     ),
     RoleDefinition(
@@ -155,7 +146,6 @@ BUILTIN_ROLES = (
         ),
         voice="loongstella_v3.1",
         description="思路清晰，陪你理顺学习与选择的知夏",
-        opening_line="你好呀，我是知夏。最近有哪件事让你有点拿不定主意？我们慢慢理。",
         categories=("陪伴", "成长"),
     ),
     RoleDefinition(
@@ -172,7 +162,6 @@ BUILTIN_ROLES = (
         ),
         voice="longanlang_v3.1",
         description="踏实从容，陪你把计划落地的景川",
-        opening_line="我是景川。想聊学习、工作，或者只是休息一会儿，都可以。",
         categories=("朋友", "成长"),
     ),
     RoleDefinition(
@@ -190,7 +179,6 @@ BUILTIN_ROLES = (
         ),
         voice="longzhe_v3.1",
         description="安静温和，陪你倾诉和聊日常的木木",
-        opening_line="我在。今天有什么想说的，哪怕只是一个很小的念头，也可以告诉我。",
         categories=("陪伴", "朋友", "治愈"),
     ),
     RoleDefinition(
@@ -207,7 +195,6 @@ BUILTIN_ROLES = (
         ),
         voice="longpaopao_v3.1",
         description="轻松积极，陪你找到适合自己节奏的乐乐",
-        opening_line="嗨，我是乐乐！今天精力怎么样？散个步、伸个懒腰，或者先歇会儿，都挺好。",
         categories=("陪伴", "朋友", "生活"),
     ),
     RoleDefinition(
@@ -229,7 +216,6 @@ BUILTIN_ROLES = (
         ),
         voice="qwen-audio-3.1-realtime-plus-self7f639e-e8da0266eb8d4770a6483f566be9d830",
         description="亲切务实的虚构董事长，陪你聊创业、产品和生活",
-        opening_line="你好，我是老雷。别被董事长这个称呼拘住，咱们就当朋友聊。最近在琢磨什么新想法，还是想说说生活里的事？",
         categories=("朋友", "成长", "生活"),
     ),
 )

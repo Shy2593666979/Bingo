@@ -25,6 +25,7 @@ from bingo.roles.catalog import default_personality
 from bingo.roles.persona import speaking_style_for
 from bingo.schemas.chat import ConversationResponse
 from bingo.schemas.roles import ClonePayload, RolePayload
+from bingo.services.companion_welcome import enqueue_role_welcome
 from bingo.services.context import BinaryAsset, ServiceContext
 from bingo.services.exceptions import ServiceError
 from bingo.services.voice_cloning import pcm_has_signal, pcm_wav
@@ -50,7 +51,7 @@ def role_response(
         else "自定义角色",
         "personality": personality,
         "description": role.description,
-        "opening_line": role.opening_line,
+        "opening_line": "",  # Legacy response key; greetings are generated as messages.
         "prompt": role.prompt,
         "avatar_data": role.avatar_data,
         "avatar_asset": role.avatar,
@@ -105,8 +106,6 @@ async def apply_payload(session, user, role: Role, payload: RolePayload) -> None
     role.description = (
         payload.description if payload.description is not None else background[:200]
     )
-    if payload.opening_line is not None:
-        role.opening_line = payload.opening_line
     role.background = background
     role.prompt = background  # Compatibility for older clients and community snapshots.
     if payload.speaking_style is not None:
@@ -232,6 +231,8 @@ async def create_role(payload: RolePayload, user: User, session: AsyncSession) -
     await apply_payload(session, user, role, payload)
     session.add(role)
     await save_personality(session, user, role, payload.personality, payload.speaking_style)
+    if role.enabled:
+        await enqueue_role_welcome(user, session, role)
     await session.commit()
     return await response_for_user(session, user, role)
 
@@ -253,11 +254,14 @@ async def update_role(
         await save_personality(session, user, role, payload.personality, payload.speaking_style)
         await session.commit()
         return await response_for_user(session, user, role)
+    was_draft = not role.enabled
     await apply_payload(session, user, role, payload)
     await save_personality(session, user, role, payload.personality, payload.speaking_style)
     users = (await session.exec(select(User).where(User.role_id == role.id))).all()
     for selected_user in users:
         selected_user.role = role.visible_name
+    if was_draft and role.enabled:
+        await enqueue_role_welcome(user, session, role)
     await session.commit()
     return await response_for_user(session, user, role)
 

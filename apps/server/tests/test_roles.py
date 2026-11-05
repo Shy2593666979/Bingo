@@ -142,7 +142,7 @@ async def test_existing_role_table_is_upgraded_and_seeded_with_voices(tmp_path: 
             assert len(added) == 6
             for code, role in added.items():
                 assert role.id == role_id(code)
-                assert role.opening_line
+                assert role.opening_line == ""
                 assert role.avatar == f"{code}.png"
                 assert role.voice not in {
                     voices["girlfriend"],
@@ -182,7 +182,7 @@ async def test_chairman_is_seeded_once_with_portrait_and_independent_voice(tmp_p
             assert role.owner_id is None
             assert role.voice.startswith("qwen-audio-3.1-realtime-plus-self7f639e-")
             assert "虚构" in role.description and "不是雷军或任何现实人物" in role.prompt
-            assert role.opening_line
+            assert role.opening_line == ""
             response = role_response(role)
             assert response["builtin"] and response["has_voice"]
             assert response["role_type"] == "董事长"

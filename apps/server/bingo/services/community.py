@@ -18,6 +18,7 @@ from bingo.db.models.community import (
 from bingo.db.repositories import RoleRepository
 from bingo.roles import role_id
 from bingo.schemas.community import ShareCreate
+from bingo.services.companion_welcome import enqueue_role_welcome
 from bingo.services.context import BinaryAsset
 from bingo.services.exceptions import ServiceError
 from bingo.services.roles import response_for_user
@@ -135,7 +136,6 @@ async def publish(session, user: User, payload: ShareCreate):
         "personality_tags": role_info["personality_tags"],
         "relationship": role_info["relationship"],
         "description": role.description,
-        "opening_line": role.opening_line,
         "role_type": role.name if role.owner_id is None else role.role_type,
         "personality": role_info["personality"] or "温柔体贴",
         "categories": json.loads(role.categories_json),
@@ -299,7 +299,6 @@ async def install(session, user, identifier):
         background=snapshot.get("background", snapshot["prompt"]),
         speaking_style=snapshot.get("speaking_style", snapshot["personality"]),
         description=snapshot["description"],
-        opening_line=snapshot.get("opening_line", ""),
         prompt=snapshot["prompt"],
         avatar=snapshot.get("avatar_asset", "bingo_logo.png"),
         avatar_data=share.avatar_data,
@@ -333,6 +332,7 @@ async def install(session, user, identifier):
     else:
         session.add(CharacterInstall(user_id=user.id, share_id=share.id, role_id=role.id))
     try:
+        await enqueue_role_welcome(user, session, role)
         await session.commit()
     except IntegrityError:
         await session.rollback()

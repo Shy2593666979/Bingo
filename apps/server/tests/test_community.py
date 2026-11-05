@@ -39,7 +39,7 @@ def test_search_finds_another_users_shares_by_author_name(community):
     assert [row["id"] for row in result["items"]] == [first["id"]]
 
 
-def test_share_title_tags_and_opening_survive_copy_without_changing_traits(community):
+def test_share_preserves_character_fields_without_copying_a_manual_greeting(community):
     client, ((alice, _), (bob, _), _) = community
     role = api_payload(
         client.post(
@@ -58,7 +58,7 @@ def test_share_title_tags_and_opening_survive_copy_without_changing_traits(commu
         )
     )
     assert role["description"] == "你的日常陪伴"
-    assert role["opening_line"] == "很高兴遇见你，今天想聊点什么？"
+    assert role["opening_line"] == ""
     payload = {
         "role_id": role["id"],
         "introduction": "把这份温柔分享给你",
@@ -88,7 +88,8 @@ def test_share_title_tags_and_opening_survive_copy_without_changing_traits(commu
         client.post(PREFIX + f"/community/characters/{share['id']}/install", headers=bob)
     )
     assert copied["id"] != role["id"]
-    assert copied["opening_line"] == role["opening_line"]
+    assert copied["opening_line"] == ""
+    assert "opening_line" not in share["persona"]
     assert copied["description"] == role["description"]
     assert copied["traits"] == role["traits"]
     for field in ("relationship", "background", "speaking_style", "personality_tags"):

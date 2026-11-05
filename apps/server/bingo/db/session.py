@@ -546,7 +546,6 @@ def _seed_builtin_roles(connection) -> None:
                     id=role_id(role.code),
                     code=role.code,
                     enabled=True,
-                    opening_line=role.opening_line,
                     created_at=now,
                     **values,
                 )
