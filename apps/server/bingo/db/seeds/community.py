@@ -78,11 +78,9 @@ def seed_community_characters(connection):
         identifier = role_id(character.code)
         publication_id = community_share_id(character.code)
         portrait = files("bingo.roles").joinpath(
-            "avatars", Path(character.avatar).with_suffix(".webp").name
+            "avatars", Path(character.avatar).with_suffix(".png").name
         )
-        avatar_data = "data:image/webp;base64," + base64.b64encode(portrait.read_bytes()).decode(
-            "ascii"
-        )
+        avatar_data = base64.b64encode(portrait.read_bytes()).decode("ascii")
         existing = (
             connection.execute(select(Role.__table__).where(Role.code == character.code))
             .mappings()
@@ -123,6 +121,18 @@ def seed_community_characters(connection):
             connection.execute(
                 Role.__table__.update().where(Role.id == identifier).values(**values)
             )
+            # Repair copies installed while the seed used a data URL. Leave edited
+            # user portraits intact by matching the exact former source image.
+            old_portrait = existing["avatar_data"] or ""
+            if old_portrait.startswith("data:image/"):
+                connection.execute(
+                    Role.__table__.update()
+                    .where(
+                        Role.source_publication_id == publication_id,
+                        Role.avatar_data == old_portrait,
+                    )
+                    .values(avatar_data=avatar_data)
+                )
 
         snapshot = {
             "name": character.name,

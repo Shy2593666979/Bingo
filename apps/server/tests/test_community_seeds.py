@@ -1,3 +1,4 @@
+import base64
 import json
 from dataclasses import replace
 
@@ -19,6 +20,7 @@ from bingo.roles.community_catalog import (
     COMMUNITY_CHARACTERS,
     community_share_id,
 )
+from bingo.schemas.avatar import validate_avatar
 from bingo.services.roles import response_for_user
 from tests.api_support import api_payload
 from tests.test_added_companion_welcome import WelcomeModel, drain, register
@@ -53,6 +55,10 @@ def test_defaults_stay_twelve_and_chairman_is_only_a_community_publication(clien
     assert share["name"] == CHARACTER.name and share["author_name"] == "Bingo 社区"
     assert share["installed_role_id"] is None
     assert share["has_avatar"] and not share["is_mine"]
+    image = client.get(P + f"/community/characters/{share['id']}/avatar")
+    assert image.status_code == 200
+    assert image.headers["content-type"] == "image/png"
+    assert image.content.startswith(b"\x89PNG\r\n\x1a\n")
     assert client.delete(P + f"/community/characters/{share['id']}").status_code == 404
 
 
@@ -65,6 +71,8 @@ def test_seed_install_uses_the_copy_voice_and_personalized_welcome(client):
     assert copied["character_name"] == CHARACTER.name
     assert copied["relationship"] == CHARACTER.relationship
     assert copied["source_publication_id"] == share_id
+    assert validate_avatar(copied["avatar_data"]) == copied["avatar_data"]
+    assert base64.b64decode(copied["avatar_data"]).startswith(b"\x89PNG\r\n\x1a\n")
     assert copied["voice_source_id"] == role_id("chairman")
     assert api_payload(client.post(route))["id"] == copied["id"]
     drain(client)
@@ -96,6 +104,37 @@ def test_seed_install_uses_the_copy_voice_and_personalized_welcome(client):
             assert len(jobs) == 1
 
     client.portal.call(verify)
+
+
+def test_initialization_repairs_old_seed_portraits_without_replacing_user_edits(client):
+    register(client, "19900117209", "小林", "女")
+    copied = api_payload(
+        client.post(P + f"/community/characters/{community_share_id('chairman')}/install")
+    )
+    correct = copied["avatar_data"]
+    malformed = "data:image/png;base64," + correct
+
+    async def check():
+        database = client.app.state.database
+        async with database.session_factory() as session:
+            source = await session.get(Role, role_id("chairman"))
+            installed = await session.get(Role, copied["id"])
+            source.avatar_data = installed.avatar_data = malformed
+            session.add(source)
+            session.add(installed)
+            await session.commit()
+        await database.initialize()
+        async with database.session_factory() as session:
+            installed = await session.get(Role, copied["id"])
+            assert installed.avatar_data == correct
+            installed.avatar_data = "user-edited-portrait"
+            session.add(installed)
+            await session.commit()
+        await database.initialize()
+        async with database.session_factory() as session:
+            assert (await session.get(Role, copied["id"])).avatar_data == "user-edited-portrait"
+
+    client.portal.call(check)
 
 
 def test_reinitialization_preserves_moderation_dates_and_favorites(client):
