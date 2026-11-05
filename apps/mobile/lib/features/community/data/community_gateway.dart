@@ -25,6 +25,7 @@ class CommunityShare {
       this.categories = const [],
       this.roleType,
       this.personality,
+      this.speakingStyle,
       this.title = '',
       this.shareTags = const [],
       this.persona});
@@ -34,6 +35,7 @@ class CommunityShare {
   final DateTime createdAt;
   final bool hasAvatar, hasImages, mine, favorite, liked;
   final String? installedRoleId, parentShareId, roleType, personality;
+  final String? speakingStyle;
   final int installCount, favoriteCount, likeCount, commentCount, imageCount;
   int get popularityScore => likeCount + favoriteCount + commentCount;
   final List<String> traits, categories;
@@ -58,11 +60,14 @@ class CommunityShare {
       imageCount: json['image_count'] as int? ?? 0,
       installedRoleId: json['installed_role_id'] as String?,
       parentShareId: json['parent_share_id'] as String?,
-      roleType: json['role_type'] as String?,
+      roleType: json['relationship'] as String? ?? json['role_type'] as String?,
       personality: json['personality'] as String?,
+      speakingStyle:
+          json['speaking_style'] as String? ?? json['personality'] as String?,
       installCount: json['install_count'] as int? ?? 0,
       favoriteCount: json['favorite_count'] as int? ?? 0,
-      traits: List<String>.from(json['traits'] as List? ?? []),
+      traits: List<String>.from(
+          json['personality_tags'] as List? ?? json['traits'] as List? ?? []),
       categories: List<String>.from(json['categories'] as List? ?? []),
       persona: json['persona'] == null
           ? null

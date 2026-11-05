@@ -148,23 +148,39 @@ class _RoleDetailPageState extends State<RoleDetailPage> {
               Text(
                   role.description.isNotEmpty
                       ? role.description
-                      : role.prompt.isNotEmpty
-                          ? role.prompt
-                          : '和喜欢的搭子，分享生活里的每个瞬间。',
+                      : '和喜欢的搭子，分享生活里的每个瞬间。',
                   style: const TextStyle(
                       color: refMuted, fontSize: 13, height: 1.65))
             ])),
             _surface(
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const BingoSectionTitle('性格特点'),
+              const BingoSectionTitle('性格标签'),
               const SizedBox(height: 13),
               Wrap(
                   spacing: 7,
                   runSpacing: 7,
-                  children: role.traits
+                  children: role.personalityTags
                       .map((label) => TraitBadge(label, outlined: true))
                       .toList())
             ])),
+            _surface(
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const BingoSectionTitle('说话风格'),
+              const SizedBox(height: 12),
+              Text(role.speakingStyle,
+                  style: const TextStyle(
+                      color: refMuted, fontSize: 13, height: 1.65)),
+            ])),
+            if (role.background.isNotEmpty)
+              _surface(Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const BingoSectionTitle('人物背景'),
+                    const SizedBox(height: 12),
+                    Text(role.background,
+                        style: const TextStyle(
+                            color: refMuted, fontSize: 13, height: 1.65)),
+                  ])),
             _surface(
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const BingoSectionTitle('最近对话'),

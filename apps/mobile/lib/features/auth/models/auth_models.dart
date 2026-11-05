@@ -92,6 +92,8 @@ class RoleOption {
       this.nickname,
       this.roleType,
       this.personality,
+      String? speakingStyle,
+      String? background,
       this.prompt = '',
       this.avatarData,
       this.avatarAsset,
@@ -110,7 +112,9 @@ class RoleOption {
       this.pinned = false,
       this.muted = false,
       this.unreadCount = 0,
-      this.archived = false});
+      this.archived = false})
+      : _speakingStyle = speakingStyle,
+        _background = background;
 
   final String id;
   final String name;
@@ -118,6 +122,11 @@ class RoleOption {
   final String? nickname;
   final String? roleType;
   final String? personality;
+  final String? _speakingStyle, _background;
+  String get speakingStyle => _speakingStyle ?? personality ?? '温柔体贴';
+  String get background => _background ?? prompt;
+  List<String> get personalityTags => traits;
+  String get relationship => typeLabel;
   String get displayName => nickname ?? name;
   String get typeLabel => roleType ?? (builtin ? name : '自定义角色');
   String get cardDescription => [typeLabel.trim(), description.trim()]
@@ -146,9 +155,12 @@ class RoleOption {
       id: json['id'] as String,
       name: json['name'] as String,
       builtin: json['builtin'] as bool,
-      nickname: json['nickname'] as String?,
-      roleType: json['role_type'] as String?,
+      nickname:
+          json['character_name'] as String? ?? json['nickname'] as String?,
+      roleType: json['relationship'] as String? ?? json['role_type'] as String?,
       personality: json['personality'] as String?,
+      speakingStyle: json['speaking_style'] as String?,
+      background: json['background'] as String?,
       prompt: json['prompt'] as String? ?? '',
       avatarData: json['avatar_data'] as String?,
       avatarAsset: _avatarAsset(json['avatar_asset'] as String?),
@@ -168,7 +180,9 @@ class RoleOption {
       muted: json['muted'] as bool? ?? false,
       categories:
           List<String>.from(json['categories'] as List? ?? ['陪伴', '朋友']),
-      traits: List<String>.from(json['traits'] as List? ?? ['善于倾听', '陪伴聊天']),
+      traits: List<String>.from(json['personality_tags'] as List? ??
+          json['traits'] as List? ??
+          ['善于倾听', '陪伴聊天']),
       messageCount: json['message_count'] as int? ?? 0,
     );
     RoleAvatarStore.set(role.name, role.avatarData, asset: role.avatarAsset);

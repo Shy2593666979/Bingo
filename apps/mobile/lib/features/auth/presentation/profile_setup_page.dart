@@ -90,7 +90,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     final role = _role;
     final personality = _personality;
     if (role == null || personality == null) {
-      setState(() => _error = '请先选择助手角色和性格');
+      setState(() => _error = '请先选择人物关系和说话风格');
       return;
     }
     setState(() {
@@ -271,7 +271,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                     const SizedBox(height: 12),
                     _ProfileDropdown(
                       key: ValueKey('personality-$_personality'),
-                      label: '助手性格',
+                      label: '说话风格',
                       icon: const _PersonalityIcon(),
                       value: _personality,
                       options: options.personalities,

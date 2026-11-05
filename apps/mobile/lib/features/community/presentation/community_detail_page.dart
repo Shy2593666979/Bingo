@@ -251,7 +251,9 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
     final persona = share.persona?['description'] as String?;
     final description = (persona?.trim().isNotEmpty ?? false)
         ? persona!
-        : share.persona?['prompt'] as String? ?? share.introduction;
+        : share.persona?['background'] as String? ??
+            share.persona?['prompt'] as String? ??
+            share.introduction;
     return Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
@@ -372,9 +374,14 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
                               Text(share.roleType ?? '陪伴搭子',
                                   style: const TextStyle(
                                       fontSize: 12, color: BingoPalette.muted)),
-                              if (share.personality?.isNotEmpty ?? false) ...[
+                              if ((share.speakingStyle ?? share.personality)
+                                      ?.isNotEmpty ??
+                                  false) ...[
                                 const SizedBox(height: 5),
-                                Text(share.personality!,
+                                Text(
+                                    '说话风格：${share.speakingStyle ?? share.personality}',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                         fontSize: 11,
                                         color: BingoPalette.muted)),

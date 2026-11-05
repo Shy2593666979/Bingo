@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:bingo/core/config/app_config.dart';
+import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -25,7 +26,8 @@ void main() {
     actionBodies.clear();
     server.listen((request) async {
       requests.add('${request.method} ${request.uri.path}');
-      if (request.uri.path.contains('/device-actions/') ||
+      if (request.uri.path.endsWith('/roles') ||
+          request.uri.path.contains('/device-actions/') ||
           request.uri.path.endsWith('/auth/reset-password') ||
           request.uri.path.endsWith('/me/account')) {
         actionBodies.add(Map<String, dynamic>.from(
@@ -45,6 +47,64 @@ void main() {
   tearDown(() async {
     gateway.close();
     await server.close(force: true);
+  });
+
+  test(
+      'character fields use canonical request keys and parse canonical responses',
+      () async {
+    responseData = {
+      'code': 0,
+      'message': '操作成功',
+      'data': {
+        'id': 'new-role',
+        'name': '小李',
+        'builtin': false,
+        'character_name': '小李',
+        'relationship': '老朋友',
+        'speaking_style': '轻松口语，先倾听再接话。',
+        'background': '在海边开书店。',
+        'prompt': '旧字段内容',
+        'personality_tags': ['善于倾听', '幽默风趣'],
+        'voice_source_id': 'voice-role',
+      },
+    };
+    final role = await gateway.saveRole(
+        name: '小李',
+        prompt: '旧字段内容',
+        background: '在海边开书店。',
+        speakingStyle: '轻松口语，先倾听再接话。',
+        relationship: '老朋友',
+        personalityTags: ['善于倾听', '幽默风趣'],
+        voiceSourceId: 'voice-role');
+    expect(actionBodies.single['character_name'], '小李');
+    expect(actionBodies.single['relationship'], '老朋友');
+    expect(actionBodies.single['background'], '在海边开书店。');
+    expect(actionBodies.single['speaking_style'], '轻松口语，先倾听再接话。');
+    expect(actionBodies.single['personality_tags'], ['善于倾听', '幽默风趣']);
+    expect(role.relationship, '老朋友');
+    expect(role.background, '在海边开书店。');
+    expect(role.speakingStyle, '轻松口语，先倾听再接话。');
+    expect(role.personalityTags, ['善于倾听', '幽默风趣']);
+  });
+
+  test(
+      'installed clients and older role responses retain their original settings',
+      () {
+    final role = RoleOption.fromJson({
+      'id': 'legacy',
+      'name': '老师',
+      'nickname': '小田老师',
+      'builtin': true,
+      'role_type': '老师',
+      'personality': '理性严谨',
+      'prompt': '耐心讲解的老师。',
+      'traits': ['耐心讲解', '答疑解惑'],
+    });
+    expect(role.displayName, '小田老师');
+    expect(role.relationship, '老师');
+    expect(role.speakingStyle, '理性严谨');
+    expect(role.background, '耐心讲解的老师。');
+    expect(role.personalityTags, ['耐心讲解', '答疑解惑']);
   });
 
   test('account deletion sends explicit confirmation to authenticated API',

@@ -198,7 +198,7 @@ void main() {
     expect(find.text('个性化设置'), findsOneWidget);
     expect(find.text('让 Bingo 更懂你'), findsOneWidget);
     expect(find.text('助手角色'), findsOneWidget);
-    expect(find.text('助手性格'), findsOneWidget);
+    expect(find.text('说话风格'), findsOneWidget);
     expect(find.text('选择你希望 Bingo 扮演的角色'), findsNothing);
     expect(find.text('选择 Bingo 的性格特征，让对话更符合你的期待'), findsNothing);
 
