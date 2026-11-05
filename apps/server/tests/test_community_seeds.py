@@ -49,8 +49,8 @@ def test_defaults_stay_twelve_and_chairman_is_only_a_community_publication(clien
     assert all(role["id"] != role_id("chairman") for role in roles + candidates)
     assert client.post(P + f"/roles/{role_id('chairman')}/conversation").status_code == 404
     listing = api_payload(client.get(P + "/community/characters"))
-    assert listing["total"] == 1
-    share = listing["items"][0]
+    assert listing["total"] == len(COMMUNITY_CHARACTERS)
+    share = next(row for row in listing["items"] if row["id"] == community_share_id("chairman"))
     assert share["id"] == community_share_id("chairman")
     assert share["name"] == CHARACTER.name and share["author_name"] == "Bingo 社区"
     assert share["installed_role_id"] is None
@@ -62,30 +62,32 @@ def test_defaults_stay_twelve_and_chairman_is_only_a_community_publication(clien
     assert client.delete(P + f"/community/characters/{share['id']}").status_code == 404
 
 
-def test_seed_install_uses_the_copy_voice_and_personalized_welcome(client):
+@pytest.mark.parametrize("entry", COMMUNITY_CHARACTERS, ids=lambda entry: entry.character.code)
+def test_seed_install_uses_the_copy_voice_and_personalized_welcome(client, entry):
+    character = entry.character
     user_id = register(client, "19900117202", "小林", "女")
-    share_id = community_share_id("chairman")
+    share_id = community_share_id(character.code)
     route = P + f"/community/characters/{share_id}/install"
     copied = api_payload(client.post(route))
     assert not copied["builtin"]
-    assert copied["character_name"] == CHARACTER.name
-    assert copied["relationship"] == CHARACTER.relationship
+    assert copied["character_name"] == character.name
+    assert copied["relationship"] == character.relationship
     assert copied["source_publication_id"] == share_id
     assert validate_avatar(copied["avatar_data"]) == copied["avatar_data"]
     assert base64.b64decode(copied["avatar_data"]).startswith(b"\x89PNG\r\n\x1a\n")
-    assert copied["voice_source_id"] == role_id("chairman")
+    assert copied["voice_source_id"] == role_id(character.code)
     assert api_payload(client.post(route))["id"] == copied["id"]
     drain(client)
     opened = api_payload(client.post(P + f"/roles/{copied['id']}/conversation"))
     messages = api_payload(client.get(P + f"/conversations/{opened['id']}/messages"))
     assert len(messages) == 1
-    assert messages[0]["content"].startswith(f"小林，我是{CHARACTER.name}。")
+    assert messages[0]["content"].startswith(f"小林，我是{character.name}。")
     assert len(api_payload(client.get(P + "/roles"))) == 13
     assert len(api_payload(client.get(P + "/onboarding/companions"))) == 12
     edited = client.put(
         P + f"/roles/{copied['id']}",
         json={
-            "character_name": CHARACTER.name,
+            "character_name": character.name,
             "background": "虚构的董事长，喜欢聊产品和生活。",
             "speaking_style": "简洁自然，平等交流。",
             "voice_source_id": copied["id"],
@@ -95,7 +97,7 @@ def test_seed_install_uses_the_copy_voice_and_personalized_welcome(client):
 
     async def verify():
         async with client.app.state.database.session_factory() as session:
-            source = await session.get(Role, role_id("chairman"))
+            source = await session.get(Role, role_id(character.code))
             role = await session.get(Role, copied["id"])
             assert role.owner_id == user_id
             assert role.voice == source.voice
@@ -154,10 +156,11 @@ def test_reinitialization_preserves_moderation_dates_and_favorites(client):
         await database.initialize()
         async with database.session_factory() as session:
             shares = (await session.exec(select(CharacterShare))).all()
-            assert len(shares) == 1
-            assert shares[0].status == "withdrawn"
-            assert shares[0].created_at.isoformat() == original["created_at"]
-            assert shares[0].author_id == COMMUNITY_AUTHOR_ID
+            assert len(shares) == len(COMMUNITY_CHARACTERS)
+            publication = await session.get(CharacterShare, share_id)
+            assert publication.status == "withdrawn"
+            assert publication.created_at.isoformat() == original["created_at"]
+            assert publication.author_id == COMMUNITY_AUTHOR_ID
             assert len((await session.exec(select(User))).all()) == 1
             assert len((await session.exec(select(CharacterInstall))).all()) == 0
             assert len((await session.exec(select(CharacterFavorite))).all()) == 1

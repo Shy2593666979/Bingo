@@ -35,6 +35,7 @@ flutter:
     - assets/avatars_square/senior_sister.webp
     - assets/avatars_square/teacher.webp
     - assets/avatars_square/chairman.webp
+    - assets/avatars_square/executive.webp
     - assets/chat_bubbles/autumncat.webp
     - assets/chat_bubbles/bear.webp
     - assets/chat_bubbles/blossom.webp

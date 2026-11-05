@@ -19,6 +19,7 @@ void main() {
       '树洞搭子': 'confidant',
       '运动搭子': 'fitness',
       '董事长': 'chairman',
+      '公司高管': 'executive',
     };
     for (final entry in additions.entries) {
       final role = RoleOption.fromJson({

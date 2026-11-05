@@ -13,6 +13,7 @@ const transparentRoleAvatarCodes = {
   'confidant',
   'fitness',
   'chairman',
+  'executive',
 };
 
 bool isTransparentRoleAvatarAsset(String asset) =>
@@ -34,4 +35,5 @@ const roleAvatarFiles = <String>{
   'confidant.png',
   'fitness.png',
   'chairman.png',
+  'executive.png',
 };
