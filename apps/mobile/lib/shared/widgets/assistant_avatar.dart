@@ -56,10 +56,9 @@ class AssistantAvatar extends StatelessWidget {
               builder: (context, images, _) => AvatarFrame(
                   size: size,
                   cornerRadius: cornerRadius,
-                  color: images[role] == null &&
-                          isTransparentRoleAvatarAsset(
-                              RoleAvatarStore.assets[role] ??
-                                  assistantAvatarAsset(role))
+                  color: isTransparentRoleAvatarAsset(
+                          RoleAvatarStore.assets[role] ??
+                              assistantAvatarAsset(role))
                       ? Colors.transparent
                       : const Color(0xFFE8F8F2),
                   child: images[role] != null
