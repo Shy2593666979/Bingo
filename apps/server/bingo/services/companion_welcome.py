@@ -15,7 +15,7 @@ from bingo.db.models.groups import MAX_GROUP_AI_MEMBERS, ChatGroup, GroupMember,
 from bingo.db.models.welcome import WelcomeJob
 from bingo.db.repositories import ConversationRepository
 from bingo.db.time import beijing_now
-from bingo.roles.catalog import default_personality
+from bingo.roles.persona import speaking_style_for
 from bingo.utils.assistant_text import clean_assistant_text
 
 ACTIVE = ("queued", "running", "retry")
@@ -100,9 +100,10 @@ def welcome_prompt(user, role, members):
         "用户": {"昵称": user.username, "性别": user.gender, "年龄": age},
         "你": {
             "名字": role.nickname,
-            "关系": role.visible_name,
+            "关系": role.name if role.owner_id is None else role.role_type or "陪伴伙伴",
             "人设": role.context_prompt,
-            "性格": default_personality(role, user.personality),
+            "说话风格": speaking_style_for(role, user.personality),
+            "性格标签": json.loads(role.traits_json),
         },
         "群内搭子": members,
     }

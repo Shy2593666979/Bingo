@@ -403,10 +403,19 @@ def _upgrade_role_schema(connection) -> None:
         "deleted": "BOOLEAN NOT NULL DEFAULT 0",
         "categories_json": 'TEXT NOT NULL DEFAULT \'["陪伴", "朋友"]\'',
         "traits_json": 'TEXT NOT NULL DEFAULT \'["善于倾听", "陪伴聊天"]\'',
+        "background": "TEXT",
+        "speaking_style": "TEXT NOT NULL DEFAULT ''",
     }
     for column, definition in additions.items():
         if column not in role_columns:
             connection.exec_driver_sql(f"ALTER TABLE roles ADD COLUMN {column} {definition}")
+    # Preserve free-form legacy settings verbatim; never guess which sentences are biography.
+    connection.exec_driver_sql("UPDATE roles SET background = prompt WHERE background IS NULL")
+    preference_columns = {
+        row[1] for row in connection.exec_driver_sql("PRAGMA table_info(role_preferences)")
+    }
+    if "speaking_style" not in preference_columns:
+        connection.exec_driver_sql("ALTER TABLE role_preferences ADD COLUMN speaking_style TEXT")
 
 
 def _upgrade_role_conversations(connection) -> None:
@@ -493,7 +502,7 @@ def _upgrade_role_conversations(connection) -> None:
 def _sync_companion_relationship(connection) -> None:
     """Rename the default relationship while retaining ownership and history IDs."""
     for old_label, code in BUILTIN_RELATION_ALIASES.items():
-        relationship = next(role.name for role in BUILTIN_ROLES if role.code == code)
+        relationship = next(role.relationship for role in BUILTIN_ROLES if role.code == code)
         connection.execute(
             User.__table__.update().where(
                 User.role_id.in_(select(Role.id).where(Role.code == code, Role.owner_id.is_(None))),
@@ -513,9 +522,11 @@ def _seed_builtin_roles(connection) -> None:
             select(Role.id).where(Role.code == role.code)
         ).scalar_one_or_none()
         values = {
-            "name": role.name,
+            "name": role.relationship,
             "description": role.description,
-            "prompt": f"{role.prompt} 你的昵称是{BUILTIN_NICKNAMES[role.code]}。",
+            "prompt": role.background,
+            "background": role.background,
+            "speaking_style": role.speaking_style,
             "avatar": role.avatar,
             "voice": role.voice,
             "sort_order": sort_order,

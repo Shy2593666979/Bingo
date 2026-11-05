@@ -90,7 +90,7 @@ class GroupContext:
             ).all()
             system = (
                 f"你是 {role.nickname}，用户的 AI 伙伴。你正在群聊「{group.name}」中。\n"
-                f"人设：{role.context_prompt}\n性格：{info['personality']}\n"
+                f"人设：{role.context_prompt}\n说话风格：{info['speaking_style']}\n"
                 f"用户：{user.username or '用户'}；真人user ID={user.id}\n"
                 f"你的Role ID={role.id}；真人不属于Role，不能替真人发言。\n"
                 "群成员Role ID与名称："

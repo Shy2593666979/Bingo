@@ -130,6 +130,10 @@ async def publish(session, user: User, payload: ShareCreate):
     snapshot = {
         "name": role.nickname,
         "prompt": role.prompt,
+        "background": role_info["background"],
+        "speaking_style": role_info["speaking_style"],
+        "personality_tags": role_info["personality_tags"],
+        "relationship": role_info["relationship"],
         "description": role.description,
         "opening_line": role.opening_line,
         "role_type": role.name if role.owner_id is None else role.role_type,
@@ -141,7 +145,10 @@ async def publish(session, user: User, payload: ShareCreate):
     }
     summary = {
         key: snapshot[key]
-        for key in ("role_type", "personality", "categories", "traits", "avatar_asset")
+        for key in (
+            "role_type", "personality", "categories", "traits", "avatar_asset",
+            "relationship", "speaking_style", "personality_tags",
+        )
     }
     summary["image_count"] = len(payload.images)
     summary["title"] = payload.title
@@ -272,7 +279,10 @@ async def install(session, user, identifier):
             )
         ).all()
     )
-    names.update((await session.exec(select(Role.name).where(Role.owner_id.is_(None)))).all())
+    builtin_roles = (
+        await session.exec(select(Role).where(Role.owner_id.is_(None)))
+    ).all()
+    names.update(value for role in builtin_roles for value in (role.name, role.nickname))
     name = snapshot["name"]
     index = 2
     while name in names:
@@ -286,6 +296,8 @@ async def install(session, user, identifier):
         owner_id=user.id,
         display_name=name,
         role_type=snapshot.get("role_type"),
+        background=snapshot.get("background", snapshot["prompt"]),
+        speaking_style=snapshot.get("speaking_style", snapshot["personality"]),
         description=snapshot["description"],
         opening_line=snapshot.get("opening_line", ""),
         prompt=snapshot["prompt"],
@@ -300,7 +312,10 @@ async def install(session, user, identifier):
     )
     session.add(role)
     session.add(
-        RolePreference(user_id=user.id, role_id=role.id, personality=snapshot["personality"])
+        RolePreference(
+            user_id=user.id, role_id=role.id, personality=snapshot["personality"],
+            speaking_style=snapshot.get("speaking_style"),
+        )
     )
     if existing:
         # A deleted copy can be re-added from two devices at once. Only the

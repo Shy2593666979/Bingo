@@ -17,7 +17,7 @@ class RoleRepository:
     async def get_by_name(self, name: str) -> Role | None:
         code = BUILTIN_RELATION_ALIASES.get(name)
         if code:
-            name = next(role.name for role in BUILTIN_ROLES if role.code == code)
+            name = next(role.relationship for role in BUILTIN_ROLES if role.code == code)
         return (
             await self._session.exec(
                 select(Role).where(

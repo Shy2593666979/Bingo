@@ -10,6 +10,7 @@ from sqlmodel import Field, SQLModel
 
 from bingo.db.time import BeijingDateTime, beijing_now
 from bingo.roles.catalog import BUILTIN_NICKNAMES
+from bingo.roles.persona import character_context
 
 from .base import new_id
 
@@ -23,6 +24,10 @@ class Role(SQLModel, table=True):
     description: str = Field(default="", sa_column=Column(Text, nullable=False))
     opening_line: str = Field(default="", sa_column=Column(Text, nullable=False, server_default=""))
     prompt: str = Field(default="", sa_column=Column(Text, nullable=False))
+    background: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
+    speaking_style: str = Field(
+        default="", sa_column=Column(Text, nullable=False, server_default="")
+    )
     avatar: str = Field(max_length=255)
     voice: str = Field(default="", max_length=255)
     enabled: bool = Field(default=True, sa_column=Column(Boolean, nullable=False, index=True))
@@ -52,10 +57,7 @@ class Role(SQLModel, table=True):
 
     @property
     def context_prompt(self) -> str:
-        if self.owner_id is None or self.role_type is None:
-            return self.prompt
-        identity = self.role_type or "陪伴伙伴，没有固定的角色身份"
-        return f"你的伙伴角色是{identity}。\n{self.prompt}"
+        return character_context(self)
 
     created_at: datetime = Field(
         default_factory=beijing_now,
@@ -73,6 +75,7 @@ class RolePreference(SQLModel, table=True):
     user_id: str = Field(primary_key=True, max_length=36)
     role_id: str = Field(primary_key=True, max_length=36)
     personality: str = Field(max_length=30)
+    speaking_style: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
 
 
 class UserCompanion(SQLModel, table=True):

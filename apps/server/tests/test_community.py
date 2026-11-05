@@ -51,6 +51,9 @@ def test_share_title_tags_and_opening_survive_copy_without_changing_traits(commu
                 "description": "你的日常陪伴",
                 "opening_line": "很高兴遇见你，今天想聊点什么？",
                 "traits": ["善于倾听", "陪伴聊天"],
+                "relationship": "老朋友",
+                "background": "住在海边，喜欢阅读和散步。",
+                "speaking_style": "简洁自然，先倾听，再轻松接话。",
             },
         )
     )
@@ -88,6 +91,9 @@ def test_share_title_tags_and_opening_survive_copy_without_changing_traits(commu
     assert copied["opening_line"] == role["opening_line"]
     assert copied["description"] == role["description"]
     assert copied["traits"] == role["traits"]
+    for field in ("relationship", "background", "speaking_style", "personality_tags"):
+        assert copied[field] == role[field]
+        assert share["persona"][field] == role[field]
 
 
 def test_share_metadata_rejects_too_many_or_oversize_tags(community):

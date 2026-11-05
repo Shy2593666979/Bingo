@@ -22,6 +22,7 @@ from bingo.db.repositories import ConversationRepository, RoleRepository
 from bingo.db.time import beijing_now
 from bingo.roles import role_id
 from bingo.roles.catalog import default_personality
+from bingo.roles.persona import speaking_style_for
 from bingo.schemas.chat import ConversationResponse
 from bingo.schemas.roles import ClonePayload, RolePayload
 from bingo.services.context import BinaryAsset, ServiceContext
@@ -30,11 +31,18 @@ from bingo.services.voice_cloning import pcm_has_signal, pcm_wav
 from bingo.utils.stickers.content import preview_content
 
 
-def role_response(role: Role, personality: str | None = None) -> dict:
+def role_response(
+    role: Role, personality: str | None = None, speaking_style: str | None = None
+) -> dict:
     return {
         "id": role.id,
         "name": role.visible_name,
         "nickname": role.nickname,
+        "character_name": role.nickname,
+        "relationship": role.name if role.owner_id is None else role.role_type or "",
+        "speaking_style": speaking_style or speaking_style_for(role, personality),
+        "background": role.background if role.background is not None else role.prompt,
+        "personality_tags": json.loads(role.traits_json),
         "role_type": role.name
         if role.owner_id is None
         else role.role_type
@@ -65,6 +73,11 @@ async def owned_role(session, user, identifier: str) -> Role:
 
 
 async def apply_payload(session, user, role: Role, payload: RolePayload) -> None:
+    background = payload.background if payload.background is not None else payload.prompt
+    if background is None:
+        background = role.background if role.background is not None else role.prompt
+    if not background:
+        raise ServiceError(422, "请填写人物背景")
     available = (
         await session.exec(
             select(Role).where(
@@ -72,7 +85,10 @@ async def apply_payload(session, user, role: Role, payload: RolePayload) -> None
             )
         )
     ).all()
-    if any(item.id != role.id and item.visible_name == payload.name for item in available):
+    if any(
+        item.id != role.id and payload.name in {item.visible_name, item.nickname}
+        for item in available
+    ):
         raise ServiceError(409, "已有同名角色，请换一个名称")
     source = await session.get(Role, payload.voice_source_id or role_id("girlfriend"))
     if payload.voice_source_id == role.id and role.owned_voice:
@@ -87,11 +103,14 @@ async def apply_payload(session, user, role: Role, payload: RolePayload) -> None
         raise ServiceError(422, "所选音色已失效，请重新选择")
     role.display_name = payload.name
     role.description = (
-        payload.description if payload.description is not None else payload.prompt[:200]
+        payload.description if payload.description is not None else background[:200]
     )
     if payload.opening_line is not None:
         role.opening_line = payload.opening_line
-    role.prompt = payload.prompt
+    role.background = background
+    role.prompt = background  # Compatibility for older clients and community snapshots.
+    if payload.speaking_style is not None:
+        role.speaking_style = payload.speaking_style
     if payload.role_type is not None:
         role.role_type = payload.role_type
     role.avatar_data = payload.avatar_data
@@ -103,21 +122,27 @@ async def apply_payload(session, user, role: Role, payload: RolePayload) -> None
         role.traits_json = json.dumps(payload.traits, ensure_ascii=False)
 
 
-async def save_personality(session, user, role, personality):
-    if personality is None:
+async def save_personality(session, user, role, personality, speaking_style=None):
+    if personality is None and speaking_style is None:
         return
     preference = await session.get(RolePreference, (user.id, role.id))
     if preference is None:
-        preference = RolePreference(user_id=user.id, role_id=role.id, personality=personality)
+        preference = RolePreference(
+            user_id=user.id, role_id=role.id, personality=personality or "温柔体贴",
+            speaking_style=speaking_style,
+        )
         session.add(preference)
     else:
-        preference.personality = personality
+        if personality is not None:
+            preference.personality = personality
+        preference.speaking_style = speaking_style
 
 
 async def response_for_user(session, user, role):
     preference = await session.get(RolePreference, (user.id, role.id))
     return role_response(
-        role, preference.personality if preference else default_personality(role, user.personality)
+        role, preference.personality if preference else default_personality(role, user.personality),
+        speaking_style_for(role, user.personality, preference),
     )
 
 
@@ -206,7 +231,7 @@ async def create_role(payload: RolePayload, user: User, session: AsyncSession) -
     )
     await apply_payload(session, user, role, payload)
     session.add(role)
-    await save_personality(session, user, role, payload.personality)
+    await save_personality(session, user, role, payload.personality, payload.speaking_style)
     await session.commit()
     return await response_for_user(session, user, role)
 
@@ -223,13 +248,13 @@ async def update_role(
     if role.owner_id is None:
         if not role.enabled:
             raise ServiceError(404, "角色不存在")
-        if payload.personality is None:
-            raise ServiceError(422, "请选择伙伴性格")
-        await save_personality(session, user, role, payload.personality)
+        if payload.personality is None and payload.speaking_style is None:
+            raise ServiceError(422, "请填写说话风格")
+        await save_personality(session, user, role, payload.personality, payload.speaking_style)
         await session.commit()
         return await response_for_user(session, user, role)
     await apply_payload(session, user, role, payload)
-    await save_personality(session, user, role, payload.personality)
+    await save_personality(session, user, role, payload.personality, payload.speaking_style)
     users = (await session.exec(select(User).where(User.role_id == role.id))).all()
     for selected_user in users:
         selected_user.role = role.visible_name

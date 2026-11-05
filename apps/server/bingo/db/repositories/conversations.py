@@ -10,7 +10,7 @@ from bingo.db.models import (
     RolePreference,
     User,
 )
-from bingo.roles.catalog import default_personality
+from bingo.roles.persona import speaking_style_for
 from bingo.services.exceptions import ServiceError
 
 from .roles import RoleRepository
@@ -73,9 +73,7 @@ class ConversationRepository:
                 "role_id": role.id,
                 "role": role.visible_name,
                 "assistant_name": role.nickname,
-                "personality": preference.personality
-                if preference
-                else default_personality(role, user.personality),
+                "personality": speaking_style_for(role, user.personality, preference),
             }
         )
 

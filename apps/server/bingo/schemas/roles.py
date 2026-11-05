@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import AliasChoices, BaseModel, Field, field_validator
 
 from bingo.roles.traits import CATEGORIES, TRAITS
 from bingo.schemas.auth import PERSONALITIES
@@ -6,14 +6,25 @@ from bingo.schemas.avatar import validate_avatar
 
 
 class RolePayload(BaseModel):
-    name: str = Field(min_length=1, max_length=30)
-    prompt: str = Field(min_length=1, max_length=2000)
+    name: str = Field(
+        min_length=1, max_length=30, validation_alias=AliasChoices("character_name", "name")
+    )
+    background: str | None = Field(default=None, min_length=1, max_length=2000)
+    speaking_style: str | None = Field(default=None, min_length=1, max_length=1000)
+    prompt: str | None = Field(default=None, min_length=1, max_length=2000)
     avatar_data: str | None = Field(default=None, max_length=3000000)
     voice_source_id: str | None = Field(default=None, max_length=36)
     draft: bool = False
     categories: list[str] | None = Field(default=None, min_length=2, max_length=3)
-    traits: list[str] | None = Field(default=None, min_length=2, max_length=3)
-    role_type: str | None = Field(default=None, max_length=30)
+    traits: list[str] | None = Field(
+        default=None,
+        min_length=2,
+        max_length=3,
+        validation_alias=AliasChoices("personality_tags", "traits"),
+    )
+    role_type: str | None = Field(
+        default=None, max_length=30, validation_alias=AliasChoices("relationship", "role_type")
+    )
     personality: str | None = Field(default=None, max_length=30)
     description: str | None = Field(default=None, max_length=200)
     opening_line: str | None = Field(default=None, max_length=300)
@@ -41,15 +52,17 @@ class RolePayload(BaseModel):
         if value is not None:
             allowed = CATEGORIES if info.field_name == "categories" else TRAITS
             if len(set(value)) != len(value) or any(item not in allowed for item in value):
-                raise ValueError("请选择有效且不重复的分类和特征")
+                raise ValueError("请选择有效且不重复的分类和性格标签")
         return value
 
-    @field_validator("name", "prompt")
+    @field_validator("name", "prompt", "background", "speaking_style")
     @classmethod
-    def trim_text(cls, value: str) -> str:
+    def trim_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
         value = value.strip()
         if not value:
-            raise ValueError("请输入角色名称和设定")
+            raise ValueError("人物名称、背景和说话风格不能只包含空白")
         return value
 
     @field_validator("avatar_data")

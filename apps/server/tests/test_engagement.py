@@ -154,7 +154,7 @@ async def test_followup_uses_shared_system_context_at_generation_time(
             "用户昵称：小明",
             "关系角色：女朋友",
             role_prompt,
-            "性格与说话风格：温柔俏皮",
+            "当前说话风格：温柔俏皮",
             f"当前时间：{current_time}",
             "时区：Asia/Shanghai",
             f"用户当前位置：{region['display'] if region else '暂未获取'}",
