@@ -35,7 +35,6 @@ class ChatPage extends StatefulWidget {
     this.onLocation,
     this.locationMapUrlBuilder,
     this.userAvatarData,
-    this.openingLine = '',
     this.imageUrlBuilder,
     this.imageAccessToken,
     required this.onOpenSettings,
@@ -58,7 +57,6 @@ class ChatPage extends StatefulWidget {
   final VoidCallback? onLocation;
   final String Function(ChatLocation)? locationMapUrlBuilder;
   final String? userAvatarData;
-  final String openingLine;
   final String Function(String imageId)? imageUrlBuilder;
   final String? imageAccessToken;
   final VoidCallback onOpenSettings;
@@ -292,7 +290,6 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                 ? _EmptyChat(
                                     onAvatarTap: widget.onOpenRoleDetails,
                                     onAvatarLongPress: _insertPartnerName,
-                                    openingLine: widget.openingLine,
                                     assistantRole: widget.assistantRole)
                                 : ListView.builder(
                                     controller: _scrollController,
@@ -647,12 +644,8 @@ class _RecommendationRows extends StatelessWidget {
 
 class _EmptyChat extends StatelessWidget {
   const _EmptyChat(
-      {this.assistantRole,
-      this.openingLine = '',
-      this.onAvatarTap,
-      this.onAvatarLongPress});
+      {this.assistantRole, this.onAvatarTap, this.onAvatarLongPress});
   final VoidCallback? onAvatarTap, onAvatarLongPress;
-  final String openingLine;
 
   final String? assistantRole;
 
@@ -678,7 +671,7 @@ class _EmptyChat extends StatelessWidget {
             ),
             const SizedBox(height: 22),
             Text(
-              openingLine.isEmpty ? '今天想聊点什么？' : openingLine,
+              '今天想聊点什么？',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,

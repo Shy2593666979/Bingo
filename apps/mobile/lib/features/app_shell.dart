@@ -107,6 +107,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   bool _loadingRoleDetails = false;
   Timer? _welcomeTimer;
   bool _welcomePolling = false, _welcomeErrorShown = false;
+  bool _welcomeRescanRequested = false;
   bool _welcomeForeground = true;
 
   @override
@@ -314,7 +315,11 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   }
 
   Future<void> _pollWelcomes() async {
-    if (!mounted || !_welcomeForeground || _welcomePolling) return;
+    if (!mounted || !_welcomeForeground) return;
+    if (_welcomePolling) {
+      _welcomeRescanRequested = true;
+      return;
+    }
     _welcomePolling = true;
     try {
       final status = await gateway.welcomeStatus();
@@ -352,6 +357,11 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       }
     } finally {
       _welcomePolling = false;
+      if (_welcomeRescanRequested && mounted && _welcomeForeground) {
+        _welcomeRescanRequested = false;
+        _welcomeTimer?.cancel();
+        _welcomeTimer = Timer(Duration.zero, () => unawaited(_pollWelcomes()));
+      }
     }
   }
 
@@ -386,6 +396,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   Future<void> _refreshPartners() async {
     await _rolesKey.currentState?.refresh();
     await _conversationsKey.currentState?.refresh();
+    if (mounted) unawaited(_pollWelcomes());
   }
 
   Future<void> _publish([RoleOption? role]) async {
@@ -544,7 +555,6 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       controller: chatController,
       assistantName: role.displayName,
       assistantRole: role.name,
-      openingLine: role.openingLine,
       speechGateway: gateway,
       onStartCall: () => _openRealtimeCall(context,
           assistantName: role.displayName, assistantRole: role.name),

@@ -30,7 +30,6 @@ class _RoleGateway implements RoleGateway {
       String? avatarData,
       String? voiceSourceId,
       String? description,
-      String? openingLine,
       List<String>? categories,
       List<String>? traits,
       bool draft = false}) async {
@@ -155,7 +154,7 @@ void main() {
   });
 
   testWidgets(
-      'creation includes introduction and opening and keeps its action visible',
+      'creation keeps the optional introduction without a manual greeting field',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(360, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -188,7 +187,8 @@ void main() {
     await tester.tap(find.text('更多资料'));
     await tester.pumpAndSettle();
     expect(find.text('一句话介绍'), findsOneWidget);
-    expect(find.text('开场白'), findsOneWidget);
+    expect(find.text('开场白'), findsNothing);
+    expect(find.byKey(const ValueKey('role-opening')), findsNothing);
     expect(find.text('暂无可用的搭子音色，可以通过录音创建。'), findsOneWidget);
     expect(tester.getRect(action).bottom, lessThanOrEqualTo(800));
     expect(tester.takeException(), isNull);

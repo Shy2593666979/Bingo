@@ -395,7 +395,6 @@ abstract interface class RoleGateway {
       String? avatarData,
       String? voiceSourceId,
       String? description,
-      String? openingLine,
       List<String>? categories,
       List<String>? traits,
       bool draft = false});
@@ -1595,7 +1594,6 @@ class HttpApiGateway
       String? avatarData,
       String? voiceSourceId,
       String? description,
-      String? openingLine,
       List<String>? categories,
       List<String>? traits,
       bool draft = false}) async {
@@ -1613,7 +1611,6 @@ class HttpApiGateway
             'personality_tags': personalityTags ?? traits,
           if (roleType != null) 'role_type': roleType,
           if (description != null) 'description': description,
-          if (openingLine != null) 'opening_line': openingLine,
           if (personality != null) 'personality': personality,
           'avatar_data': avatarData,
           'voice_source_id': voiceSourceId,

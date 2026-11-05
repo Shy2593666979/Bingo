@@ -33,7 +33,7 @@ class _RoleEditorPageState extends State<RoleEditorPage>
   late final TextEditingController _name;
   late final TextEditingController _background;
   late final TextEditingController _speakingStyle;
-  late final TextEditingController _description, _opening;
+  late final TextEditingController _description;
   late final TextEditingController _roleType;
   bool get _builtin => widget.role?.builtin ?? false;
   static const _personalities = [
@@ -72,7 +72,6 @@ class _RoleEditorPageState extends State<RoleEditorPage>
         TextEditingController(text: widget.role?.speakingStyle ?? '温柔体贴');
     _background = TextEditingController(text: widget.role?.background);
     _description = TextEditingController(text: widget.role?.description);
-    _opening = TextEditingController(text: widget.role?.openingLine);
     _avatarData = widget.role?.avatarData;
     _voiceId = _builtin
         ? widget.role!.id
@@ -99,7 +98,6 @@ class _RoleEditorPageState extends State<RoleEditorPage>
     _background.dispose();
     _speakingStyle.dispose();
     _description.dispose();
-    _opening.dispose();
     _roleType.dispose();
     super.dispose();
   }
@@ -136,7 +134,6 @@ class _RoleEditorPageState extends State<RoleEditorPage>
       personalityTags: _traits,
       roleType: _roleType.text.trim(),
       description: _description.text.trim(),
-      openingLine: _opening.text.trim(),
       personality: _personalities.contains(_speakingStyle.text.trim())
           ? _speakingStyle.text.trim()
           : null,
@@ -781,14 +778,6 @@ class _RoleEditorPageState extends State<RoleEditorPage>
                                                       controller: _description,
                                                       hint: '用一句话描述你的搭子',
                                                       limit: 200,
-                                                      requiredValue: false),
-                                                  _label('开场白'),
-                                                  _field(
-                                                      keyName: 'role-opening',
-                                                      controller: _opening,
-                                                      hint: '第一次见面，TA 会怎样打招呼？',
-                                                      limit: 300,
-                                                      lines: 2,
                                                       requiredValue: false),
                                                 ]),
                                           if (_error != null)
