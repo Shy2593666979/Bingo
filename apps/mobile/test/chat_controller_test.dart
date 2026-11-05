@@ -338,7 +338,7 @@ void main() {
     controller.deactivateSpeech();
     final beforePause = gateway.loads;
     await tester.pump(const Duration(seconds: 10));
-    expect(gateway.loads, beforePause);
+    expect(gateway.loads, greaterThan(beforePause));
     await controller.activateSpeech();
     gateway.remoteMessages = [
       const ChatMessage(
@@ -355,6 +355,60 @@ void main() {
     expect(controller.isWaitingForReply, isFalse);
     controller.dispose();
   });
+  testWidgets('server welcome continues offscreen and is not replayed on entry',
+      (tester) async {
+    for (final name in ['bingo/local_chat', 'bingo/device_tools']) {
+      tester.binding.defaultBinaryMessenger
+          .setMockMethodCallHandler(MethodChannel(name), (_) async => null);
+      addTearDown(() => tester.binding.defaultBinaryMessenger
+          .setMockMethodCallHandler(MethodChannel(name), null));
+    }
+    final gateway = RecoveringChatGateway([
+      const ChatMessage(
+          id: 'first',
+          role: ChatRole.assistant,
+          content: '',
+          runId: 'welcome-job',
+          status: ChatMessageStatus.streaming)
+    ]);
+    final controller = ChatController(gateway: gateway, remoteHistory: gateway);
+    await controller.bindConversation('u', 'c', '公司高管', welcomeUnread: true);
+    controller.deactivateSpeech();
+    gateway.remoteMessages = [
+      const ChatMessage(
+          id: 'first',
+          role: ChatRole.assistant,
+          content: '你好。',
+          runId: 'welcome-segment-job'),
+      const ChatMessage(
+          id: 'second',
+          role: ChatRole.assistant,
+          content: '',
+          runId: 'welcome-segment-job',
+          status: ChatMessageStatus.streaming)
+    ];
+    await tester.pump(const Duration(seconds: 2));
+    expect(controller.messages.map((m) => m.content), ['你好。']);
+    final loads = gateway.loads;
+    await tester.pump(const Duration(seconds: 2));
+    expect(gateway.loads, greaterThan(loads));
+    gateway.remoteMessages = [
+      gateway.remoteMessages.first,
+      const ChatMessage(
+          id: 'second',
+          role: ChatRole.assistant,
+          content: '今天想聊什么？',
+          runId: 'welcome-segment-job')
+    ];
+    await tester.pump(const Duration(seconds: 2));
+    expect(controller.messages, hasLength(2));
+    expect(controller.isBusy, isFalse);
+    await controller.activateSpeech();
+    expect(controller.messages, hasLength(2));
+    expect(controller.isWaitingForReply, isFalse);
+    controller.dispose();
+  });
+
   testWidgets('speech defaults on and preserves a saved disabled preference',
       (tester) async {
     const local = MethodChannel('bingo/local_chat');

@@ -64,6 +64,7 @@ class AssistantAvatar extends StatelessWidget {
                       : const Color(0xFFE8F8F2),
                   child: images[role] != null
                       ? Image.memory(images[role]!,
+                          gaplessPlayback: true,
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => _asset())
                       : _asset())),

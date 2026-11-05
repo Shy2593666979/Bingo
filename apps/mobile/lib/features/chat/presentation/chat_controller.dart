@@ -98,9 +98,6 @@ class ChatController extends ChangeNotifier {
   }
 
   void deactivateSpeech() {
-    if (_activeRunId?.startsWith('welcome-') == true) {
-      _stopRecoveryPolling();
-    }
     _bubblePacingSuspended = true;
     _resetBubblePacing();
     _speechActive = false;
@@ -713,6 +710,7 @@ class ChatController extends ChangeNotifier {
       if (binding != _bindingSequence) return;
       final pendingRunId = _unfinishedRunId();
       final remoteFinished = pendingRunId == null ||
+          pendingRunId.startsWith('welcome-') ||
           remoteMessages.any(
             (message) =>
                 message.role == ChatRole.assistant &&
@@ -758,10 +756,14 @@ class ChatController extends ChangeNotifier {
           .where((message) => message.role == ChatRole.user)
           .map((message) => message.content)
           .firstOrNull;
-      _activeRunId = null;
-      _status = ChatStatus.idle;
+      _activeRunId = _unfinishedRunId();
+      _status = _activeRunId == null ? ChatStatus.idle : ChatStatus.sending;
       _errorMessage = null;
-      _stopRecoveryPolling();
+      if (_activeRunId == null) {
+        _stopRecoveryPolling();
+      } else {
+        _startRecoveryPolling();
+      }
       _paceWelcome();
       await _persist();
       notifyListeners();
@@ -800,6 +802,7 @@ class ChatController extends ChangeNotifier {
     final replies = _messages
         .where((message) =>
             message.runId?.startsWith('welcome-') == true &&
+            message.runId?.startsWith('welcome-segment-') != true &&
             message.status == ChatMessageStatus.completed &&
             message.content.trim().isNotEmpty)
         .toList();
