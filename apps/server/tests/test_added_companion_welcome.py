@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import select
 
 from bingo.config import Settings
+from bingo.db.models import Conversation, Message
 from bingo.db.models.community import CharacterShare
 from bingo.db.models.welcome import WelcomeJob
 from bingo.main import create_app
@@ -38,6 +39,7 @@ def client(tmp_path):
     )
     with TestClient(create_app(settings)) as connection:
         connection.app.state.services.companion_welcome.model = WelcomeModel()
+        connection.app.state.services.companion_welcome.sleep = lambda _: asyncio.sleep(0)
         register(connection, "19900117101", "小林", "女")
         yield connection
 
@@ -107,6 +109,96 @@ def conversation_messages(client, role):
     return opened, messages
 
 
+@pytest.mark.parametrize("action", ["continue", "interrupt", "restart"])
+def test_welcome_bubbles_progress_without_opening_chat_and_resume_safely(client, action):
+    service = client.app.state.services.companion_welcome
+    client.portal.call(service.close)
+    role = create(client)
+
+    async def scenario():
+        started, release = asyncio.Event(), asyncio.Event()
+
+        async def wait(_):
+            started.set()
+            await release.wait()
+
+        service.sleep = wait
+        async with service.database.session_factory() as session:
+            job = (await session.exec(select(WelcomeJob))).one()
+            identifier, conversation_id = job.id, job.conversation_id
+        task = asyncio.create_task(service.execute(identifier))
+        try:
+            await asyncio.wait_for(started.wait(), 3)
+            async with service.database.session_factory() as session:
+                rows = (
+                    await session.exec(
+                        select(Message).where(Message.conversation_id == conversation_id)
+                    )
+                ).all()
+                delivered = [m for m in rows if m.status == "completed"]
+                assert len(delivered) == 1 and delivered[0].content == "小林，我是创业老友。"
+                first_id = delivered[0].id
+                assert sum(m.status == "streaming" and not m.content for m in rows) == 1
+                # No role/conversation/messages endpoint has been opened or marked read.
+                assert (await session.get(Conversation, conversation_id)).last_read_at is None
+                assert (await session.get(WelcomeJob, identifier)).status == "running"
+                if action == "interrupt":
+                    session.add(
+                        Message(
+                            conversation_id=conversation_id, role="user", content="先聊我的问题吧。"
+                        )
+                    )
+                    await session.commit()
+            if action == "restart":
+                task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
+                from bingo.services.companion_welcome import CompanionWelcomeService
+
+                restarted = CompanionWelcomeService(service.database, service.model, service.groups)
+                restarted.sleep = lambda _: asyncio.sleep(0)
+                try:
+                    await restarted.start()
+                    await restarted.tick()
+                    await asyncio.gather(*list(restarted.tasks.values()))
+                finally:
+                    await restarted.close()
+            else:
+                release.set()
+                await task
+            async with service.database.session_factory() as session:
+                rows = (
+                    await session.exec(
+                        select(Message)
+                        .where(
+                            Message.conversation_id == conversation_id, Message.role == "assistant"
+                        )
+                        .order_by(Message.created_at)
+                    )
+                ).all()
+                delivered = [m for m in rows if m.status == "completed"]
+                assert delivered[0].id == first_id
+                assert len(delivered) == (1 if action == "interrupt" else 2)
+                if action == "interrupt":
+                    assert any(m.status == "interrupted" and not m.content for m in rows)
+                else:
+                    assert delivered[1].content == "今天想聊什么？"
+                    assert delivered[1].created_at > delivered[0].created_at
+                assert (await session.get(WelcomeJob, identifier)).status == "completed"
+                assert len(service.model.prompts) == 1
+        finally:
+            release.set()
+            if not task.done():
+                task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
+
+    client.portal.call(scenario)
+    if action != "interrupt":
+        roles = api_payload(client.get(PREFIX + "/roles"))
+        installed = next(item for item in roles if item["id"] == role["id"])
+        assert installed["unread_count"] == 2
+        assert installed["last_message"] == "今天想聊什么？"
+
+
 def test_custom_add_generates_a_personalized_greeting_once(client):
     role = create(client)
     assert role["opening_line"] == ""
@@ -114,8 +206,8 @@ def test_custom_add_generates_a_personalized_greeting_once(client):
     assert opened["welcome_unread"]
     drain(client)
     _, messages = conversation_messages(client, role)
-    assert len(messages) == 1
-    assert messages[0]["content"] == "小林，我是创业老友。今天想聊什么？"
+    assert len(messages) == 2
+    assert "".join(m["content"] for m in messages) == "小林，我是创业老友。今天想聊什么？"
     assert messages[0]["run_id"].startswith("welcome-")
     assert messages[0]["status"] == "completed"
     prompt = client.app.state.services.companion_welcome.model.prompts[0]
@@ -137,7 +229,7 @@ def test_custom_add_generates_a_personalized_greeting_once(client):
     drain(client)
     assert len(jobs(client)) == 1
     assert len(client.app.state.services.companion_welcome.model.prompts) == 1
-    assert len(conversation_messages(client, role)[1]) == 1
+    assert len(conversation_messages(client, role)[1]) == 2
     assert api_payload(client.get(PREFIX + "/groups")) == []
 
 
@@ -187,8 +279,8 @@ def test_installing_legacy_community_share_generates_for_the_new_user(client):
     assert api_payload(client.post(route))["id"] == copied["id"]
     drain(client)
     _, messages = conversation_messages(client, copied)
-    assert len(messages) == 1
-    assert messages[0]["content"] == "小周，我是创业老友。今天想聊什么？"
+    assert len(messages) == 2
+    assert "".join(m["content"] for m in messages) == "小周，我是创业老友。今天想聊什么？"
     prompts = client.app.state.services.companion_welcome.model.prompts
     assert len(prompts) == 2
     assert prompts[-1]["用户"]["性别"] == "男"

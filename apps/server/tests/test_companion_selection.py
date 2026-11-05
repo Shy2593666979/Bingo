@@ -55,6 +55,7 @@ def client(tmp_path):
     with TestClient(create_app(settings)) as connection:
         connection.app.state.services.companion_welcome.model = WelcomeModel()
         connection.app.state.services.companion_welcome.message_interval = 0
+        connection.app.state.services.companion_welcome.sleep = lambda _: asyncio.sleep(0)
         yield connection
 
 
@@ -168,12 +169,12 @@ def test_selection_creates_private_welcomes_and_capped_group_once(client, count)
     assert {role["id"] for role in roles} == set(ids)
     welcome_ids = set()
     for role in roles:
-        assert role["message_count"] == 1
-        assert role["unread_count"] == 1
+        assert role["message_count"] == 2
+        assert role["unread_count"] == 2
         messages = api_payload(
             client.get(f"/api/v1/conversations/{role['conversation_id']}/messages")
         )
-        assert len(messages) == 1
+        assert len(messages) == 2
         message = messages[0]
         assert message["role"] == "assistant"
         assert role["nickname"] in message["content"]
@@ -204,7 +205,7 @@ def test_selection_creates_private_welcomes_and_capped_group_once(client, count)
     assert {
         m["id"] for m in api_payload(client.get(f"/api/v1/groups/{group['id']}/messages"))
     } == before
-    assert all(role["message_count"] == 1 for role in api_payload(client.get("/api/v1/roles")))
+    assert all(role["message_count"] == 2 for role in api_payload(client.get("/api/v1/roles")))
 
 
 def test_model_failure_retries_without_any_canned_greeting(client):
@@ -231,7 +232,7 @@ def test_model_failure_retries_without_any_canned_greeting(client):
     drain_welcomes(client)
     assert api_payload(client.get("/api/v1/onboarding/welcome")) == {"pending": False, "failed": 0}
     recovered = api_payload(client.get(f"/api/v1/conversations/{item['conversation_id']}/messages"))
-    assert len(recovered) == 1 and recovered[0]["status"] == "completed"
+    assert len(recovered) == 2 and all(m["status"] == "completed" for m in recovered)
     assert "选择体验" in recovered[0]["content"]
 
 
@@ -292,7 +293,8 @@ def test_restart_recovers_saved_generation_without_another_model_call(client):
     assert service.model.prompts == []
     item = api_payload(client.get("/api/v1/roles"))[0]
     messages = api_payload(client.get(f"/api/v1/conversations/{item['conversation_id']}/messages"))
-    assert len(messages) == 1 and messages[0]["content"] == "选择体验，见到你真开心。我们慢慢聊。"
+    assert len(messages) == 2
+    assert "".join(m["content"] for m in messages) == "选择体验，见到你真开心。我们慢慢聊。"
 
 
 def test_waiting_welcome_does_not_block_user_or_publish_after_user_speaks(client):

@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import json
 from dataclasses import replace
@@ -38,6 +39,7 @@ def client(tmp_path):
     )
     with TestClient(create_app(settings)) as connection:
         connection.app.state.services.companion_welcome.model = WelcomeModel()
+        connection.app.state.services.companion_welcome.sleep = lambda _: asyncio.sleep(0)
         yield connection
 
 
@@ -80,7 +82,7 @@ def test_seed_install_uses_the_copy_voice_and_personalized_welcome(client, entry
     drain(client)
     opened = api_payload(client.post(P + f"/roles/{copied['id']}/conversation"))
     messages = api_payload(client.get(P + f"/conversations/{opened['id']}/messages"))
-    assert len(messages) == 1
+    assert len(messages) == 2
     assert messages[0]["content"].startswith(f"小林，我是{character.name}。")
     assert len(api_payload(client.get(P + "/roles"))) == 13
     assert len(api_payload(client.get(P + "/onboarding/companions"))) == 12

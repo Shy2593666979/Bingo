@@ -10,12 +10,13 @@ from datetime import date, timedelta
 from sqlmodel import select, update
 
 from bingo.agent.model_client import ModelMessage
-from bingo.db.models import Conversation, Message, Role, RolePreference, User
+from bingo.db.models import Message, Role, RolePreference, User
 from bingo.db.models.groups import MAX_GROUP_AI_MEMBERS, ChatGroup, GroupMember, GroupMessage
 from bingo.db.models.welcome import WelcomeJob
 from bingo.db.repositories import ConversationRepository
 from bingo.db.time import beijing_now
 from bingo.roles.persona import speaking_style_for
+from bingo.services.welcome_messages import interrupt_welcome_messages, publish_private_welcome
 from bingo.utils.assistant_text import clean_assistant_text
 
 ACTIVE = ("queued", "running", "retry")
@@ -280,25 +281,9 @@ class CompanionWelcomeService:
                 if not job or job.status != "running":
                     return
                 job.result_json = json.dumps(result, ensure_ascii=False)
-                message = await session.get(Message, job.message_id)
-                conversation = await session.get(Conversation, job.conversation_id)
-                spoken = (
-                    await session.exec(
-                        select(Message.id)
-                        .where(
-                            Message.conversation_id == job.conversation_id, Message.role == "user"
-                        )
-                        .limit(1)
-                    )
-                ).first()
-                if message and conversation:
-                    if spoken:
-                        message.status = "interrupted"
-                    elif message.status == "streaming":
-                        message.content, message.status = result["private"], "completed"
-                        message.created_at = beijing_now()
                 await session.commit()
                 group_id = job.group_id
+            await publish_private_welcome(self.database, identifier, result["private"], self.sleep)
             if group_id and result["group"]:
                 async with self.publish_locks.setdefault(group_id, asyncio.Lock()):
                     delay = self.message_interval - (
@@ -373,9 +358,7 @@ class CompanionWelcomeService:
                     job.status = "failed" if job.attempts >= 3 else "retry"
                     job.available_at = beijing_now() + timedelta(seconds=job.attempts * 3)
                     if job.status == "failed":
-                        message = await session.get(Message, job.message_id)
-                        if message and message.status == "streaming":
-                            message.status = "interrupted"
+                        await interrupt_welcome_messages(session, job)
                     await session.commit()
 
 
