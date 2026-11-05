@@ -407,10 +407,7 @@ void main() {
     if (writePreview) {
       await tester.runAsync(() async {
         final font = FontLoader('BingoSans');
-        for (final weight in ['Regular', 'Medium', 'Bold', 'Black']) {
-          font.addFont(
-              rootBundle.load('assets/fonts/HarmonyOS_Sans_SC_$weight.ttf'));
-        }
+        font.addFont(rootBundle.load('assets/fonts/PingFangSanShengTi.ttf'));
         await font.load();
         final icons = FontLoader('MaterialIcons')
           ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));

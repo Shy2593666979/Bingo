@@ -48,7 +48,7 @@ void main() {
     await tester.runAsync(() async {
       final font = FontLoader('BingoSans')
         ..addFont(
-            rootBundle.load('assets/fonts/HarmonyOS_Sans_SC_Regular.ttf'));
+            rootBundle.load('assets/fonts/PingFangSanShengTi.ttf'));
       await font.load();
     });
     final boundaryKey = GlobalKey();
