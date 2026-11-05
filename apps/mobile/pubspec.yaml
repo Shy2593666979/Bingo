@@ -36,6 +36,7 @@ flutter:
     - assets/avatars_square/teacher.webp
     - assets/avatars_square/chairman.webp
     - assets/avatars_square/executive.webp
+    - assets/avatars_square/xiaofan.webp
     - assets/chat_bubbles/autumncat.webp
     - assets/chat_bubbles/bear.webp
     - assets/chat_bubbles/blossom.webp

@@ -20,6 +20,7 @@ void main() {
       '运动搭子': 'fitness',
       '董事长': 'chairman',
       '公司高管': 'executive',
+      '网红人物': 'xiaofan',
     };
     for (final entry in additions.entries) {
       final role = RoleOption.fromJson({

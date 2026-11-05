@@ -422,7 +422,18 @@ def test_permissions_idempotency_favorites_reports_and_pagination(community):
             params={"limit": 2, "offset": second["next_offset"]},
         )
     )
-    assert {item["id"] for item in third["items"]} == {
+    remaining = list(third["items"])
+    while third["next_offset"] is not None:
+        third = api_payload(
+            client.get(
+                PREFIX + "/community/characters",
+                headers=bob,
+                params={"limit": 2, "offset": third["next_offset"]},
+            )
+        )
+        remaining.extend(third["items"])
+    assert len(remaining) == len(COMMUNITY_CHARACTERS)
+    assert {item["id"] for item in remaining} == {
         community_share_id(entry.character.code) for entry in COMMUNITY_CHARACTERS
     }
     assert third["next_offset"] is None
