@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from bingo.config import Settings
 from bingo.main import create_app
+from bingo.roles import BUILTIN_ROLES
 from tests.api_support import api_payload
 
 
@@ -81,7 +82,7 @@ def test_modern_selection_only_adds_selected_and_survives_login(client):
     assert not auth["user"]["companion_selection_complete"]
     assert api_payload(client.get("/api/v1/roles")) == []
     candidates = api_payload(client.get("/api/v1/onboarding/companions"))
-    assert len(candidates) == 12
+    assert len(candidates) == len(BUILTIN_ROLES)
     ids = [role["id"] for role in candidates[:2]]
     assert client.post("/api/v1/onboarding/companions", json={"role_ids": ids}).status_code == 409
     details(client)
@@ -137,7 +138,7 @@ def test_reject_empty_duplicate_unknown_and_foreign_roles(client):
 def test_legacy_registration_keeps_catalogue(client):
     auth = register(client, modern=False)
     assert auth["user"]["companion_selection_complete"]
-    assert len(api_payload(client.get("/api/v1/roles"))) == 12
+    assert len(api_payload(client.get("/api/v1/roles"))) == len(BUILTIN_ROLES)
 
 
 def test_incomplete_registration_restores_selection_requirement(client):
@@ -152,7 +153,7 @@ def test_incomplete_registration_restores_selection_requirement(client):
     assert not login["user"]["companion_selection_complete"]
 
 
-@pytest.mark.parametrize("count", [1, 3, 8, 12])
+@pytest.mark.parametrize("count", [1, 3, 8, len(BUILTIN_ROLES)])
 def test_selection_creates_private_welcomes_and_capped_group_once(client, count):
     register(client)
     details(client)
@@ -391,6 +392,6 @@ async def test_existing_database_upgrade_keeps_account_and_builtin_access(tmp_pa
             assert user.role_id == role_id("girlfriend")
             assert user.companion_selection_complete
             assert not user.selective_companions
-            assert len(await RoleRepository(session).list_enabled(identifier)) == 12
+            assert len(await RoleRepository(session).list_enabled(identifier)) == len(BUILTIN_ROLES)
     finally:
         await database.dispose()

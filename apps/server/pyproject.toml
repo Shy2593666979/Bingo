@@ -28,6 +28,9 @@ dev = [
 [tool.setuptools.packages.find]
 include = ["bingo*"]
 
+[tool.setuptools.package-data]
+"bingo.roles" = ["avatars/*.webp"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 pythonpath = ["."]

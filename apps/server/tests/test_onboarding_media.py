@@ -20,7 +20,7 @@ def test_bundled_introductions_match_current_distinct_role_voices():
         for row in json.loads((root / "docs/mobile-audio-optimization.json").read_text("utf-8"))
     }
     assert set(lines) == set(sources) == set(encoded) == {role.code for role in BUILTIN_ROLES}
-    assert len({role.voice for role in BUILTIN_ROLES}) == 12
+    assert len({role.voice for role in BUILTIN_ROLES}) == len(BUILTIN_ROLES)
     for role in BUILTIN_ROLES:
         metadata = sources[role.code]
         assert metadata["voice_fingerprint"] == hashlib.sha256(role.voice.encode()).hexdigest(), (

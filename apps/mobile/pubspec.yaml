@@ -48,6 +48,7 @@ flutter:
     - assets/avatars_square/senior_brother.webp
     - assets/avatars_square/senior_sister.webp
     - assets/avatars_square/teacher.webp
+    - assets/avatars_square/chairman.webp
     - assets/chat_bubbles/autumncat.webp
     - assets/chat_bubbles/bear.webp
     - assets/chat_bubbles/blossom.webp
@@ -97,6 +98,7 @@ flutter:
     - assets/onboarding/senior_brother.m4a
     - assets/onboarding/senior_sister.m4a
     - assets/onboarding/teacher.m4a
+    - assets/onboarding/chairman.m4a
 
 flutter_launcher_icons:
   android: true

@@ -3,6 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from bingo.roles import BUILTIN_ROLES
 from bingo.schemas.avatar import validate_avatar
 
 PERSONALITIES = ("温柔体贴", "理性严谨", "幽默风趣", "尖酸刻薄", "积极活泼", "沉稳克制")
@@ -24,7 +25,7 @@ class RegistrationCredentials(Credentials):
 
 
 class CompanionSelection(BaseModel):
-    role_ids: list[str] = Field(min_length=1, max_length=12)
+    role_ids: list[str] = Field(min_length=1, max_length=len(BUILTIN_ROLES))
 
     @field_validator("role_ids")
     @classmethod

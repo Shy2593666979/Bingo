@@ -1,6 +1,8 @@
+import base64
 import json
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
+from importlib.resources import files
 from uuid import uuid4
 
 from sqlalchemy import event
@@ -521,6 +523,12 @@ def _seed_builtin_roles(connection) -> None:
             "categories_json": json.dumps(BUILTIN_TRAITS[role.code][0], ensure_ascii=False),
             "traits_json": json.dumps(BUILTIN_TRAITS[role.code][1], ensure_ascii=False),
         }
+        # New portraits are also delivered to installed clients without bundled assets.
+        portrait = files("bingo.roles").joinpath("avatars", f"{role.code}.webp")
+        if portrait.is_file():
+            values["avatar_data"] = "data:image/webp;base64," + base64.b64encode(
+                portrait.read_bytes()
+            ).decode("ascii")
         if existing_id is None:
             connection.execute(
                 Role.__table__.insert().values(

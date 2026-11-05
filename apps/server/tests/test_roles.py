@@ -132,7 +132,7 @@ async def test_existing_role_table_is_upgraded_and_seeded_with_voices(tmp_path: 
         async with database.session_factory() as session:
             roles = await RoleRepository(session).list_enabled()
             voices = {role.code: role.voice for role in roles}
-            assert len(roles) == len(BUILTIN_ROLES) == 12
+            assert len(roles) == len(BUILTIN_ROLES) == 13
             added = {
                 role.code: role
                 for role in roles
@@ -157,5 +157,39 @@ async def test_existing_role_table_is_upgraded_and_seeded_with_voices(tmp_path: 
         assert voices["teacher"].startswith("qwen-audio-3.1-realtime-plus-teacher-")
         assert voices["child"].startswith("qwen-audio-3.1-realtime-plus-child-")
         assert voices["colleague"].startswith("qwen-audio-3.1-realtime-plus-colleague-")
+    finally:
+        await database.dispose()
+
+
+@pytest.mark.asyncio
+async def test_chairman_is_seeded_once_with_portrait_and_independent_voice(tmp_path):
+    import base64
+
+    from bingo.services.roles import role_response
+
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'chairman.db'}")
+    try:
+        await database.initialize()
+        await database.initialize()
+        async with database.session_factory() as session:
+            roles = await RoleRepository(session).list_enabled()
+            chairmen = [role for role in roles if role.code == "chairman"]
+            assert len(chairmen) == 1
+            role = chairmen[0]
+            assert role.id == role_id("chairman")
+            assert role.nickname == "老雷"
+            assert role.name == "董事长"
+            assert role.owner_id is None
+            assert role.voice.startswith("qwen-audio-3.1-realtime-plus-self7f639e-")
+            assert "虚构" in role.description and "不是雷军或任何现实人物" in role.prompt
+            assert role.opening_line
+            response = role_response(role)
+            assert response["builtin"] and response["has_voice"]
+            assert response["role_type"] == "董事长"
+            assert response["nickname"] == "老雷"
+            header, encoded = response["avatar_data"].split(",", 1)
+            assert header == "data:image/webp;base64"
+            assert base64.b64decode(encoded).startswith(b"RIFF")
+            assert response["traits"] == ["思路梳理", "轻松幽默", "鼓励支持"]
     finally:
         await database.dispose()

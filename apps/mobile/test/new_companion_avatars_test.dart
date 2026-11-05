@@ -17,7 +17,8 @@ void main() {
       '学姐': 'senior_sister',
       '学长': 'senior_brother',
       '树洞搭子': 'confidant',
-      '运动搭子': 'fitness'
+      '运动搭子': 'fitness',
+      '董事长': 'chairman',
     };
     for (final entry in additions.entries) {
       final role = RoleOption.fromJson({

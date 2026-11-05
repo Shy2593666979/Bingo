@@ -16,6 +16,7 @@ String assistantAvatarAsset(String? role) => switch (role) {
       '学长' => 'assets/images/senior_brother.png',
       '知己' || '树洞搭子' => 'assets/images/confidant.png',
       '运动搭子' => 'assets/images/fitness.png',
+      '董事长' => 'assets/images/chairman.png',
       _ => 'assets/images/bingo_logo.png',
     };
 

@@ -187,6 +187,7 @@ def test_profile_options_use_personality_and_role(client: TestClient) -> None:
         "学长",
         "树洞搭子",
         "运动搭子",
+        "董事长",
     ]
 
 
