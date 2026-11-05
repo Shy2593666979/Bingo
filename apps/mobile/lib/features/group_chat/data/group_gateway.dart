@@ -1,4 +1,5 @@
 import 'package:bingo/core/role_avatar_store.dart';
+import 'package:bingo/core/role_avatar_assets.dart';
 import 'dart:typed_data';
 import 'dart:io';
 
@@ -26,18 +27,11 @@ class GroupPerson {
         active = json['active'] == true,
         avatarAsset = json['avatar_asset'] as String? ?? 'bingo_logo.png',
         avatarData = json['avatar_data'] as String? {
-    const assets = {
-      'girlfriend.png',
-      'boyfriend.png',
-      'parent.png',
-      'teacher.png',
-      'child.png',
-      'colleague.png',
-      'bingo_logo.png'
-    };
     RoleAvatarStore.set(roleName, avatarData,
-        asset:
-            assets.contains(avatarAsset) ? 'assets/images/$avatarAsset' : null);
+        fallback: true,
+        asset: roleAvatarFiles.contains(avatarAsset)
+            ? 'assets/images/$avatarAsset'
+            : null);
   }
   final String id, name, roleName, avatarAsset;
   final String? avatarData;

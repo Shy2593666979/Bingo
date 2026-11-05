@@ -7,6 +7,7 @@ abstract final class RoleAvatarStore {
   static String? _userId;
   static final assets = <String, String>{};
   static final _encoded = <String, String?>{};
+  static final _currentRoles = <String>{};
 
   static void selectUser(String userId) {
     if (_userId == userId) return;
@@ -14,8 +15,13 @@ abstract final class RoleAvatarStore {
     _userId = userId;
   }
 
-  static void set(String? name, String? encoded, {String? asset}) {
+  static void set(String? name, String? encoded,
+      {String? asset, bool fallback = false}) {
     if (name == null) return;
+    // Group membership stores a historical portrait, sometimes null. It may
+    // fill an unknown role, but must never replace its current profile image.
+    if (fallback && _currentRoles.contains(name)) return;
+    if (!fallback) _currentRoles.add(name);
     final assetChanged = asset != null && assets[name] != asset;
     if (asset != null) assets[name] = asset;
     if (_encoded.containsKey(name) && _encoded[name] == encoded) {
@@ -40,6 +46,7 @@ abstract final class RoleAvatarStore {
     _userId = null;
     assets.clear();
     _encoded.clear();
+    _currentRoles.clear();
     images.value = {};
   }
 }
