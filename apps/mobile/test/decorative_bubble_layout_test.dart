@@ -48,7 +48,7 @@ void main() {
     await tester.runAsync(() async {
       final font = FontLoader('BingoSans')
         ..addFont(
-            rootBundle.load('assets/fonts/PingFangSanShengTi.ttf'));
+            rootBundle.load('assets/fonts/PingFangSC-Regular.otf'));
       await font.load();
     });
     final boundaryKey = GlobalKey();

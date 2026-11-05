@@ -407,7 +407,9 @@ void main() {
     if (writePreview) {
       await tester.runAsync(() async {
         final font = FontLoader('BingoSans');
-        font.addFont(rootBundle.load('assets/fonts/PingFangSanShengTi.ttf'));
+        for (final weight in ['Regular', 'Medium', 'Semibold']) {
+          font.addFont(rootBundle.load('assets/fonts/PingFangSC-$weight.otf'));
+        }
         await font.load();
         final icons = FontLoader('MaterialIcons')
           ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));

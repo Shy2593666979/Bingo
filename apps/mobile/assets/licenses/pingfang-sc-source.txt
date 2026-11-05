@@ -1,0 +1,12 @@
+PingFang SC — extracted font files used for visual evaluation
+
+Copyright © 2015 DynaComware. All rights reserved.
+
+Source archive:
+https://github.com/ZWolken/PingFang
+Original extraction project referenced by the archive:
+https://github.com/jimmyctk/PingFang-OTF-Fonts
+
+Files: PingFangSC-Regular.otf, PingFangSC-Medium.otf, PingFangSC-Semibold.otf
+
+This notice records provenance; it does not grant embedding or redistribution rights.

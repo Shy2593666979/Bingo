@@ -87,7 +87,9 @@ void main() {
     await tester.runAsync(() async {
       final font = FontLoader('BingoSans');
       font.addFont(
-          rootBundle.load('assets/fonts/PingFangSanShengTi.ttf'));
+          rootBundle.load('assets/fonts/PingFangSC-Regular.otf'));
+      font.addFont(rootBundle.load('assets/fonts/PingFangSC-Medium.otf'));
+      font.addFont(rootBundle.load('assets/fonts/PingFangSC-Semibold.otf'));
       await font.load();
     });
     RoleAvatarStore.assets.clear();
