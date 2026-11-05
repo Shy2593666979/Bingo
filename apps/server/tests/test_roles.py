@@ -166,6 +166,7 @@ async def test_chairman_is_seeded_once_with_portrait_and_independent_voice(tmp_p
     import base64
 
     from bingo.roles.community_catalog import COMMUNITY_CHARACTERS
+    from bingo.schemas.avatar import validate_avatar
     from bingo.services.roles import role_response
 
     database = Database(f"sqlite+aiosqlite:///{tmp_path / 'chairman.db'}")
@@ -192,9 +193,9 @@ async def test_chairman_is_seeded_once_with_portrait_and_independent_voice(tmp_p
             assert not response["identity_editable"]
             assert response["role_type"] == character.relationship
             assert response["nickname"] == character.name
-            header, encoded = response["avatar_data"].split(",", 1)
-            assert header == "data:image/webp;base64"
-            assert base64.b64decode(encoded).startswith(b"RIFF")
+            encoded = response["avatar_data"]
+            assert validate_avatar(encoded) == encoded
+            assert base64.b64decode(encoded, validate=True).startswith(b"\x89PNG\r\n\x1a\n")
             assert response["traits"] == ["思路梳理", "轻松幽默", "鼓励支持"]
     finally:
         await database.dispose()
