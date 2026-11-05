@@ -22,7 +22,9 @@ class ChatController extends ChangeNotifier {
     LocalChatStore? localStore,
     ConversationGateway? remoteHistory,
     EngagementGateway? engagement,
+    BubblePacer? bubblePacer,
   })  : _gateway = gateway,
+        _bubblePacer = bubblePacer ?? BubblePacer(),
         _deviceActions = deviceActions,
         _deviceToolExecutor = deviceToolExecutor,
         _localStore = localStore,
@@ -30,7 +32,7 @@ class ChatController extends ChangeNotifier {
         _engagement = engagement;
 
   final ChatGateway _gateway;
-  final _bubblePacer = BubblePacer();
+  final BubblePacer _bubblePacer;
   final Set<String> _hiddenBubbleIds = {};
   final Set<String> _pacedActionIds = {};
   bool _bubblePacingSuspended = false;

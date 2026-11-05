@@ -5,6 +5,7 @@ import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/chat/data/local_chat_store.dart';
 import 'package:bingo/features/chat/models/chat_message.dart';
 import 'package:bingo/features/chat/presentation/chat_controller.dart';
+import 'package:bingo/features/chat/presentation/bubble_pacer.dart';
 import 'package:bingo/shared/widgets/assistant_avatar.dart';
 import 'package:bingo/features/chat/presentation/chat_page.dart';
 import 'package:bingo/features/chat/presentation/widgets/message_bubble.dart';
@@ -739,7 +740,10 @@ void main() {
 
   testWidgets('stream completion keeps later bubbles queued until their turn',
       (tester) async {
-    final controller = ChatController(gateway: FakeChatGateway());
+    final controller = ChatController(
+        gateway: FakeChatGateway(),
+        bubblePacer: BubblePacer(
+            random: () => 0.5, elapsedSinceReveal: () => Duration.zero));
     final sending = controller.send('测试');
     await tester.pump();
     expect(
