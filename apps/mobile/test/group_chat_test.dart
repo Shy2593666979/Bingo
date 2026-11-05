@@ -406,11 +406,6 @@ void main() {
         Platform.environment['WRITE_NEW_MESSAGE_PREVIEW'] == '1';
     if (writePreview) {
       await tester.runAsync(() async {
-        final font = FontLoader('BingoSans');
-        for (final weight in ['Regular', 'Medium', 'Semibold']) {
-          font.addFont(rootBundle.load('assets/fonts/PingFangSC-$weight.otf'));
-        }
-        await font.load();
         final icons = FontLoader('MaterialIcons')
           ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));
         await icons.load();

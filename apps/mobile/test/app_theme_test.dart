@@ -41,9 +41,15 @@ void main() {
       useMaterial3: true,
     );
 
-    expect(theme.textTheme.bodyMedium?.fontFamily, 'BingoSans');
-    expect(theme.textTheme.titleLarge?.fontFamily, 'BingoSans');
-    expect(theme.primaryTextTheme.bodyMedium?.fontFamily, 'BingoSans');
+    expect(theme.textTheme.bodyMedium?.fontFamily,
+        baseline.textTheme.bodyMedium?.fontFamily);
+    expect(theme.textTheme.titleLarge?.fontFamily,
+        baseline.textTheme.titleLarge?.fontFamily);
+    expect(theme.primaryTextTheme.bodyMedium?.fontFamily,
+        baseline.primaryTextTheme.bodyMedium?.fontFamily);
+    expect(theme.appBarTheme.titleTextStyle?.fontFamily, isNull);
+    expect(theme.dialogTheme.titleTextStyle?.fontFamily, isNull);
+    expect(theme.dialogTheme.contentTextStyle?.fontFamily, isNull);
     expect(theme.textTheme.bodyMedium?.fontSize,
         baseline.textTheme.bodyMedium?.fontSize);
     expect(theme.colorScheme.primary, BingoPalette.blue);
@@ -68,7 +74,8 @@ void main() {
     ));
 
     final text = tester.widget<RichText>(find.byType(RichText).first);
-    const expectedFamily = 'BingoSans';
+    final expectedFamily =
+        ThemeData(useMaterial3: true).textTheme.bodyMedium?.fontFamily;
     expect(text.text.style?.fontFamily, expectedFamily);
     expect(mint.textTheme.bodyMedium?.fontFamily, expectedFamily);
     expect(mint.colorScheme.primary, BingoPalette.mintPrimary);

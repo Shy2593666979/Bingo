@@ -20,15 +20,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  fonts:
-    - family: BingoSans
-      fonts:
-        - asset: assets/fonts/PingFangSC-Regular.otf
-          weight: 400
-        - asset: assets/fonts/PingFangSC-Medium.otf
-          weight: 500
-        - asset: assets/fonts/PingFangSC-Semibold.otf
-          weight: 600
   assets:
     - assets/images/bingo_logo.webp
     - assets/avatars_square/bestie.webp

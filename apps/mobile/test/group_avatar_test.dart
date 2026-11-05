@@ -8,7 +8,6 @@ import 'package:bingo/core/role_avatar_store.dart';
 import 'package:bingo/features/group_chat/data/group_gateway.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const names = ['女朋友', '男朋友', '同事', '老师', '邻家大叔', '弟弟', '闺蜜', '好兄弟', '运动搭子'];
@@ -84,20 +83,12 @@ void main() {
   testWidgets('render the complete member layout comparison', (tester) async {
     final output = Platform.environment['BINGO_AVATAR_PREVIEW'];
     if (output == null) return;
-    await tester.runAsync(() async {
-      final font = FontLoader('BingoSans');
-      font.addFont(
-          rootBundle.load('assets/fonts/PingFangSC-Regular.otf'));
-      font.addFont(rootBundle.load('assets/fonts/PingFangSC-Medium.otf'));
-      font.addFont(rootBundle.load('assets/fonts/PingFangSC-Semibold.otf'));
-      await font.load();
-    });
     RoleAvatarStore.assets.clear();
     await tester.binding.setSurfaceSize(const Size(690, 810));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final key = GlobalKey();
     await tester.pumpWidget(MaterialApp(
-        theme: ThemeData(fontFamily: 'BingoSans'),
+        theme: ThemeData(),
         home: RepaintBoundary(
             key: key,
             child: Scaffold(

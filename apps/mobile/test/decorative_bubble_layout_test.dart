@@ -3,7 +3,6 @@ import 'dart:ui' as ui;
 import 'package:bingo/core/appearance/chat_appearance.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -45,15 +44,9 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.runAsync(() async {
-      final font = FontLoader('BingoSans')
-        ..addFont(
-            rootBundle.load('assets/fonts/PingFangSC-Regular.otf'));
-      await font.load();
-    });
     final boundaryKey = GlobalKey();
     await tester.pumpWidget(MaterialApp(
-        theme: ThemeData(fontFamily: 'BingoSans'),
+        theme: ThemeData(),
         home: Scaffold(
             body: SingleChildScrollView(
                 child: RepaintBoundary(
@@ -64,7 +57,6 @@ void main() {
                           for (final skin in skins)
                             SizedBox(
                                 width: 400,
-                                height: 340,
                                 child: Padding(
                                     padding: const EdgeInsets.all(12),
                                     child: Column(
