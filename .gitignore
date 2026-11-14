@@ -26,6 +26,7 @@ build/
 coverage/
 apps/mobile/android/local.properties
 apps/mobile/android/.gradle/
+apps/mobile/android/.kotlin/
 
 # IDE and OS
 .idea/
