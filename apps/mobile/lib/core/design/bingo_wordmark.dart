@@ -1,3 +1,4 @@
+import 'package:bingo/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 /// Vector contours traced from the approved HTML wordmark. No bitmap or font dependency.
@@ -838,7 +839,7 @@ class _WordmarkPainter extends CustomPainter {
       ..lineTo(28.125, 7.500)
       ..lineTo(28.000, 7.500)
       ..close();
-    canvas.drawPath(path0, Paint()..color = const Color(0xFF09A39B));
+    canvas.drawPath(path0, Paint()..color = BingoPalette.primary);
     final path1 = Path()..fillType = PathFillType.evenOdd;
     path1
       ..moveTo(89.875, 12.625)

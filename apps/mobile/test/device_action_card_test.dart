@@ -1,3 +1,4 @@
+import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/chat/presentation/widgets/device_action_card.dart';
 import 'package:flutter/material.dart';
@@ -37,7 +38,8 @@ void main() {
     });
   }
 
-  testWidgets('alarm note shows time and uses red reject and mint confirm',
+  testWidgets(
+      'alarm note shows time and uses distinct reject and confirm styles',
       (tester) async {
     var approvals = 0;
     var rejections = 0;
@@ -62,8 +64,7 @@ void main() {
     final reject = tester.widget<OutlinedButton>(find.byType(OutlinedButton));
     expect(reject.style!.foregroundColor!.resolve({}), const Color(0xFFB5403C));
     final confirm = tester.widget<FilledButton>(find.byType(FilledButton));
-    expect(
-        confirm.style!.backgroundColor!.resolve({}), const Color(0xFFBFE5D4));
+    expect(confirm.style!.backgroundColor!.resolve({}), BingoPalette.blush);
     await tester.tap(find.text('拒绝'));
     await tester.tap(find.text('确认创建'));
     expect(rejections, 1);

@@ -168,7 +168,7 @@ class _CompanionRecordsPageState extends State<CompanionRecordsPage> {
                                           const Text('和搭子一起留下的小事，会收在这里',
                                               style: TextStyle(
                                                   fontSize: 12,
-                                                  color: Color(0xFF809589))),
+                                                  color: BingoPalette.muted)),
                                         ]))
                                   : RefreshIndicator(
                                       onRefresh: _load,
@@ -180,9 +180,9 @@ class _CompanionRecordsPageState extends State<CompanionRecordsPage> {
                                           itemBuilder: (_, index) {
                                             final record = _records[index];
                                             return Material(
-                                                color: Colors.white,
+                                                color: BingoPalette.softSurface,
                                                 borderRadius:
-                                                    BorderRadius.circular(22),
+                                                    BorderRadius.circular(16),
                                                 clipBehavior: Clip.antiAlias,
                                                 child: ListTile(
                                                     contentPadding:

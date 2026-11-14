@@ -90,7 +90,7 @@ class _SettingsPageState extends State<SettingsPage> {
   void _details(String title, List<Widget> rows) =>
       Navigator.of(context).push<void>(MaterialPageRoute(
           builder: (_) => Scaffold(
-              backgroundColor: BingoPalette.ice,
+              backgroundColor: Colors.white,
               appBar: AppBar(title: Text(title), centerTitle: true),
               body: ListView(
                   padding: const EdgeInsets.all(20),
@@ -132,7 +132,7 @@ class _SettingsPageState extends State<SettingsPage> {
   void _privacy() => Navigator.of(context).push<void>(MaterialPageRoute(
       builder: (_) => StatefulBuilder(
           builder: (context, update) => Scaffold(
-              backgroundColor: BingoPalette.ice,
+              backgroundColor: Colors.white,
               appBar: AppBar(title: const Text('隐私设置'), centerTitle: true),
               body: ListView(padding: const EdgeInsets.all(20), children: [
                 _SettingsCard(children: [
@@ -167,7 +167,7 @@ class _SettingsPageState extends State<SettingsPage> {
               color: BingoPalette.muted));
   @override
   Widget build(BuildContext context) => Scaffold(
-      backgroundColor: BingoPalette.ice,
+      backgroundColor: Colors.white,
       appBar: AppBar(
           title: const Text('设置'),
           centerTitle: true,
@@ -278,18 +278,18 @@ class _StoragePage extends StatefulWidget {
 class _StoragePageState extends State<_StoragePage> {
   @override
   Widget build(BuildContext context) => Scaffold(
-      backgroundColor: BingoPalette.ice,
+      backgroundColor: Colors.white,
       appBar: AppBar(title: const Text('数据与存储'), centerTitle: true),
       body: ListView(padding: const EdgeInsets.all(20), children: [
         const ReferenceSurface(
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('云端数据', style: TextStyle(fontWeight: FontWeight.w800)),
+          Text('云端数据', style: TextStyle(fontWeight: FontWeight.w600)),
           SizedBox(height: 9),
           Text('聊天记录、社区分享和上传的表情保存在服务器。',
               style: TextStyle(color: BingoPalette.muted, height: 1.7)),
           SizedBox(height: 20),
-          Text('本机数据', style: TextStyle(fontWeight: FontWeight.w800)),
+          Text('本机数据', style: TextStyle(fontWeight: FontWeight.w600)),
           SizedBox(height: 9),
           Text('聊天外观设置、照片背景和图片缓存保存在当前设备。',
               style: TextStyle(color: BingoPalette.muted, height: 1.7))
@@ -325,7 +325,7 @@ class _SectionLabel extends StatelessWidget {
           text,
           style: const TextStyle(
             color: BingoPalette.muted,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w400,
             fontSize: 15,
           ),
         ),
@@ -338,11 +338,10 @@ class _SettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-        color: BingoPalette.surface,
+        color: const Color(0xFFFAFAFA),
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-          side: const BorderSide(color: BingoPalette.line),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Column(children: children),
       );
@@ -378,7 +377,7 @@ class _SettingsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ListTile(
         onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 17, vertical: 3),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 2),
         minLeadingWidth: 24,
         horizontalTitleGap: 14,
         leading: Icon(icon, color: BingoPalette.ink, size: 21),
@@ -386,8 +385,8 @@ class _SettingsRow extends StatelessWidget {
           title,
           style: TextStyle(
             color: BingoPalette.ink,
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            fontSize: 15,
           ),
         ),
         subtitle: subtitle == null

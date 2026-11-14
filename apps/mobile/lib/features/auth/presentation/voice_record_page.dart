@@ -190,16 +190,16 @@ class _VoiceRecordPageState extends State<VoiceRecordPage>
             child: SafeArea(
                 child: ListView(padding: const EdgeInsets.all(24), children: [
               const Text('让声音，也熟悉起来',
-                  style: TextStyle(fontSize: 25, fontWeight: FontWeight.w800)),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w500)),
               const SizedBox(height: 10),
               const Text('找一个安静的地方，用平时说话的语气朗读下面的文字，约需 20～30 秒。',
-                  style: TextStyle(color: Color(0xFF707B78), height: 1.6)),
+                  style: TextStyle(color: BingoPalette.muted, height: 1.6)),
               const SizedBox(height: 24),
               Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24)),
+                      color: BingoPalette.softSurface,
+                      borderRadius: BorderRadius.circular(16)),
                   child: const Text(voiceReadingText,
                       style: TextStyle(
                           fontSize: 16, height: 1.9, color: BingoPalette.ink))),
@@ -214,7 +214,7 @@ class _VoiceRecordPageState extends State<VoiceRecordPage>
               const SizedBox(height: 6),
               Center(
                   child: Text(_recording ? '正在录音，读完后点击结束' : '至少录制 15 秒，最长 60 秒',
-                      style: const TextStyle(color: Color(0xFF707B78)))),
+                      style: const TextStyle(color: BingoPalette.muted))),
               const SizedBox(height: 22),
               FilledButton.icon(
                   onPressed: _busy ? null : (_recording ? _stop : _start),

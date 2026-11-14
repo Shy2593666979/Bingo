@@ -15,7 +15,8 @@ String companionShareDescription(CommunityShare share) {
     return description.trim();
   }
   return share.traits.isNotEmpty
-      ? share.traits.take(2).join('，') : share.introduction;
+      ? share.traits.take(2).join('，')
+      : share.introduction;
 }
 
 class SharedCompanionAvatar extends StatelessWidget {
@@ -36,20 +37,23 @@ class SharedCompanionAvatar extends StatelessWidget {
         child: SizedBox.square(
             dimension: size,
             child: ColoredBox(
-                color: BingoPalette.softSurface,
-                child: share.hasAvatar
-                    ? Image.network(gateway.communityAvatarUrl(share.id),
-                        fit: BoxFit.cover,
-                        cacheWidth:
-                            (size * MediaQuery.devicePixelRatioOf(context))
-                                .round(),
-                        headers: {
-                          if (gateway.communityAccessToken != null)
-                            'Authorization':
-                                'Bearer ${gateway.communityAccessToken}'
-                        },
-                        errorBuilder: (_, error, stack) => fallback)
-                    : fallback)));
+                color: const Color(0xFFEDE7EB),
+                child: Transform.scale(
+                    scale: allowed.contains(share.avatarAsset) ? 1.38 : 1,
+                    alignment: Alignment.topCenter,
+                    child: share.hasAvatar
+                        ? Image.network(gateway.communityAvatarUrl(share.id),
+                            fit: BoxFit.cover,
+                            cacheWidth:
+                                (size * MediaQuery.devicePixelRatioOf(context))
+                                    .round(),
+                            headers: {
+                              if (gateway.communityAccessToken != null)
+                                'Authorization':
+                                    'Bearer ${gateway.communityAccessToken}'
+                            },
+                            errorBuilder: (_, error, stack) => fallback)
+                        : fallback))));
   }
 }
 
@@ -66,7 +70,7 @@ class CompanionPortrait extends StatelessWidget {
   Widget build(BuildContext context) {
     const allowed = roleAvatarFiles;
     final fallback = ColoredBox(
-        color: BingoPalette.softSurface,
+        color: const Color(0xFFEDE7EB),
         child: Image.asset(
             squareAvatarAsset(
                 'assets/images/${allowed.contains(share.avatarAsset) ? share.avatarAsset : 'bingo_logo.png'}'),
@@ -117,11 +121,13 @@ class CommunityTags extends StatelessWidget {
           .map((tag) => Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                  color: BingoPalette.softSurface,
-                  borderRadius: BorderRadius.circular(7)),
-              child: Text(tag,
+                  color: const Color(0xFFF6F6F6),
+                  borderRadius: BorderRadius.circular(20)),
+              child: Text(tag.startsWith('#') ? tag.substring(1) : tag,
                   style: const TextStyle(
-                      fontSize: 10, color: BingoPalette.primary))))
+                      fontSize: 12,
+                      color: Color(0xFF444444),
+                      fontWeight: FontWeight.w600))))
           .toList());
 }
 
@@ -141,9 +147,9 @@ class CommunityEmpty extends StatelessWidget {
         Container(
             padding: const EdgeInsets.all(20),
             decoration: const BoxDecoration(
-                color: Color(0xFFE8F2EC), shape: BoxShape.circle),
+                color: Color(0xFFEDE7EB), shape: BoxShape.circle),
             child: const Icon(Icons.diversity_1_outlined,
-                size: 36, color: Color(0xFF8CAB99))),
+                size: 36, color: BingoPalette.muted)),
         const SizedBox(height: 17),
         Text(title,
             textAlign: TextAlign.center,

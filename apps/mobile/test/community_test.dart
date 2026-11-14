@@ -37,9 +37,12 @@ const _role = RoleOption(
     prompt: '喜欢星星，擅长倾听');
 
 CommunityShare _share(
-        {String name = '星野', String? installed, bool mine = false}) =>
+        {String id = 'share-one',
+        String name = '星野',
+        String? installed,
+        bool mine = false}) =>
     CommunityShare(
-        id: 'share-one',
+        id: id,
         name: name,
         introduction: '一起看星星，聊聊今天的小事。',
         authorName: '小林',
@@ -91,7 +94,13 @@ class _Gateway extends HttpApiGateway {
     if (deferredSearch && query.isNotEmpty) {
       return (searches[query] = Completer<CommunityPageResult>()).future;
     }
-    return CommunityPageResult(List.generate(itemCount, (_) => share), null);
+    return CommunityPageResult(
+        List.generate(
+            itemCount,
+            (index) => index == 0
+                ? share
+                : _share(id: 'share-$index', name: '${share.name}$index')),
+        null);
   }
 
   @override
@@ -167,8 +176,10 @@ void main() {
                   onCreate: () async {},
                   onPartners: () {}))));
       await tester.pumpAndSettle();
-      expect(find.text('搭子'), findsOneWidget);
+      expect(find.text('我的搭子'), findsOneWidget);
       expect(find.text('聊天外观'), findsOneWidget);
+      await tester.tap(find.byTooltip('编辑个人资料'));
+      await tester.pumpAndSettle();
       expect(find.text('我的收藏'), findsOneWidget);
       expect(find.text('属于你的陪伴空间'), findsNothing);
       expect(tester.takeException(), isNull);
@@ -231,26 +242,24 @@ void main() {
                 onInstalled: (_) async {},
                 onOpenCopy: (_) async {}))));
     await tester.pumpAndSettle();
-    expect(find.byType(TextField), findsNothing);
-    await tester.tap(find.byTooltip('搜索社区'));
-    await tester.pumpAndSettle();
     expect(find.byType(TextField), findsOneWidget);
+    expect(find.widgetWithText(TextField, '搜索搭子'), findsOneWidget);
     expect(find.byTooltip('分享搭子'), findsOneWidget);
-    await tester.tap(find.byTooltip('搜索社区'));
-    await tester.pumpAndSettle();
-    expect(find.byType(TextField), findsNothing);
+    expect(find.byTooltip('我的社区'), findsOneWidget);
+    expect(find.text('最新'), findsOneWidget);
+    expect(find.text('最热'), findsOneWidget);
     expect(find.text('群聊模板'), findsNothing);
     expect(find.text('加入群聊'), findsNothing);
-    expect(find.byTooltip('分享搭子'), findsNothing);
-    expect(find.text('Bingo 搭子'), findsNothing);
     expect(find.text('一起看星星，聊聊今天的小事。'), findsWidgets);
-    expect(find.text('小林'), findsWidgets);
-    expect(find.text('添加搭子'), findsWidgets);
-    await tester.tap(find.text('收藏').first);
+    expect(find.textContaining('@小林'), findsWidgets);
+    await tester.tap(find.byTooltip('我的社区'));
     await tester.pumpAndSettle();
-    expect(find.text('收藏'), findsWidgets);
-    expect(find.text('热门搭子'), findsNothing);
+    await tester.tap(find.text('我的收藏'));
     await tester.pumpAndSettle();
+    expect(find.text('我的收藏'), findsOneWidget);
+    await tester.tap(find.text('返回广场'));
+    await tester.pumpAndSettle();
+    expect(find.text('最新'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await close(tester);
     gateway.close();
@@ -278,12 +287,14 @@ void main() {
     await tester.tap(find.byTooltip('查找聊天'));
     await tester.pumpAndSettle();
     expect(find.widgetWithText(TextField, '搜索搭子或聊天记录'), findsOneWidget);
-    expect(find.byTooltip('新建'), findsNothing);
+    expect(find.byTooltip('新建'), findsOneWidget);
     expect(find.text('创建'), findsNothing);
     await tester.enterText(find.byType(TextField), '旧搜索');
     await tester.tap(find.text('首页'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('最近聊天'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('搜索聊天'));
     await tester.pumpAndSettle();
     expect(
         tester.widget<TextField>(find.byType(TextField)).controller!.text, '');
@@ -291,8 +302,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('社区').last);
     await tester.pumpAndSettle();
-    expect(find.text('推荐'), findsOneWidget);
-    expect(find.text('收藏'), findsWidgets);
+    expect(find.text('最新'), findsOneWidget);
+    expect(find.byTooltip('我的社区'), findsOneWidget);
     expect(find.text('发现更多有趣的 AI 搭子～'), findsNothing);
     expect(find.text('发现搭子'), findsNothing);
     await tester.tap(find.bySemanticsLabel('创建中心'));
@@ -334,7 +345,7 @@ void main() {
     await tester.tap(find.text('进入聊天'));
     await tester.pumpAndSettle();
     final chat = tester.state(find.byType(ChatPage));
-    await tester.tap(find.byKey(const ValueKey('chat-header-avatar')));
+    await tester.tap(find.byKey(const ValueKey('chat-header-title')));
     await tester.pumpAndSettle();
     expect(tester.widget<RoleDetailPage>(find.byType(RoleDetailPage)).role.id,
         _role.id);

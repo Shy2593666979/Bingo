@@ -1,10 +1,80 @@
-import 'package:bingo/core/design/release_ui.dart';
-import 'package:bingo/core/design/bingo_surface.dart';
-import 'package:bingo/core/design/reference_design.dart';
+import 'package:bingo/core/design/approved_art.dart';
 import 'package:bingo/core/theme/app_theme.dart';
-import 'package:bingo/shared/widgets/assistant_avatar.dart';
-import 'package:bingo/shared/widgets/group_avatar.dart';
+import 'package:bingo/core/design/companion_launch_ui.dart';
+import 'package:bingo/core/design/reference_design.dart';
 import 'package:flutter/material.dart';
+
+class CreateChoiceDialog extends StatelessWidget {
+  const CreateChoiceDialog({super.key});
+  @override
+  Widget build(BuildContext context) => Dialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 340),
+            child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Text('创建搭子',
+                      style: CompanionLaunch.text(18, weight: FontWeight.w600)),
+                  const SizedBox(height: 10),
+                  Text('选择创建方式',
+                      style: CompanionLaunch.text(14,
+                          color: const Color(0xFF777777))),
+                  const SizedBox(height: 22),
+                  _choice(context, 'role', Icons.auto_fix_high_rounded, '创建搭子',
+                      '从头像、设定和背景开始创建'),
+                  _choice(context, 'group', Icons.group_add_outlined, '创建群聊',
+                      '选择几位搭子，创建属于你们的群聊'),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(0, 46),
+                              side:
+                                  const BorderSide(color: BingoPalette.primary),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20))),
+                          child: const Text('取消'))),
+                ]))),
+      );
+  Widget _choice(BuildContext context, String action, IconData icon,
+          String title, String text) =>
+      InkWell(
+          onTap: () => Navigator.pop(context, action),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              child: Row(children: [
+                Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: BingoPalette.softSurface),
+                    child: Icon(icon, size: 23, color: BingoPalette.ink)),
+                const SizedBox(width: 14),
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text(title,
+                          style: CompanionLaunch.text(15,
+                              weight: FontWeight.w600)),
+                      const SizedBox(height: 7),
+                      Text(text,
+                          style: CompanionLaunch.text(14,
+                              color: const Color(0xFF999999))),
+                    ])),
+                const SizedBox(width: 8),
+                const Icon(Icons.chevron_right_rounded,
+                    size: 20, color: Color(0xFF999999)),
+              ])));
+}
 
 class CreateCenterPage extends StatelessWidget {
   const CreateCenterPage(
@@ -12,162 +82,94 @@ class CreateCenterPage extends StatelessWidget {
       required this.onCreateGroup,
       required this.onPublish,
       this.onDestination,
+      this.onManageRoles,
+      this.onVoices,
       super.key});
   final Future<void> Function() onCreateRole, onCreateGroup, onPublish;
+  final VoidCallback? onManageRoles, onVoices;
   final ValueChanged<int>? onDestination;
-
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: Colors.white,
-        bottomNavigationBar: onDestination == null
-            ? null
-            : ReferenceNavigation(
-                selected: -1,
-                creating: true,
-                onSelected: onDestination!,
-                onCreate: () {}),
-        body: DefaultTextStyle.merge(
-            style: const TextStyle(letterSpacing: 0, height: 1.5),
-            child: SafeArea(
-                bottom: false,
-                child: ListView(
-                    padding: const EdgeInsets.fromLTRB(22, 0, 22, 28),
-                    children: [
-                      ReleasePlainHeader('创建',
-                          leading: onDestination == null
-                              ? BackButton(
-                                  onPressed: () => Navigator.maybePop(context))
-                              : null),
-                      const SizedBox(height: 6),
-                      const Text('把一点灵感，变成一份陪伴。',
-                          style: TextStyle(
-                              fontSize: 13, color: BingoPalette.muted)),
-                      const SizedBox(height: 24),
-                      BingoSurface(
-                          radius: 16,
-                          padding: const EdgeInsets.fromLTRB(20, 20, 10, 17),
-                          onTap: onCreateRole,
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.center,
-                                    children: [
-                                      Expanded(
-                                          child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                            Text('创建一个专属搭子',
-                                                style: TextStyle(
-                                                    fontSize: 22,
-                                                    letterSpacing: -.5,
-                                                    height: 1.45,
-                                                    fontWeight:
-                                                        FontWeight.w600)),
-                                            SizedBox(height: 10),
-                                            Text('定制性格与声音\n把想象中的陪伴带到身边。',
-                                                style: TextStyle(
-                                                    fontSize: 12,
-                                                    height: 1.7,
-                                                    color: BingoPalette.muted)),
-                                          ])),
-                                      SizedBox(width: 10),
-                                      AssistantAvatar(role: '女朋友', size: 100),
-                                    ]),
-                                const SizedBox(height: 18),
-                                FilledButton(
-                                    onPressed: onCreateRole,
-                                    style: FilledButton.styleFrom(
-                                        minimumSize: const Size(0, 42),
-                                        backgroundColor: BingoPalette.primary,
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 17),
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(10)),
-                                        textStyle: const TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w600)),
-                                    child: const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text('开始创建'),
-                                          SizedBox(width: 12),
-                                          Icon(Icons.arrow_forward_rounded,
-                                              size: 18),
-                                        ])),
-                              ])),
-                      const SizedBox(height: 14),
-                      _entry(
-                          title: '创建群聊',
-                          description: '和喜欢的搭子一起聊聊',
-                          art: const GroupAvatar.roles(
-                              ['女朋友', '男朋友', '老师', '同事'],
-                              size: 48),
-                          onTap: onCreateGroup),
-                      const SizedBox(height: 14),
-                      _entry(
-                          title: '分享搭子',
-                          description: '分享人设与故事，让陪伴被看见',
-                          art: Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                  color: BingoPalette.blush,
-                                  borderRadius: BorderRadius.circular(10)),
-                              child: const Icon(Icons.near_me_outlined,
-                                  color: BingoPalette.primary, size: 25)),
-                          onTap: onPublish),
-                      const SizedBox(height: 24),
-                      const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(Icons.lightbulb_outline_rounded,
-                                    size: 18, color: BingoPalette.muted),
-                                SizedBox(width: 8),
-                                Expanded(
-                                    child: Text('灵感从一句话开始，陪伴由你定义。',
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            height: 1.6,
-                                            color: BingoPalette.muted))),
-                              ])),
-                    ]))),
-      );
-
+      backgroundColor: Colors.white,
+      appBar: onDestination == null
+          ? AppBar(title: const Text('创建'), centerTitle: true)
+          : null,
+      bottomNavigationBar: onDestination == null
+          ? null
+          : ReferenceNavigation(
+              selected: -1,
+              creating: true,
+              onSelected: onDestination!,
+              onCreate: () {}),
+      body: SafeArea(
+          top: onDestination != null,
+          bottom: false,
+          child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              children: [
+                if (onDestination != null)
+                  const SizedBox(
+                      height: 64,
+                      child: Center(
+                          child: Text('创建',
+                              style: TextStyle(
+                                  fontSize: 20, fontWeight: FontWeight.w600)))),
+                const SizedBox(height: 48),
+                _entry(Icons.person_add_alt_1_outlined, '创建搭子', '认识一个新的陪伴',
+                    onCreateRole),
+                const SizedBox(height: 23),
+                _entry(
+                    Icons.groups_outlined, '创建群聊', '把喜欢的搭子聚在一起', onCreateGroup),
+                const SizedBox(height: 61),
+                const Divider(),
+                ListTile(
+                    onTap: onManageRoles,
+                    leading: const Icon(Icons.person_outline_rounded),
+                    title: const Text('我的搭子',
+                        style: TextStyle(
+                            fontSize: 17, fontWeight: FontWeight.w600)),
+                    trailing: const Icon(Icons.chevron_right_rounded)),
+                const Divider(),
+                ListTile(
+                    onTap: onVoices,
+                    leading: const Icon(Icons.graphic_eq_rounded),
+                    title: const Text('我的音色',
+                        style: TextStyle(
+                            fontSize: 17, fontWeight: FontWeight.w600)),
+                    trailing: const Icon(Icons.chevron_right_rounded)),
+                const Divider(),
+              ])));
   Widget _entry(
-          {required String title,
-          required String description,
-          required Widget art,
-          required VoidCallback onTap}) =>
-      BingoSurface(
-          radius: 16,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-          onTap: onTap,
-          child: Row(children: [
-            art,
-            const SizedBox(width: 14),
-            Expanded(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                  Text(title,
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 6),
-                  Text(description,
-                      style: const TextStyle(
-                          fontSize: 12,
-                          height: 1.5,
-                          color: BingoPalette.muted)),
-                ])),
-            const SizedBox(width: 6),
-            const Icon(Icons.chevron_right_rounded,
-                size: 20, color: BingoPalette.muted),
-          ]));
+          IconData icon, String title, String subtitle, VoidCallback action) =>
+      Material(
+          color: Colors.white,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+              side: const BorderSide(color: BingoPalette.line)),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+              onTap: action,
+              child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 105),
+                  child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Row(children: [
+                        ApprovedCreateIcon(group: title == '创建群聊'),
+                        const SizedBox(width: 20),
+                        Expanded(
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                              Text(title,
+                                  style: const TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 5),
+                              Text(subtitle,
+                                  style: const TextStyle(
+                                      fontSize: 14, color: BingoPalette.muted))
+                            ])),
+                        const Icon(Icons.chevron_right_rounded,
+                            size: 18, color: BingoPalette.muted)
+                      ])))));
 }

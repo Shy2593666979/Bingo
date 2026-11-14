@@ -1,3 +1,4 @@
+import 'package:bingo/core/design/pearl_icon.dart';
 import 'package:bingo/core/design/companion_launch_ui.dart';
 import 'package:bingo/core/design/companion_menu_icon.dart';
 import 'dart:async';
@@ -13,6 +14,9 @@ import 'package:bingo/features/group_chat/data/group_gateway.dart';
 import 'package:bingo/features/roles/data/local_role_order_store.dart';
 import 'package:bingo/features/stickers/sticker.dart';
 import 'package:bingo/shared/widgets/assistant_avatar.dart';
+import 'package:bingo/shared/widgets/avatar_frame.dart';
+import 'package:bingo/core/role_avatar_assets.dart';
+import 'package:bingo/core/role_avatar_store.dart';
 import 'package:bingo/shared/widgets/group_avatar.dart';
 import 'package:flutter/material.dart';
 
@@ -33,6 +37,8 @@ class CompanionSpacePage extends StatefulWidget {
       this.community,
       this.onRecommendation,
       this.onInstalled,
+      this.onReady,
+      this.showHeader = true,
       super.key});
   final RoleGateway gateway;
   final GroupGateway groups;
@@ -44,7 +50,9 @@ class CompanionSpacePage extends StatefulWidget {
   final Future<void> Function() onCreateRole;
   final Future<void> Function(String)? onRecommendation;
   final Future<void> Function()? onInstalled;
+  final VoidCallback? onReady;
   final VoidCallback onAllGroups, onCommunity, onMessages, onSearchChats;
+  final bool showHeader;
   @override
   State<CompanionSpacePage> createState() => CompanionSpacePageState();
 }
@@ -52,6 +60,7 @@ class CompanionSpacePage extends StatefulWidget {
 class CompanionSpacePageState extends State<CompanionSpacePage> {
   double _refreshTurns = 0;
   bool _refreshAnimating = false;
+  bool _startupReported = false;
 
   Future<void> _refreshRecommendation() async {
     if (_recLoading || _adding != null || _refreshAnimating) return;
@@ -112,7 +121,8 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
     if (_loading) return;
     _loading = true;
     final version = ++_version;
-    if (recommendations) unawaited(_loadRecommendations());
+    final recommendationLoad =
+        recommendations ? _loadRecommendations() : Future<void>.value();
     try {
       final result = await Future.wait<Object>(
           [widget.gateway.listRoles(), widget.groups.listGroups()]);
@@ -133,7 +143,62 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
       if (mounted && version == _version) setState(() => _failed = true);
     } finally {
       if (version == _version) _loading = false;
+      if (!_startupReported && widget.onReady != null) {
+        await recommendationLoad;
+        if (mounted && version == _version) {
+          await _prepareHomeImages();
+          await WidgetsBinding.instance.endOfFrame;
+          if (mounted && version == _version) {
+            _startupReported = true;
+            widget.onReady?.call();
+          }
+        }
+      }
     }
+  }
+
+  Future<void> _prepareHomeImages() async {
+    ImageProvider portrait(String name) {
+      final bytes = RoleAvatarStore.images.value[name];
+      if (bytes != null) return MemoryImage(bytes);
+      return ResizeImage.resizeIfNeeded(
+          512,
+          null,
+          AssetImage(squareAvatarAsset(
+              RoleAvatarStore.assets[name] ?? assistantAvatarAsset(name))));
+    }
+
+    final names = {
+      ...?_roles?.take(6).map((r) => r.name),
+      for (final group in _groups.take(2))
+        ...group.activeMembers.map((m) => m.roleName),
+    };
+    final jobs = <Future<void>>[
+      for (final name in names)
+        precacheImage(portrait(name), context, onError: (_, __) {}),
+      if (_recommendations.isNotEmpty)
+        _prepareRecommendation(_recommendations.first),
+    ];
+    await Future.wait(jobs)
+        .timeout(const Duration(seconds: 5), onTimeout: () => []);
+  }
+
+  Future<void> _prepareRecommendation(CommunityShare share) async {
+    if (!mounted) return;
+    final gateway = widget.community;
+    final ImageProvider image = share.hasAvatar && gateway != null
+        ? NetworkImage(gateway.communityAvatarUrl(share.id), headers: {
+            if (gateway.communityAccessToken != null)
+              'Authorization': 'Bearer ${gateway.communityAccessToken}',
+          })
+        : AssetImage(squareAvatarAsset(
+            'assets/images/${roleAvatarFiles.contains(share.avatarAsset) ? share.avatarAsset : 'bingo_logo.png'}'));
+    if (!share.hasAvatar && widget.onReady == null) {
+      unawaited(precacheImage(image, context, onError: (_, __) {}));
+      return;
+    }
+    await precacheImage(image, context, onError: (_, __) {})
+        .timeout(const Duration(seconds: 3), onTimeout: () {});
   }
 
   Future<void> _loadRecommendations({int offset = 0}) async {
@@ -148,16 +213,22 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
       final result = await gateway.listCommunity(
           scope: 'recommended', sort: 'popular', offset: offset);
       if (!mounted || version != _recVersion) return;
+      final eligible = result.items
+          .where((s) =>
+              !s.mine &&
+              s.status == 'published' &&
+              s.installedRoleId == null &&
+              !_consumed.contains(s.id))
+          .toList();
+      if (eligible.isNotEmpty) {
+        await _prepareRecommendation(eligible.first);
+      }
+      if (!mounted || version != _recVersion) return;
       setState(() {
         _nextRecommendationOffset = result.nextOffset;
         _recommendationRotations = 0;
-        _recommendations = result.items
-            .where((s) =>
-                !s.mine &&
-                s.status == 'published' &&
-                s.installedRoleId == null &&
-                !_consumed.contains(s.id))
-            .toList();
+        _recommendations =
+            eligible.where((s) => !_consumed.contains(s.id)).toList();
       });
     } catch (_) {
       if (mounted && version == _recVersion) setState(() => _recFailed = true);
@@ -174,6 +245,11 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
     if (_recommendations.length > 1 &&
         (_nextRecommendationOffset == null ||
             _recommendationRotations < _recommendations.length - 1)) {
+      final version = _recVersion;
+      await _prepareRecommendation(_recommendations[1]);
+      if (!mounted || version != _recVersion || _recommendations.length < 2) {
+        return;
+      }
       setState(() {
         _recommendations.add(_recommendations.removeAt(0));
         _recommendationRotations++;
@@ -183,6 +259,11 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
     await _loadRecommendations(offset: _nextRecommendationOffset ?? 0);
     if (!mounted || _recFailed) return;
     if (_recommendations.length > 1 && _recommendations.first.id == previous) {
+      final version = _recVersion;
+      await _prepareRecommendation(_recommendations[1]);
+      if (!mounted || version != _recVersion || _recommendations.length < 2) {
+        return;
+      }
       setState(() => _recommendations.add(_recommendations.removeAt(0)));
     } else if (_recommendations.length == 1 &&
         _recommendations.first.id == previous) {
@@ -232,8 +313,8 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
           {String label = '全部 ›',
           int? count,
           bool refresh = false,
-          double top = 27,
-          double bottom = 18}) =>
+          double top = 20,
+          double bottom = 12}) =>
       Padding(
           padding: EdgeInsets.only(top: top, bottom: bottom),
           child: Row(children: [
@@ -241,8 +322,8 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
                 child: Row(children: [
               Flexible(
                   child: Text(text,
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.w700))),
+                      style:
+                          BingoTypography.sectionTitle.copyWith(fontSize: 20))),
               if (count != null) ...[
                 const SizedBox(width: 7),
                 Text('$count',
@@ -292,12 +373,12 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
               height: MediaQuery.sizeOf(context).height * .65,
               child: Column(children: [
                 Padding(
-                    padding: const EdgeInsets.all(18),
+                    padding: const EdgeInsets.all(14),
                     child: Row(children: [
                       const Expanded(
                           child: Text('我的搭子',
                               style: TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.w600))),
+                                  fontSize: 18, fontWeight: FontWeight.w500))),
                       IconButton(
                           onPressed: () => Navigator.pop(sheet),
                           icon: const Icon(Icons.close))
@@ -316,98 +397,198 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
                         })
                 ]))
               ]))));
-  Widget _partners() {
-    final compact = CompanionLaunch.compact(context);
-    final size = compact ? 62.0 : 68.0;
-    final textSize = compact ? 14.0 : 16.0;
-    return SizedBox(
-        height:
-            size + 9 + MediaQuery.textScalerOf(context).scale(textSize) * 1.5,
-        child: ListView.builder(
-            key: const ValueKey('companion-strip-0'),
-            scrollDirection: Axis.horizontal,
-            itemExtent: size + 12,
-            itemCount: _roles!.length,
-            itemBuilder: (_, i) {
-              final role = _roles![i];
-              return Padding(
-                  key: ValueKey('companion-card-${role.id}'),
-                  padding: const EdgeInsets.only(right: 12),
-                  child: InkWell(
-                      onTap: () => widget.onDetail(role),
-                      borderRadius: BorderRadius.circular(17),
-                      child: Column(children: [
-                        AssistantAvatar(role: role.name, size: size),
-                        const SizedBox(height: 9),
-                        Text(role.displayName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: CompanionLaunch.text(textSize,
-                                weight: FontWeight.w500)),
-                      ])));
-            }));
-  }
+  Widget _partners() => SizedBox(
+      key: const ValueKey('companion-preview'),
+      height: 96 + (MediaQuery.textScalerOf(context).scale(12) - 12) * 1.35,
+      child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: _roles!.length + 1,
+          separatorBuilder: (_, __) => const SizedBox(width: 14),
+          itemBuilder: (_, i) {
+            if (i == _roles!.length) {
+              return InkWell(
+                  onTap: widget.onCreateRole,
+                  child: Column(children: [
+                    Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                            color: BingoPalette.blush,
+                            borderRadius: BorderRadius.circular(15)),
+                        child: const Icon(Icons.add_rounded,
+                            color: BingoPalette.primary, size: 28)),
+                    const SizedBox(height: 7),
+                    const Text('添加', style: BingoTypography.caption)
+                  ]));
+            }
+            final role = _roles![i];
+            return InkWell(
+                key: ValueKey('companion-card-${role.id}'),
+                onTap: () => widget.onDetail(role),
+                child: SizedBox(
+                    width: 64,
+                    child: Column(children: [
+                      AssistantAvatar(
+                          role: role.name,
+                          size: 64,
+                          showOnline: true,
+                          onlineDotSize: 13,
+                          onlineBorderWidth: 1.5,
+                          closePortrait: true),
+                      const SizedBox(height: 7),
+                      Text(role.displayName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: BingoTypography.caption)
+                    ])));
+          }));
 
+  Widget _createShortcut(
+          IconData icon, String title, String subtitle, VoidCallback action) =>
+      Expanded(
+          child: OutlinedButton(
+              onPressed: action,
+              style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 48),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  side: const BorderSide(color: BingoPalette.line),
+                  shape: const StadiumBorder()),
+              child:
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                PearlIcon(
+                    icon == Icons.groups_outlined
+                        ? PearlSymbol.group
+                        : PearlSymbol.personAdd,
+                    size: 23,
+                    color: icon == Icons.groups_outlined
+                        ? BingoPalette.ink
+                        : BingoPalette.primary),
+                const SizedBox(width: 7),
+                Flexible(
+                    child: Text(title,
+                        style: const TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w600))),
+                const SizedBox(width: 4),
+                const Icon(Icons.chevron_right_rounded,
+                    size: 17, color: BingoPalette.muted)
+              ])));
   Widget _discover() {
     final share = _recommendations.firstOrNull;
     final gateway = widget.community;
-    final compact = CompanionLaunch.compact(context);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _heading('发现搭子', () => unawaited(_refreshRecommendation()),
-          top: 16, bottom: 11, refresh: true),
+          top: 30, bottom: 16, refresh: true),
       if (share != null && gateway != null)
-        Container(
-            padding: const EdgeInsets.fromLTRB(5, 9, 7, 9),
-            decoration: BoxDecoration(
-                color: const Color(0xFFF9FEFB),
-                border: Border.all(color: const Color(0xFFE1F0E6)),
-                borderRadius: BorderRadius.circular(18)),
-            child: Row(children: [
-              InkWell(
-                  onTap: () => _openRecommendation(share),
-                  borderRadius: BorderRadius.circular(18),
-                  child: ClipRRect(
-                      borderRadius: BorderRadius.circular(18),
-                      child: SizedBox.square(
-                          dimension: compact ? 76 : 88,
-                          child: CompanionPortrait(
-                              share: share, gateway: gateway)))),
-              SizedBox(width: compact ? 9 : 12),
-              Expanded(
-                  child: InkWell(
-                      onTap: () => _openRecommendation(share),
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(share.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: CompanionLaunch.text(compact ? 17 : 19,
-                                    weight: FontWeight.w700, height: 1.35)),
-                            Text(
-                                [
-                                  if (share.roleType?.isNotEmpty == true)
-                                    share.roleType!,
-                                  '${share.authorName}分享'
-                                ].join(' · '),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: CompanionLaunch.text(compact ? 12 : 14,
-                                    color: const Color(0xFF718777))),
-                            const SizedBox(height: 3),
-                            Text(companionShareDescription(share),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: CompanionLaunch.text(compact ? 14 : 16,
-                                    color: const Color(0xFF395E46),
-                                    height: 1.45)),
-                          ]))),
-              const SizedBox(width: 7),
-              CompanionLaunchButton(
-                  key: ValueKey('recommend-add-${share.id}'),
-                  label: _adding == share.id ? '添加中' : '添加',
-                  onPressed: _adding != null ? null : () => _install(share)),
-            ]))
+        AnimatedSize(
+            duration: const Duration(milliseconds: 320),
+            curve: Curves.easeInOutCubic,
+            alignment: Alignment.topCenter,
+            child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 380),
+                switchInCurve: Curves.easeInOut,
+                switchOutCurve: Curves.easeInOut,
+                layoutBuilder: (current, previous) => Stack(
+                        alignment: Alignment.topCenter,
+                        clipBehavior: Clip.none,
+                        children: [
+                          for (final child in previous)
+                            // Outgoing cards keep their natural height. Forcing
+                            // them into the incoming card's height overflows when
+                            // the new introduction or tags use fewer lines.
+                            Positioned(
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                child: IgnorePointer(child: child)),
+                          if (current != null) current,
+                        ]),
+                child: Material(
+                    key:
+                        ValueKey('recommendation-${widget.userId}-${share.id}'),
+                    color: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side:
+                            const BorderSide(color: BingoPalette.accentBorder)),
+                    child: InkWell(
+                        onTap: () => _openRecommendation(share),
+                        borderRadius: BorderRadius.circular(16),
+                        child: Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(
+                                      width: 78,
+                                      height: 82,
+                                      child: ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(13),
+                                          child: CompanionPortrait(
+                                              share: share, gateway: gateway))),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                      child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                        Row(children: [
+                                          Expanded(
+                                              child: Text(share.name,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: BingoTypography
+                                                      .itemTitle)),
+                                          CompanionLaunchButton(
+                                              key: ValueKey(
+                                                  'recommend-add-${share.id}'),
+                                              label: _adding == share.id
+                                                  ? '添加中'
+                                                  : '添加',
+                                              onPressed: _adding != null
+                                                  ? null
+                                                  : () => _install(share))
+                                        ]),
+                                        const SizedBox(height: 4),
+                                        Wrap(
+                                            spacing: 5,
+                                            runSpacing: 4,
+                                            children: [
+                                              for (final tag in [
+                                                share.roleType ?? '社区搭子',
+                                                ...share.traits.take(2)
+                                              ])
+                                                Container(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                            horizontal: 5,
+                                                            vertical: 1),
+                                                    decoration: BoxDecoration(
+                                                        color:
+                                                            BingoPalette.blush,
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(6)),
+                                                    child: Text(tag,
+                                                        style: BingoTypography
+                                                            .caption
+                                                            .copyWith(
+                                                                fontSize: 11,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
+                                                                color: const Color(
+                                                                    0xFF444444)))),
+                                            ]),
+                                        const SizedBox(height: 6),
+                                        Text(share.introduction,
+                                            maxLines: 3,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: BingoTypography.body
+                                                .copyWith(fontSize: 13)),
+                                      ])),
+                                ]))))))
       else
         Padding(
             padding: const EdgeInsets.only(bottom: 18),
@@ -452,7 +633,7 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
       InkWell(
           onTap: onTap,
           child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 7),
+              padding: const EdgeInsets.symmetric(vertical: 12),
               decoration: const BoxDecoration(
                   border: Border(bottom: BorderSide(color: BingoPalette.line))),
               child: Row(children: [
@@ -467,9 +648,9 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
                             child: Text(name,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700))),
+                                style: BingoTypography.itemTitle.copyWith(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500))),
                         if (group) ...[
                           const SizedBox(width: 6),
                           const BingoIcon(BingoSymbol.group,
@@ -525,7 +706,7 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
       ));
     }
     recent.sort((a, b) => b.date.compareTo(a.date));
-    return recent.take(5).map((e) => e.child).toList();
+    return recent.take(2).map((e) => e.child).toList();
   }
 
   @override
@@ -537,31 +718,30 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
               onRefresh: refresh,
               child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(15, 0, 15, 20),
+                  padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
                   children: [
-                    CompanionLaunchHeader('陪伴空间',
-                        horizontalPadding: 0,
-                        actions: [
-                          IconButton(
-                              tooltip: '查找聊天',
-                              onPressed: widget.onSearchChats,
-                              padding: EdgeInsets.zero,
-                              icon: const Icon(Icons.search_rounded, size: 26)),
-                        ]),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                        height: 80,
-                        child: Row(children: [
-                          Expanded(
-                              child: CompanionLaunchCreateAction(
-                                  group: false, onTap: widget.onCreateRole)),
-                          const SizedBox(width: 15),
-                          Expanded(
-                              child: CompanionLaunchCreateAction(
-                                  group: true,
-                                  onTap: () => widget.onCreateGroup(''))),
-                        ])),
-                    _heading('我的搭子', _allPartners),
+                    if (widget.showHeader)
+                      SizedBox(
+                          height: 64,
+                          child: Row(children: [
+                            Expanded(
+                                child: Text('陪伴空间',
+                                    style: CompanionLaunch.text(20,
+                                        weight: FontWeight.w600))),
+                            IconButton(
+                                tooltip: '查找聊天',
+                                onPressed: widget.onSearchChats,
+                                icon:
+                                    const Icon(Icons.search_rounded, size: 24))
+                          ])),
+                    Row(children: [
+                      _createShortcut(Icons.person_add_alt_outlined, '创建搭子', '',
+                          widget.onCreateRole),
+                      const SizedBox(width: 10),
+                      _createShortcut(Icons.groups_outlined, '创建群聊', '',
+                          () => widget.onCreateGroup(''))
+                    ]),
+                    _heading('我的搭子', _allPartners, top: 26, bottom: 18),
                     if (_roles == null && !_failed)
                       const Center(child: CircularProgressIndicator())
                     else if (_failed && _roles == null)
@@ -573,18 +753,15 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
                           child: const Text('创建自己的第一位搭子'))
                     else
                       _partners(),
-                    const SizedBox(height: 15),
-                    const Divider(height: 1, color: CompanionLaunch.line),
                     _discover(),
                     InkWell(
                         onTap: widget.onMessages,
-                        child: _heading('最近聊天', null, top: 14, bottom: 5)),
+                        child: _heading('最近聊天', widget.onMessages,
+                            top: 22, bottom: 8, label: '更多 ›')),
                     ..._recentChats(),
                     if (_recentChats().isEmpty)
-                      Padding(
-                          padding: const EdgeInsets.all(14),
-                          child: TextButton(
-                              onPressed: widget.onMessages,
-                              child: const Text('找搭子聊聊今天吧'))),
+                      TextButton(
+                          onPressed: widget.onMessages,
+                          child: const Text('找搭子聊聊今天吧')),
                   ]))));
 }

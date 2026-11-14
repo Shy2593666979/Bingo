@@ -182,7 +182,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                 top: 180, left: -105, child: _SoftCircle(size: 170)),
             SafeArea(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(28, 4, 28, 32),
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
                 children: [
                   _buildHeader(context),
                   const SizedBox(height: 8),
@@ -205,7 +205,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                           Container(
                               decoration: BoxDecoration(
                                   color: Colors.white,
-                                  borderRadius: BorderRadius.circular(24),
+                                  borderRadius: BorderRadius.circular(16),
                                   border: Border.all(color: BingoPalette.line)),
                               child: ListTile(
                                   leading: const Icon(Icons.cake_outlined,
@@ -252,7 +252,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                         key: ValueKey('role-$_role'),
                         label: '助手角色',
                         icon: const _RoleIcon(),
-                        iconBackgroundColor: const Color(0xFFECFBF6),
+                        iconBackgroundColor: BingoPalette.softSurface,
                         value: _role,
                         options: options.roles,
                         roleDetails: options.roleDetails,
@@ -432,8 +432,8 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
           const Text(
             '让 Bingo 更懂你',
             style: TextStyle(
-                fontSize: 27,
-                fontWeight: FontWeight.w800,
+                fontSize: 22,
+                fontWeight: FontWeight.w500,
                 color: BingoPalette.ink),
           ),
           const SizedBox(height: 6),
@@ -458,7 +458,7 @@ class _SoftCircle extends StatelessWidget {
         height: size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: const Color(0xFFE8F9F3).withValues(alpha: 0.62),
+          color: BingoPalette.softSurface.withValues(alpha: 0.62),
         ),
       );
 }
@@ -474,7 +474,7 @@ class _AssistantNameIcon extends StatelessWidget {
 class _RoleIcon extends StatelessWidget {
   const _RoleIcon();
 
-  static const _iconColor = Color(0xFF00B58A);
+  static const _iconColor = BingoPalette.primary;
 
   @override
   Widget build(BuildContext context) => SizedBox.square(

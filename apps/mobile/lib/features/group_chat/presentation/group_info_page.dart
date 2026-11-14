@@ -155,10 +155,12 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
       ListTile(
           leading: icon == null ? null : Icon(icon, size: 23),
           title: Text(title, style: const TextStyle(fontSize: 15)),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           subtitle: subtitle == null
               ? null
               : Text(subtitle,
-                  style: const TextStyle(fontSize: 11, color: refMuted)),
+                  style: const TextStyle(fontSize: 12, color: refMuted)),
           trailing: trailing ??
               const Icon(Icons.chevron_right_rounded, color: refMuted),
           onTap: onTap);
@@ -186,7 +188,7 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
   Widget build(BuildContext context) => PopScope(
       canPop: !_saving,
       child: Scaffold(
-          backgroundColor: BingoPalette.ice,
+          backgroundColor: Colors.white,
           appBar: AppBar(title: const Text('群聊信息'), centerTitle: true),
           body: AbsorbPointer(
               absorbing: _saving,
@@ -223,7 +225,7 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
                       ]),
                       const SizedBox(height: 17),
                       Text('${_group.activeMembers.length}位搭子 · 最多8位搭子',
-                          style: const TextStyle(fontSize: 11, color: refMuted))
+                          style: const TextStyle(fontSize: 12, color: refMuted))
                     ])),
                     const SizedBox(height: 13),
                     H2Group(children: [

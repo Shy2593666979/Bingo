@@ -66,14 +66,16 @@ void main() {
         home: CreateCenterPage(
             onCreateRole: () async => opened.add('role'),
             onCreateGroup: () async => opened.add('group'),
-            onPublish: () async => opened.add('share'))));
+            onPublish: () async => opened.add('share'),
+            onManageRoles: () => opened.add('roles'),
+            onVoices: () => opened.add('voices'))));
     await tester.pumpAndSettle();
-    for (final text in ['开始创建', '创建群聊', '分享搭子']) {
+    for (final text in ['创建搭子', '创建群聊', '我的搭子', '我的音色']) {
       await tester.ensureVisible(find.text(text));
       await tester.tap(find.text(text));
       await tester.pumpAndSettle();
     }
-    expect(opened, ['role', 'group', 'share']);
+    expect(opened, ['role', 'group', 'roles', 'voices']);
     expect(tester.takeException(), isNull);
   });
 }

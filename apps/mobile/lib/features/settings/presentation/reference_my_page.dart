@@ -1,5 +1,7 @@
+import 'package:bingo/core/design/approved_art.dart';
+import 'package:bingo/core/design/pearl_icon.dart';
+import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/core/design/companion_launch_ui.dart';
-import 'package:bingo/core/design/companion_menu_icon.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/community/data/community_gateway.dart';
@@ -25,6 +27,8 @@ class ReferenceMyPage extends StatefulWidget {
       this.onMessages,
       this.onGroups,
       this.onAppearance,
+      this.onVoices,
+      this.onManageRoles,
       super.key});
   final UserProfile profile;
   final RoleGateway roles;
@@ -35,6 +39,7 @@ class ReferenceMyPage extends StatefulWidget {
   final VoidCallback onShares, onFavorites, onPartners;
   final VoidCallback? onMessages;
   final VoidCallback? onGroups;
+  final VoidCallback? onVoices, onManageRoles;
   final Future<void> Function(String) onRole, onShare;
   final Future<void> Function(ChatGroup) onGroup;
   @override
@@ -44,7 +49,6 @@ class ReferenceMyPage extends StatefulWidget {
 class ReferenceMyPageState extends State<ReferenceMyPage> {
   List<RoleOption> _roles = [];
   List<ChatGroup> _groups = [];
-  int _shareCount = 0;
   bool _failed = false;
   @override
   void initState() {
@@ -56,12 +60,10 @@ class ReferenceMyPageState extends State<ReferenceMyPage> {
     try {
       final roles = await widget.roles.listRoles();
       final groups = await widget.groups.listGroups();
-      final shares = await widget.community.listCommunity(scope: 'mine');
       if (mounted) {
         setState(() {
           _roles = roles;
           _groups = groups;
-          _shareCount = shares.total ?? shares.items.length;
           _failed = false;
         });
       }
@@ -70,138 +72,165 @@ class ReferenceMyPageState extends State<ReferenceMyPage> {
     }
   }
 
-  Widget _stat(String label, int count, VoidCallback onTap) => Expanded(
-      child: InkWell(
-          onTap: onTap,
-          child: Column(children: [
-            Text('$count',
-                style: CompanionLaunch.text(23, weight: FontWeight.w700)),
-            const SizedBox(height: 2),
-            Text(label,
-                style:
-                    CompanionLaunch.text(16, color: const Color(0xFF647E6B))),
-          ])));
-
-  Widget _menu(CompanionMenuSymbol icon, String title, VoidCallback onTap) =>
+  Widget _menu(IconData icon, String title, VoidCallback onTap,
+          {String? subtitle, String? value, bool last = false}) =>
       InkWell(
           onTap: onTap,
-          child: Container(
-              constraints: const BoxConstraints(minHeight: 63),
-              decoration: const BoxDecoration(
-                  border:
-                      Border(bottom: BorderSide(color: CompanionLaunch.line))),
-              child: Row(children: [
-                CompanionMenuIcon(icon),
-                const SizedBox(width: 21),
-                Expanded(
-                    child: Text(title,
-                        style: CompanionLaunch.text(
-                            CompanionLaunch.compact(context) ? 18 : 19))),
-                const CompanionMenuIcon(CompanionMenuSymbol.chevron,
-                    size: 16, color: Color(0xFF91A895)),
-              ])));
-
-  @override
-  Widget build(BuildContext context) {
-    final compact = CompanionLaunch.compact(context);
-    return DecoratedBox(
-        decoration: CompanionLaunch.background,
-        child: SafeArea(
-            bottom: false,
-            child: RefreshIndicator(
-                onRefresh: refresh,
-                child: ListView(
-                    padding: EdgeInsets.zero,
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    children: [
-                      const CompanionLaunchHeader('我的'),
-                      Padding(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: compact ? 23 : 27),
-                          child: Column(children: [
-                            const SizedBox(height: 30),
-                            InkWell(
-                                onTap: widget.onEdit,
-                                borderRadius: BorderRadius.circular(23),
-                                child: Padding(
-                                    padding: EdgeInsets.only(
-                                        left: compact ? 12 : 16),
-                                    child: Row(children: [
-                                      Stack(clipBehavior: Clip.none, children: [
-                                        UserAvatar(
-                                            avatarData:
-                                                widget.profile.userAvatarData,
-                                            username:
-                                                widget.profile.username ?? '',
-                                            size: compact ? 80 : 88,
-                                            foregroundColor: Colors.white,
-                                            backgroundGradient:
-                                                const LinearGradient(
-                                                    begin: Alignment.topLeft,
-                                                    end: Alignment.bottomRight,
-                                                    colors: [
-                                                  Color(0xFF32C89B),
-                                                  CompanionLaunch.primary
-                                                ])),
-                                        if (widget.profile.userAvatarData ==
-                                            null)
-                                          const Positioned(
-                                              right: -15,
-                                              top: -9,
-                                              child: SizedBox(
-                                                  width: 29,
-                                                  height: 29,
-                                                  child: CustomPaint(
-                                                      painter:
-                                                          _ProfileRays()))),
-                                      ]),
-                                      SizedBox(width: compact ? 23 : 27),
-                                      Expanded(
-                                          child: Text(
-                                              widget.profile.username ??
-                                                  'Bingo 用户',
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: CompanionLaunch.text(
-                                                  compact ? 25 : 27,
-                                                  weight: FontWeight.w700))),
-                                      const CompanionMenuIcon(
-                                          CompanionMenuSymbol.chevron,
-                                          size: 19,
-                                          color: Color(0xFF6E8C77)),
-                                    ]))),
-                            const SizedBox(height: 20),
-                            Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 2, horizontal: 9),
-                                child: Row(children: [
-                                  _stat('搭子', _roles.length, widget.onPartners),
-                                  _stat('分享', _shareCount, widget.onShares),
-                                  _stat(
-                                      '群聊',
-                                      _groups.length,
-                                      widget.onGroups ??
-                                          () => _showGroups(context)),
-                                ])),
-                            if (_failed)
-                              TextButton(
-                                  onPressed: refresh,
-                                  child: const Text('部分信息加载失败，点击重试')),
-                            const SizedBox(height: 18),
-                            const Divider(
-                                height: 1, color: CompanionLaunch.line),
-                            _menu(CompanionMenuSymbol.share, '我的分享',
-                                widget.onShares),
-                            _menu(CompanionMenuSymbol.favorite, '我的收藏',
-                                widget.onFavorites),
-                            _menu(CompanionMenuSymbol.appearance, '聊天外观',
-                                widget.onAppearance ?? widget.onSettings),
-                            _menu(CompanionMenuSymbol.settings, '设置',
-                                widget.onSettings),
-                            const SizedBox(height: 24),
+          child: Column(children: [
+            ConstrainedBox(
+                constraints:
+                    BoxConstraints(minHeight: subtitle == null ? 54 : 78),
+                child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 18, vertical: 12),
+                    child: Row(children: [
+                      ApprovedMenuIcon(switch (icon) {
+                        Icons.person_outline_rounded => 0,
+                        Icons.mic_none_rounded => 1,
+                        Icons.share_outlined => 2,
+                        Icons.favorite_border_rounded => 3,
+                        Icons.palette_outlined => 4,
+                        _ => 5
+                      }),
+                      const SizedBox(width: 16),
+                      Expanded(
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                            Text(title,
+                                style: BingoTypography.menuTitle.copyWith(
+                                    fontSize: 18, fontWeight: FontWeight.w600)),
+                            if (subtitle != null) ...[
+                              const SizedBox(height: 4),
+                              Text(subtitle,
+                                  style: CompanionLaunch.text(14,
+                                      color: const Color(0xFF666666))),
+                            ],
                           ])),
-                    ]))));
-  }
+                      if (value != null) ...[
+                        const SizedBox(width: 8),
+                        Text(value,
+                            style: CompanionLaunch.text(12,
+                                color: CompanionLaunch.muted)),
+                      ],
+                      const SizedBox(width: 12),
+                      const Icon(Icons.chevron_right_rounded,
+                          size: 18, color: BingoPalette.muted),
+                    ]))),
+            if (!last)
+              const Divider(height: 1, indent: 48, color: BingoPalette.line),
+          ]));
+
+  Widget _welcome() => InkWell(
+      onTap: widget.onManageRoles ?? widget.onPartners,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+          decoration: BoxDecoration(
+              color: const Color(0xFFF7F6F5),
+              borderRadius: BorderRadius.circular(16)),
+          child: Row(children: [
+            const PearlIcon(PearlSymbol.group, size: 25),
+            const SizedBox(width: 18),
+            Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  const Text('我的陪伴',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 4),
+                  Text('${_roles.length} 位搭子，随时都在',
+                      style: const TextStyle(
+                          fontSize: 13, color: BingoPalette.muted))
+                ]))
+          ])));
+  @override
+  Widget build(BuildContext context) => ColoredBox(
+      color: BingoPalette.pageBottom,
+      child: SafeArea(
+          bottom: false,
+          child: RefreshIndicator(
+              onRefresh: refresh,
+              child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
+                  children: [
+                    Padding(
+                        padding: const EdgeInsets.only(top: 40, bottom: 26),
+                        child: Row(children: [
+                          InkWell(
+                              onTap: widget.onEdit,
+                              child: ClipOval(
+                                  child: UserAvatar(
+                                      avatarData: widget.profile.userAvatarData,
+                                      username: widget.profile.username ?? '',
+                                      size: 76))),
+                          const SizedBox(width: 14),
+                          Flexible(
+                              child: InkWell(
+                                  onTap: widget.onEdit,
+                                  child: Text(
+                                      widget.profile.username ?? 'Bingo 用户',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: CompanionLaunch.text(20,
+                                          weight: FontWeight.w600)))),
+                          const SizedBox(width: 6),
+                          PopupMenuButton<int>(
+                              tooltip: '编辑个人资料',
+                              icon: const Icon(Icons.edit_rounded,
+                                  size: 17, color: BingoPalette.muted),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(
+                                  minWidth: 32, minHeight: 36),
+                              onSelected: (v) {
+                                if (v == 0) {
+                                  widget.onEdit();
+                                } else if (v == 1) {
+                                  widget.onFavorites();
+                                } else {
+                                  (widget.onGroups ??
+                                      () => _showGroups(context))();
+                                }
+                              },
+                              itemBuilder: (_) => [
+                                    const PopupMenuItem(
+                                        value: 0, child: Text('编辑个人资料')),
+                                    const PopupMenuItem(
+                                        value: 2, child: Text('我的群聊'))
+                                  ]),
+                        ])),
+                    _welcome(),
+                    const SizedBox(height: 20),
+                    if (_failed)
+                      TextButton(
+                          onPressed: refresh,
+                          child: const Text('部分信息加载失败，点击重试')),
+                    Container(
+                        decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: Colors.transparent)),
+                        clipBehavior: Clip.antiAlias,
+                        child: Column(children: [
+                          _menu(Icons.person_outline_rounded, '我的搭子',
+                              widget.onManageRoles ?? widget.onPartners,
+                              value: null),
+                          if (widget.onVoices != null)
+                            _menu(Icons.mic_none_rounded, '我的音色',
+                                widget.onVoices!),
+                          _menu(Icons.share_outlined, '我的分享', widget.onShares,
+                              value: null),
+                          _menu(Icons.favorite_border_rounded, '我的收藏',
+                              widget.onFavorites),
+                          _menu(Icons.palette_outlined, '聊天外观',
+                              widget.onAppearance ?? widget.onSettings),
+                          _menu(
+                              Icons.settings_outlined, '设置', widget.onSettings,
+                              last: true),
+                        ])),
+                  ]))));
 
   void _showGroups(BuildContext context) => showModalBottomSheet<void>(
       context: context,
@@ -210,7 +239,7 @@ class ReferenceMyPageState extends State<ReferenceMyPage> {
               child: ListView(shrinkWrap: true, children: [
             const ListTile(
                 title: Text('我的群聊',
-                    style: TextStyle(fontWeight: FontWeight.w800))),
+                    style: TextStyle(fontWeight: FontWeight.w500))),
             if (_groups.isEmpty) const ListTile(title: Text('还没有群聊，可在创建中心创建')),
             for (final group in _groups)
               ListTile(
@@ -221,20 +250,4 @@ class ReferenceMyPageState extends State<ReferenceMyPage> {
                     widget.onGroup(group);
                   })
           ])));
-}
-
-class _ProfileRays extends CustomPainter {
-  const _ProfileRays();
-  @override
-  void paint(Canvas canvas, Size size) {
-    final pen = Paint()
-      ..color = const Color(0xFF8EDAB6)
-      ..strokeWidth = 5
-      ..strokeCap = StrokeCap.round;
-    canvas.drawLine(const Offset(7, 3), const Offset(3, 12), pen);
-    canvas.drawLine(const Offset(21, 14), const Offset(13, 18), pen);
-  }
-
-  @override
-  bool shouldRepaint(_ProfileRays oldDelegate) => false;
 }

@@ -331,12 +331,12 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
     final center = _center;
     if (center == null) {
       return const ColoredBox(
-          color: Color(0xFFEAF1EC),
+          color: BingoPalette.softSurface,
           child: Center(
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.map_outlined, color: Color(0xFF9FB4AB), size: 44),
+            Icon(Icons.map_outlined, color: BingoPalette.muted, size: 44),
             SizedBox(height: 12),
-            Text('正在定位，可先搜索地点', style: TextStyle(color: Color(0xFF7D918A))),
+            Text('正在定位，可先搜索地点', style: TextStyle(color: BingoPalette.muted)),
           ])));
     }
     final uri = Uri.parse(widget.gateway.locationMapUrl(center, zoom: _zoom));
@@ -379,7 +379,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
         }
       },
       child: ColoredBox(
-          color: const Color(0xFFEAF1EC),
+          color: BingoPalette.softSurface,
           child: Transform.translate(
               offset: _drag,
               child: Image.network(
@@ -549,7 +549,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                                               textAlign: TextAlign.end,
                                               style: const TextStyle(
                                                   fontSize: 10,
-                                                  color: Color(0xFF5A7067))))),
+                                                  color: BingoPalette.muted)))),
                               ]))),
                   Expanded(
                       child: Material(
@@ -602,7 +602,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                                         child: Text(_error!,
                                             style: const TextStyle(
                                                 fontSize: 12,
-                                                color: Color(0xFF7D918A)))),
+                                                color: BingoPalette.muted))),
                                   if (_busy && _places.isEmpty)
                                     Padding(
                                         padding: const EdgeInsets.all(20),
@@ -612,7 +612,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                                                 : '正在查询地点…',
                                             style: const TextStyle(
                                                 fontSize: 12,
-                                                color: Color(0xFF7D918A)))),
+                                                color: BingoPalette.muted))),
                                   if (!_busy &&
                                       _places.isEmpty &&
                                       _error == null)
@@ -621,7 +621,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                                         child: Text('搜索一个地点，或在地图上选择位置',
                                             style: TextStyle(
                                                 fontSize: 12,
-                                                color: Color(0xFF7D918A)))),
+                                                color: BingoPalette.muted))),
                                   for (final place in _places)
                                     Column(children: [
                                       ListTile(
@@ -642,7 +642,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                                               overflow: TextOverflow.ellipsis,
                                               style: const TextStyle(
                                                   fontSize: 12,
-                                                  color: Color(0xFF9AA8A2),
+                                                  color: BingoPalette.muted,
                                                   height: 1.6)),
                                           trailing: selected == place
                                               ? const Icon(Icons.check_rounded,

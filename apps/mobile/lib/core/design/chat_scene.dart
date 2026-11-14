@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:bingo/core/theme/app_theme.dart';
 
-/// Shared materials for the sunlit, sage-and-ivory conversation scene.
+/// Shared materials for the neutral conversation scene with a blush accent.
 abstract final class ChatScene {
   static Future<void> setNativeChrome(bool enabled) async {
     try {
@@ -50,24 +50,57 @@ class SageBubble extends StatelessWidget {
   final Widget child;
   final EdgeInsets padding;
   @override
-  Widget build(BuildContext context) => Container(
-      padding: padding,
-      decoration: BoxDecoration(
-        color: isUser ? null : Colors.white.withValues(alpha: .94),
-        gradient: isUser
-            ? LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [const Color(0xFFDDFBF2), const Color(0xFFD9F9EC)])
-            : null,
-        borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(isUser ? 12 : 4),
-            topRight: Radius.circular(isUser ? 4 : 12),
-            bottomLeft: const Radius.circular(12),
-            bottomRight: const Radius.circular(12)),
-        border: Border.all(
-            color: isUser ? const Color(0xFFD4F3E8) : BingoPalette.line,
-            width: .6),
-      ),
-      child: child);
+  Widget build(BuildContext context) => CustomPaint(
+      painter: _DefaultBubblePainter(isUser),
+      child: Padding(
+          padding: EdgeInsets.fromLTRB(
+              padding.left < 14 ? 14 : padding.left,
+              padding.top,
+              padding.right < 14 ? 14 : padding.right,
+              padding.bottom),
+          child: child));
+}
+
+/// A scalable outline and tail, kept independent of the text's layout.
+class _DefaultBubblePainter extends CustomPainter {
+  const _DefaultBubblePainter(this.isUser);
+  final bool isUser;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    if (isUser) {
+      canvas.translate(size.width, 0);
+      canvas.scale(-1, 1);
+    }
+    final w = size.width, h = size.height;
+    final r = (h / 2).clamp(0.0, 18.0);
+    final path = Path()
+      ..moveTo(5 + r, .5)
+      ..lineTo(w - r, .5)
+      ..quadraticBezierTo(w - .5, .5, w - .5, r)
+      ..lineTo(w - .5, h - r)
+      ..quadraticBezierTo(w - .5, h - .5, w - r, h - .5)
+      ..lineTo(5 + r, h - .5)
+      ..quadraticBezierTo(11, h - .5, 9, h - 3)
+      ..quadraticBezierTo(5, h, .5, h - 1)
+      ..quadraticBezierTo(6, h - 6, 5.5, h - 10)
+      ..lineTo(5.5, r)
+      ..quadraticBezierTo(5.5, .5, 5 + r, .5)
+      ..close();
+    canvas.drawPath(
+        path, Paint()..color = isUser ? BingoPalette.userBubble : Colors.white);
+    canvas.drawPath(
+        path,
+        Paint()
+          ..color =
+              isUser ? BingoPalette.userBubbleBorder : const Color(0xFFD5D0D2)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = .6);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_DefaultBubblePainter oldDelegate) =>
+      oldDelegate.isUser != isUser;
 }

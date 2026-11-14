@@ -113,6 +113,9 @@ void main() {
                 onUnreadChanged: (n) => unread = n))));
     await tester.pumpAndSettle();
     expect(find.text('Bingo 搭子'), findsNothing);
+    expect(find.text('全部'), findsNothing);
+    await tester.tap(find.byTooltip('搜索聊天'));
+    await tester.pumpAndSettle();
     expect(find.text('全部'), findsOneWidget);
     expect(find.text('单聊'), findsOneWidget);
     expect(find.text('群聊'), findsOneWidget);
@@ -177,7 +180,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(gateway.roles[1]['archived'], true);
     expect(find.text('暖暖'), findsNothing);
-    expect(find.text('全部'), findsOneWidget);
+    expect(find.text('全部'), findsNothing);
     expect(tester.takeException(), isNull);
     gateway.close();
   });

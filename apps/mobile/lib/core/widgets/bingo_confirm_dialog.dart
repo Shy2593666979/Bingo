@@ -46,7 +46,7 @@ class BingoConfirmDialog extends StatelessWidget {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 340),
             child: SingleChildScrollView(
@@ -64,14 +64,14 @@ class BingoConfirmDialog extends StatelessWidget {
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                           fontSize: 18,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w500,
                           color: BingoPalette.ink)),
                   const SizedBox(height: 12),
                   Text(message,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                           fontSize: 14,
-                          height: 1.6,
+                          height: 1.5,
                           color: BingoPalette.muted)),
                   const SizedBox(height: 24),
                   Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -79,7 +79,7 @@ class BingoConfirmDialog extends StatelessWidget {
                         child: TextButton(
                             onPressed: () => Navigator.pop(context, false),
                             style: TextButton.styleFrom(
-                                backgroundColor: const Color(0xFFF2F5F5),
+                                backgroundColor: BingoPalette.softSurface,
                                 foregroundColor: BingoPalette.ink,
                                 minimumSize: const Size(0, 44),
                                 padding: const EdgeInsets.symmetric(

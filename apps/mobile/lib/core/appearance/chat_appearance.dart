@@ -391,8 +391,8 @@ class ChatSkin {
   static const originals = [
     ChatSkin(
         'mint',
-        '薄荷日常',
-        '薄荷绿 · 清透陪伴',
+        '默认气泡',
+        '白底浅绿 · 简洁日常',
         BingoPalette.primary,
         BingoPalette.userBubble,
         Colors.white,
@@ -584,17 +584,7 @@ class ChatWallpaper extends StatelessWidget {
   Widget build(BuildContext context) {
     final skin = ChatSkin.find(value.background);
     if (value.background == 'mint') {
-      return DecoratedBox(
-          decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                Color(0xFFFFFFFF),
-                Color(0xFFFAFDFC),
-                Color(0xFFF3FAF7)
-              ])),
-          child: child);
+      return ColoredBox(color: Colors.white, child: child);
     }
     return DecoratedBox(
         decoration: BoxDecoration(

@@ -1,3 +1,5 @@
+import 'package:bingo/features/voices/presentation/voice_library_page.dart';
+import 'package:bingo/features/roles/presentation/companion_library_page.dart';
 import 'package:bingo/core/appearance/chat_appearance.dart';
 import 'package:bingo/core/design/reference_design.dart';
 import 'package:bingo/core/appearance/appearance_page.dart';
@@ -66,6 +68,7 @@ class AppShell extends StatefulWidget {
     required this.onProfileSaved,
     required this.onLogout,
     this.onAccountDeleted,
+    this.onReady,
     super.key,
   });
 
@@ -77,6 +80,7 @@ class AppShell extends StatefulWidget {
   final ValueChanged<UserProfile> onProfileSaved;
   final VoidCallback onLogout;
   final Future<void> Function()? onAccountDeleted;
+  final VoidCallback? onReady;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -100,6 +104,20 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   final _communityKey = GlobalKey<CommunityPageState>();
   final _conversationsKey = GlobalKey<MessagesPageState>();
   final _myKey = GlobalKey<ReferenceMyPageState>();
+  Future<void> _openLibrary({bool voices = false}) async {
+    await Navigator.of(context).push<void>(MaterialPageRoute(
+        builder: (_) => voices
+            ? VoiceLibraryPage(
+                gateway: widget.gateway,
+                roles: widget.gateway,
+                onChanged: _refreshPartners)
+            : CompanionLibraryPage(
+                gateway: widget.gateway,
+                onRole: _openCopy,
+                onCreate: _newRole)));
+    if (mounted) await _refreshPartners();
+  }
+
   int _tab = 0;
   final _pages = PageController();
   int _unreadChats = 0;
@@ -201,37 +219,31 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
             },
             children: <Widget>[
               CompanionSpacePage(
-                key: _rolesKey,
-                userId: profile.id,
-                gateway: gateway,
-                groups: gateway,
-                community: gateway,
-                onRecommendation: _openCommunityShare,
-                onInstalled: _refreshPartners,
-                onChat: _openRole,
-                onDetail: (role) => _openCopy(role.id),
-                onOpenGroup: _openGroup,
-                onCreateGroup: _createGroup,
-                onCreateRole: _newRole,
-                onCommunity: () => _selectTab(2),
-                onMessages: () {
-                  _onTabReady(
-                      1, () => _conversationsKey.currentState?.showChats());
-                },
-                onSearchChats: () {
-                  _onTabReady(
+                  key: _rolesKey,
+                  onReady: widget.onReady,
+                  gateway: gateway,
+                  groups: gateway,
+                  community: gateway,
+                  userId: widget.profile.id,
+                  onChat: _openRole,
+                  onDetail: (role) => _openCopy(role.id),
+                  onOpenGroup: _openGroup,
+                  onCreateGroup: _createGroup,
+                  onCreateRole: _newRole,
+                  onRecommendation: _openCommunityShare,
+                  onInstalled: _refreshPartners,
+                  onCommunity: () => _selectTab(2),
+                  onMessages: () => _onTabReady(
+                      1, () => _conversationsKey.currentState?.showChats()),
+                  onSearchChats: () => _onTabReady(
                       1,
                       () => _conversationsKey.currentState
-                          ?.showChats(search: true));
-                },
-                onAllGroups: () {
-                  _onTabReady(
-                      1, () => _conversationsKey.currentState?.onlyGroups());
-                },
-              ),
+                          ?.showChats(search: true)),
+                  onAllGroups: () => _onTabReady(
+                      1, () => _conversationsKey.currentState?.onlyGroups())),
               MessagesPage(
                   key: _conversationsKey,
-                  showCreateAction: false,
+                  showCreateAction: true,
                   gateway: gateway,
                   groups: gateway,
                   onRole: _openRole,
@@ -254,11 +266,12 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                             appearanceStore: _appearance)));
                     if (mounted) await _refreshPartners();
                   },
-                  onPartners: () => _selectTab(0)),
+                  onPartners: () => _openLibrary()),
               CommunityPage(
                   key: _communityKey,
                   gateway: gateway,
                   referenceDesign: true,
+                  onPartners: () => _openLibrary(),
                   onCreateGroup: _createGroup,
                   onPublish: _publish,
                   onInstalled: (_) => _refreshPartners(),
@@ -266,6 +279,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                   onChatCopy: _chatCopy),
               ReferenceMyPage(
                   key: _myKey,
+                  onManageRoles: () => _openLibrary(),
+                  onVoices: () => _openLibrary(voices: true),
                   profile: profile,
                   roles: gateway,
                   groups: gateway,
@@ -505,22 +520,19 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   Future<void> _create() async {
     _updateCommunityChrome(false);
     FocusScope.of(context).unfocus();
-    final previousTab = _tab;
-    int? destination;
     await Navigator.of(context).push<void>(MaterialPageRoute(
         builder: (_) => CreateCenterPage(
-            onDestination: (tab) {
-              destination = tab;
-              Navigator.of(context).pop();
-              _selectTab(tab);
-            },
-            onCreateRole: _newRole,
-            onCreateGroup: () => _createGroup('快乐小窝'),
-            onPublish: _publish)));
+              onCreateRole: _newRole,
+              onCreateGroup: () => _createGroup(''),
+              onPublish: _publish,
+              onManageRoles: () => _openLibrary(),
+              onVoices: () => _openLibrary(voices: true),
+              onDestination: (tab) {
+                Navigator.of(context).pop();
+                _selectTab(tab);
+              },
+            )));
     if (mounted) _updateCommunityChrome(_tab != 0);
-    if (mounted && destination == null && _tab != previousTab) {
-      _selectTab(previousTab);
-    }
   }
 
   Future<void> _openRole(RoleOption role) async {

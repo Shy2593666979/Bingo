@@ -1,4 +1,5 @@
 import 'package:bingo/core/theme/app_theme.dart';
+import 'package:bingo/core/design/bingo_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -40,7 +41,7 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
       padding: const EdgeInsets.only(top: 9),
       child: Text(text,
           style: const TextStyle(
-              fontSize: 14, height: 1.9, color: Color(0xFF63766E))));
+              fontSize: 14, height: 1.9, color: BingoPalette.muted)));
 
   Widget _privacySection(int index) {
     final paragraphs = privacyPolicySections[index].paragraphs;
@@ -60,7 +61,7 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
             margin: const EdgeInsets.only(top: 12),
             decoration: BoxDecoration(
                 color: Colors.white,
-                border: Border.all(color: const Color(0xFFE1ECE5)),
+                border: Border.all(color: BingoPalette.softSurface),
                 borderRadius: BorderRadius.circular(14)),
             child: ExpansionTile(
                 shape: const Border(),
@@ -68,7 +69,9 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
                 initiallyExpanded: provider.$1.startsWith('Yukisbox'),
                 title: Text(provider.$1,
                     style: const TextStyle(
-                        fontSize: 13, height: 1.6, color: Color(0xFF368D77))),
+                        fontSize: 13,
+                        height: 1.6,
+                        color: BingoPalette.primary)),
                 childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 children: [
                   for (final paragraph in provider.$2) _paragraph(paragraph)
@@ -100,14 +103,12 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
                 gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFFE6F5ED), Color(0xFFF7FBF7)])),
+                    colors: [BingoPalette.softSurface, Colors.white])),
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                ClipRRect(
-                    borderRadius: BorderRadius.circular(15),
-                    child: Image.asset('assets/images/bingo_logo.webp',
-                        width: 55, height: 55)),
+                const BingoIcon(BingoSymbol.chat,
+                    size: 40, color: BingoPalette.primary),
                 const SizedBox(width: 13),
                 const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,21 +118,21 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
                               fontSize: 23, fontWeight: FontWeight.w700)),
                       SizedBox(height: 5),
                       Text('在这里，慢慢聊～',
-                          style:
-                              TextStyle(fontSize: 12, color: Color(0xFF7C918A)))
+                          style: TextStyle(
+                              fontSize: 12, color: BingoPalette.muted))
                     ])
               ]),
               const SizedBox(height: 25),
               Text(widget.privacy ? '把隐私，说清楚' : '遇见之前的小约定',
                   style: const TextStyle(
-                      fontSize: 26, fontWeight: FontWeight.w700)),
+                      fontSize: 22, fontWeight: FontWeight.w500)),
               const SizedBox(height: 10),
               Text(
                   widget.privacy
                       ? '哪些信息会被使用，为什么需要它们，\n以及你可以如何管理自己的资料。'
                       : '感谢你来到 Bingo。开始陪伴之前，\n请花一点时间了解我们的服务与使用边界。',
                   style: const TextStyle(
-                      fontSize: 13, height: 1.9, color: Color(0xFF6D857C))),
+                      fontSize: 13, height: 1.9, color: BingoPalette.muted)),
             ])),
         Padding(
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
@@ -142,7 +143,7 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
                     for (var index = 0; index < _sections.length; index++)
                       TextButton(
                           style: TextButton.styleFrom(
-                              foregroundColor: const Color(0xFF368D77),
+                              foregroundColor: BingoPalette.primary,
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 3)),
                           onPressed: () => Scrollable.ensureVisible(
@@ -166,13 +167,13 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
                                     height: 28,
                                     alignment: Alignment.center,
                                     decoration: BoxDecoration(
-                                        color: const Color(0xFFE9F3ED),
+                                        color: BingoPalette.softSurface,
                                         borderRadius: BorderRadius.circular(9)),
                                     child: Text(
                                         (index + 1).toString().padLeft(2, '0'),
                                         style: const TextStyle(
                                             fontSize: 11,
-                                            color: Color(0xFF368D77)))),
+                                            color: BingoPalette.primary))),
                                 const SizedBox(width: 10),
                                 Expanded(
                                     child: Text(_sections[index].$1,
@@ -198,8 +199,8 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
                       padding: const EdgeInsets.all(17),
                       decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                              colors: [Color(0xFFF0F7F2), Colors.white]),
-                          border: Border.all(color: const Color(0xFFE1ECE5)),
+                              colors: [BingoPalette.softSurface, Colors.white]),
+                          border: Border.all(color: BingoPalette.softSurface),
                           borderRadius: BorderRadius.circular(18)),
                       child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -208,10 +209,10 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
                               Container(
                                   padding: const EdgeInsets.all(9),
                                   decoration: BoxDecoration(
-                                      color: const Color(0xFFDFF0E6),
+                                      color: BingoPalette.softSurface,
                                       borderRadius: BorderRadius.circular(12)),
                                   child: const Icon(Icons.code_rounded,
-                                      color: Color(0xFF368D77), size: 22)),
+                                      color: BingoPalette.primary, size: 22)),
                               const SizedBox(width: 11),
                               const Expanded(
                                   child: Column(
@@ -221,7 +222,7 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
                                     Text('项目创作者',
                                         style: TextStyle(
                                             fontSize: 11,
-                                            color: Color(0xFF7C918A))),
+                                            color: BingoPalette.muted)),
                                     SizedBox(height: 4),
                                     Text('田明广',
                                         style: TextStyle(
@@ -231,7 +232,7 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
                                     Text('Mingguang.Tian',
                                         style: TextStyle(
                                             fontSize: 12,
-                                            color: Color(0xFF63766E)))
+                                            color: BingoPalette.muted))
                                   ]))
                             ]),
                             _paragraph(
@@ -251,22 +252,24 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
                                     padding: EdgeInsets.symmetric(vertical: 10),
                                     child: Row(children: [
                                       Icon(Icons.code_rounded,
-                                          size: 20, color: Color(0xFF368D77)),
+                                          size: 20,
+                                          color: BingoPalette.primary),
                                       SizedBox(width: 9),
                                       Expanded(
                                           child: Text('Shy2593666979 / Bingo',
                                               style: TextStyle(
                                                   fontSize: 12,
-                                                  color: Color(0xFF368D77)))),
+                                                  color:
+                                                      BingoPalette.primary))),
                                       Icon(Icons.open_in_new_rounded,
-                                          size: 15, color: Color(0xFF368D77))
+                                          size: 15, color: BingoPalette.primary)
                                     ])))
                           ])),
                   const SizedBox(height: 24),
                   const Text('认真对待你的每一次表达。\nBingo · 在这里，慢慢聊',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                          fontSize: 11, height: 1.8, color: Color(0xFF93A59B)))
+                          fontSize: 11, height: 1.8, color: BingoPalette.muted))
                 ]))
       ])),
       bottomNavigationBar: SafeArea(
@@ -280,8 +283,8 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
                     width: double.infinity,
                     child: FilledButton(
                         style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFFD5EEE0),
-                            foregroundColor: const Color(0xFF347B63),
+                            backgroundColor: BingoPalette.blush,
+                            foregroundColor: BingoPalette.primary,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16))),

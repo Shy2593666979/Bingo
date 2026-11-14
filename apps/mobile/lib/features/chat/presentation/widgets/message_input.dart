@@ -539,7 +539,7 @@ class MessageInputState extends State<MessageInput> {
                               color: widget.referenceStyle
                                   ? Colors.transparent
                                   : skin.id == 'mint'
-                                      ? const Color(0xFFEEF6F3)
+                                      ? BingoPalette.softSurface
                                       : skin.other,
                               shape: BoxShape.circle,
                             ),
@@ -578,16 +578,16 @@ class MessageInputState extends State<MessageInput> {
                                             _VoiceReleaseAction.cancel =>
                                               colors.errorContainer,
                                             _VoiceReleaseAction.transcribe =>
-                                              const Color(0xFFDFF4EE),
+                                              BingoPalette.softSurface,
                                             _VoiceReleaseAction.send =>
-                                              const Color(0xFFD7F2E8),
+                                              BingoPalette.blush,
                                           }
                                         : skin.id == 'mint'
-                                            ? const Color(0xFFCDEEE2)
+                                            ? BingoPalette.blush
                                             : skin.user,
                                     border: Border.all(
                                         color: skin.id == 'mint'
-                                            ? const Color(0xFFB8E4D5)
+                                            ? BingoPalette.blush
                                             : skin.accent
                                                 .withValues(alpha: .25)),
                                     borderRadius: BorderRadius.circular(23),
@@ -656,7 +656,7 @@ class MessageInputState extends State<MessageInput> {
                                             ? const TextStyle(
                                                 fontSize: 14.5,
                                                 height: 1.45,
-                                                color: Color(0xFF233C39))
+                                                color: BingoPalette.ink)
                                             : null,
                                         decoration: InputDecoration(
                                           hintText: widget.hintText,
@@ -700,7 +700,7 @@ class MessageInputState extends State<MessageInput> {
                             color: widget.referenceStyle
                                 ? Colors.transparent
                                 : widget.enabled
-                                    ? const Color(0xFFEEF6F3)
+                                    ? BingoPalette.softSurface
                                     : colors.surfaceContainer,
                             shape: BoxShape.circle,
                           ),
@@ -931,7 +931,7 @@ class _MoreAction extends StatelessWidget {
 
 enum _VoiceReleaseAction { send, cancel, transcribe }
 
-const _voiceGreen = Color(0xFF8EEA6A);
+const _voiceAccent = BingoPalette.primary;
 
 class _VoiceRecordingOverlay extends StatelessWidget {
   const _VoiceRecordingOverlay({
@@ -975,7 +975,7 @@ class _VoiceRecordingOverlay extends StatelessWidget {
                 icon: Icons.text_fields_rounded,
                 label: '转文字',
                 active: action == _VoiceReleaseAction.transcribe,
-                activeColor: const Color(0xFFCFF5E8),
+                activeColor: BingoPalette.blush,
               ),
             ),
             Positioned(
@@ -1030,7 +1030,7 @@ class _VoiceStatusBubble extends StatelessWidget {
           height: 108,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: _voiceGreen,
+            color: _voiceAccent,
             borderRadius: BorderRadius.circular(24),
             boxShadow: const [
               BoxShadow(color: Color(0x33000000), blurRadius: 18),
@@ -1061,7 +1061,7 @@ class _VoiceStatusBubble extends StatelessWidget {
         ),
         CustomPaint(
           size: const Size(28, 16),
-          painter: const _BubbleTailPainter(_voiceGreen),
+          painter: const _BubbleTailPainter(_voiceAccent),
         ),
       ],
     );
@@ -1170,7 +1170,7 @@ class _VoiceTranscriptReview extends StatelessWidget {
                     constraints: const BoxConstraints(maxHeight: 270),
                     padding: const EdgeInsets.fromLTRB(22, 20, 22, 20),
                     decoration: BoxDecoration(
-                      color: _voiceGreen,
+                      color: _voiceAccent,
                       borderRadius: BorderRadius.circular(24),
                     ),
                     child: SingleChildScrollView(
@@ -1187,7 +1187,7 @@ class _VoiceTranscriptReview extends StatelessWidget {
                   ),
                   CustomPaint(
                     size: const Size(28, 16),
-                    painter: const _BubbleTailPainter(_voiceGreen),
+                    painter: const _BubbleTailPainter(_voiceAccent),
                   ),
                 ],
               ),

@@ -1,3 +1,4 @@
+import 'package:bingo/core/theme/app_theme.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -42,7 +43,7 @@ class StickerArt extends StatelessWidget {
     return SizedBox.square(
         dimension: size,
         child: gateway == null
-            ? const Icon(Icons.image_outlined, color: Color(0xFF9AA89A))
+            ? const Icon(Icons.image_outlined, color: BingoPalette.muted)
             : Image.network(gateway.stickerImageUrl(sticker.id),
                 headers: {
                   if (gateway.stickerToken != null)
@@ -51,7 +52,7 @@ class StickerArt extends StatelessWidget {
                 fit: BoxFit.contain,
                 errorBuilder: (_, __, ___) => const Icon(
                     Icons.broken_image_outlined,
-                    color: Color(0xFF9AA89A))));
+                    color: BingoPalette.muted)));
   }
 }
 
@@ -255,7 +256,7 @@ class _StickerPanelState extends State<StickerPanel> {
                                                         strokeWidth: 2))
                                             : const Icon(Icons.add_rounded,
                                                 size: 36,
-                                                color: Color(0xFF657065)))))));
+                                                color: BingoPalette.muted))))));
                   }
                   if (index > stickers.length) {
                     return TextButton(
@@ -302,7 +303,7 @@ class _DashedFrame extends CustomPainter {
       ..addRRect(RRect.fromRectAndRadius(
           Offset.zero & size, const Radius.circular(8)));
     final paint = Paint()
-      ..color = const Color(0xFF939D91)
+      ..color = BingoPalette.muted
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
     for (final metric in path.computeMetrics()) {

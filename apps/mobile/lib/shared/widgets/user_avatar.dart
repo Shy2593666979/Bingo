@@ -20,11 +20,11 @@ class UserAvatar extends StatelessWidget {
   final Color? backgroundColor, foregroundColor;
   final Gradient? backgroundGradient;
 
-  static const initialBackground = Color(0xFFE2EFE8);
-  static const initialForeground = Color(0xFF3C6B58);
-  static const emptyBackground = Color(0xFFF2F5F3);
+  static const initialBackground = Color(0xFFF3E3E8);
+  static const initialForeground = Color(0xFF88556B);
+  static const emptyBackground = Color(0xFFF5F3F4);
   static const tones = [
-    (background: Color(0xFFE2EFE8), foreground: Color(0xFF3C6B58)),
+    (background: Color(0xFFF0E5ED), foreground: Color(0xFF77576D)),
     (background: Color(0xFFE5EDF5), foreground: Color(0xFF3F607A)),
     (background: Color(0xFFECE7F4), foreground: Color(0xFF6C5486)),
     (background: Color(0xFFF7E6DF), foreground: Color(0xFF885A46)),

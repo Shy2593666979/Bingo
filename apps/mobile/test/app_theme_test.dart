@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('companion actions share the mint surface and existing shape', () {
+  test('companion actions share the accent surface and existing shape', () {
     for (final height in [54.0, 56.0]) {
       final style = companionActionButtonStyle(height: height);
       expect(style.backgroundColor!.resolve({}),
@@ -18,7 +18,8 @@ void main() {
     }
   });
 
-  test('mint action and supporting text remain readable on their surfaces', () {
+  test('accent actions and supporting text remain readable on their surfaces',
+      () {
     double contrast(Color a, Color b) {
       final one = a.computeLuminance(), two = b.computeLuminance();
       return ((one > two ? one : two) + .05) / ((one < two ? one : two) + .05);
@@ -34,7 +35,8 @@ void main() {
         contrast(BingoPalette.ink, BingoPalette.ice), greaterThanOrEqualTo(7));
   });
 
-  test('system font theme preserves the existing palette and text sizes', () {
+  test('system font theme keeps platform families with a shared text hierarchy',
+      () {
     final theme = buildBingoTheme();
     final baseline = ThemeData(
       colorScheme: theme.colorScheme,
@@ -50,8 +52,10 @@ void main() {
     expect(theme.appBarTheme.titleTextStyle?.fontFamily, isNull);
     expect(theme.dialogTheme.titleTextStyle?.fontFamily, isNull);
     expect(theme.dialogTheme.contentTextStyle?.fontFamily, isNull);
-    expect(theme.textTheme.bodyMedium?.fontSize,
-        baseline.textTheme.bodyMedium?.fontSize);
+    expect(theme.textTheme.bodyMedium?.fontSize, 14);
+    expect(theme.textTheme.bodyMedium?.fontWeight, FontWeight.w400);
+    expect(theme.textTheme.titleLarge?.fontSize, 18);
+    expect(theme.textTheme.titleLarge?.fontWeight, FontWeight.w600);
     expect(theme.colorScheme.primary, BingoPalette.blue);
     expect(theme.scaffoldBackgroundColor, BingoPalette.ice);
   });

@@ -1,10 +1,10 @@
+import 'package:bingo/core/design/bingo_page.dart';
 import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/core/design/bingo_surface.dart';
 import 'package:bingo/core/design/reference_design.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/chat/models/chat_message.dart';
-import 'package:bingo/features/roles/role_traits.dart';
 import 'package:bingo/features/stickers/sticker.dart';
 import 'package:bingo/shared/widgets/assistant_avatar.dart';
 import 'package:bingo/shared/widgets/user_avatar.dart';
@@ -35,6 +35,7 @@ class RoleDetailPage extends StatefulWidget {
 class _RoleDetailPageState extends State<RoleDetailPage> {
   List<ChatMessage>? _messages;
   bool _busy = false;
+  bool _backgroundExpanded = false;
   String? _error;
   late RoleOption _role;
   @override
@@ -79,8 +80,25 @@ class _RoleDetailPageState extends State<RoleDetailPage> {
   }
 
   Widget _surface(Widget child) => Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: BingoSurface(child: child));
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Material(
+          color: const Color(0xFFFAFAFA),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(padding: const EdgeInsets.all(18), child: child)));
+
+  Widget _tags(List<String> tags) => Wrap(spacing: 7, runSpacing: 7, children: [
+        for (final tag in tags)
+          Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(color: BingoPalette.line)),
+              child: Text(tag,
+                  style: const TextStyle(
+                      fontSize: 12, height: 1.35, color: Color(0xFF666666))))
+      ]);
+
   String _messageTime(DateTime value) {
     final local = value.toUtc().add(const Duration(hours: 8));
     return '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
@@ -90,7 +108,7 @@ class _RoleDetailPageState extends State<RoleDetailPage> {
   Widget build(BuildContext context) {
     final role = _role;
     return Scaffold(
-      backgroundColor: BingoPalette.ice,
+      backgroundColor: Colors.white,
       appBar: AppBar(title: const Text('搭子详情'), centerTitle: true, actions: [
         if (widget.onShare != null)
           IconButton(
@@ -107,80 +125,120 @@ class _RoleDetailPageState extends State<RoleDetailPage> {
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
           children: [
             Padding(
-                padding: const EdgeInsets.fromLTRB(0, 6, 0, 24),
-                child: Column(children: [
-                  AssistantAvatar(role: role.name, size: 104),
-                  const SizedBox(height: 12),
-                  Wrap(
-                      alignment: WrapAlignment.center,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 10,
-                      runSpacing: 8,
-                      children: [
-                        Text(role.displayName,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                                fontSize: 24, fontWeight: FontWeight.w700)),
-                        Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                                color: BingoPalette.blush,
-                                borderRadius: BorderRadius.circular(20)),
-                            child: Text(
+                padding: const EdgeInsets.fromLTRB(0, 14, 0, 26),
+                child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      AssistantAvatar(
+                          role: role.name, size: 84, closePortrait: true),
+                      const SizedBox(width: 18),
+                      Expanded(
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                            Text(role.displayName,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontSize: 22,
+                                    height: 1.3,
+                                    fontWeight: FontWeight.w500)),
+                            const SizedBox(height: 7),
+                            Text(
                                 role.typeLabel.isEmpty
                                     ? '陪伴搭子'
                                     : role.typeLabel,
                                 style: const TextStyle(
-                                    color: BingoPalette.primaryText,
-                                    fontSize: 12))),
-                      ]),
-                  const SizedBox(height: 10),
-                  const Text('分享日常，也陪你慢慢成长。',
-                      textAlign: TextAlign.center,
-                      style:
-                          TextStyle(fontSize: 13, color: BingoPalette.muted)),
-                ])),
+                                    fontSize: 14, color: BingoPalette.muted)),
+                            const SizedBox(height: 10),
+                            Text(
+                                role.builtin
+                                    ? 'Bingo 官方搭子'
+                                    : role.sourcePublicationId != null
+                                        ? '来自社区的搭子'
+                                        : '我创建的搭子',
+                                style: const TextStyle(
+                                    fontSize: 12, color: Color(0xFF999999))),
+                          ])),
+                    ])),
             _surface(
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const BingoSectionTitle('关于TA'),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Text(
                   role.description.isNotEmpty
                       ? role.description
                       : '和喜欢的搭子，分享生活里的每个瞬间。',
                   style: const TextStyle(
-                      color: refMuted, fontSize: 13, height: 1.65))
-            ])),
-            _surface(
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const BingoSectionTitle('性格标签'),
-              const SizedBox(height: 13),
-              Wrap(
-                  spacing: 7,
-                  runSpacing: 7,
-                  children: role.personalityTags
-                      .map((label) => TraitBadge(label, outlined: true))
-                      .toList())
+                      fontSize: 14, height: 1.7, color: Color(0xFF555555))),
             ])),
             _surface(
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const BingoSectionTitle('说话风格'),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Text(role.speakingStyle,
                   style: const TextStyle(
-                      color: refMuted, fontSize: 13, height: 1.65)),
+                      fontSize: 14, height: 1.6, color: Color(0xFF555555))),
+              const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Divider(height: 1, color: BingoPalette.line)),
+              const BingoSectionTitle('性格标签'),
+              const SizedBox(height: 12),
+              _tags(role.personalityTags),
             ])),
             if (role.background.isNotEmpty)
               _surface(Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const BingoSectionTitle('人物背景'),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     Text(role.background,
+                        maxLines: _backgroundExpanded ? null : 5,
+                        overflow: _backgroundExpanded
+                            ? TextOverflow.visible
+                            : TextOverflow.ellipsis,
                         style: const TextStyle(
-                            color: refMuted, fontSize: 13, height: 1.65)),
+                            fontSize: 14,
+                            height: 1.7,
+                            color: Color(0xFF555555))),
+                    if (role.background.length > 100 ||
+                        '\n'.allMatches(role.background).length > 4)
+                      Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                              onPressed: () => setState(() =>
+                                  _backgroundExpanded = !_backgroundExpanded),
+                              child: Text(_backgroundExpanded ? '收起背景' : '展开背景',
+                                  style: const TextStyle(fontSize: 12)))),
                   ])),
+            _surface(Row(children: [
+              Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12)),
+                  child: const Icon(Icons.mic_none_rounded,
+                      size: 22, color: Color(0xFF555555))),
+              const SizedBox(width: 12),
+              Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    const BingoSectionTitle('人物声音'),
+                    const SizedBox(height: 4),
+                    Text(
+                        role.voiceName?.isNotEmpty == true
+                            ? role.voiceName!
+                            : role.hasVoice
+                                ? '已设置专属声音'
+                                : '暂未设置声音',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 13, color: BingoPalette.muted)),
+                  ])),
+            ])),
             _surface(
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const BingoSectionTitle('最近对话'),
@@ -192,7 +250,7 @@ class _RoleDetailPageState extends State<RoleDetailPage> {
                 const Padding(
                     padding: EdgeInsets.symmetric(vertical: 25),
                     child: Text('还没有聊天记录，和 TA 打个招呼吧。',
-                        style: TextStyle(color: Color(0xFF7D918A)))),
+                        style: TextStyle(color: BingoPalette.muted))),
               ...?_messages?.map((message) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Row(
@@ -219,7 +277,7 @@ class _RoleDetailPageState extends State<RoleDetailPage> {
                                         maxLines: 1,
                                         style: const TextStyle(
                                             fontSize: 13,
-                                            fontWeight: FontWeight.w700))),
+                                            fontWeight: FontWeight.w500))),
                                 if (message.createdAt != null)
                                   Text(_messageTime(message.createdAt!),
                                       style: const TextStyle(
@@ -241,51 +299,45 @@ class _RoleDetailPageState extends State<RoleDetailPage> {
                       ]))),
             ])),
           ]),
-      bottomNavigationBar: SafeArea(
-          top: false,
-          child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
-              child: Row(children: [
-                if (widget.onEdit != null) ...[
-                  Expanded(
-                      child: OutlinedButton.icon(
-                          onPressed: _edit,
-                          style: OutlinedButton.styleFrom(
-                              minimumSize: const Size(0, 48),
-                              textStyle: const TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.w600),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12)),
-                              side:
-                                  const BorderSide(color: BingoPalette.primary),
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 10)),
-                          icon: const PartnerActionIcon(
-                              symbol: PartnerActionSymbol.edit),
-                          label: const Text('编辑搭子'))),
-                  const SizedBox(width: 12)
-                ],
-                Expanded(
-                    child: FilledButton.icon(
-                        onPressed: _busy ? null : _chat,
-                        style: FilledButton.styleFrom(
-                            backgroundColor: BingoPalette.primary,
-                            foregroundColor: Colors.white,
-                            minimumSize: const Size(0, 48),
-                            textStyle: const TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.w600),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 10)),
-                        icon: const PartnerActionIcon(
-                            symbol: PartnerActionSymbol.chat,
-                            size: 20,
-                            color: Colors.white),
-                        label: Text(_busy ? '正在进入…' : '进入聊天',
-                            style: const TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.w600))))
-              ]))),
+      bottomNavigationBar: BingoActionBar(
+          child: Row(children: [
+        if (widget.onEdit != null) ...[
+          Expanded(
+              child: OutlinedButton.icon(
+                  onPressed: _edit,
+                  style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                      textStyle: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w600),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      side: const BorderSide(color: BingoPalette.primary),
+                      padding: const EdgeInsets.symmetric(horizontal: 10)),
+                  icon:
+                      const PartnerActionIcon(symbol: PartnerActionSymbol.edit),
+                  label: const Text('编辑搭子'))),
+          const SizedBox(width: 12)
+        ],
+        Expanded(
+            child: FilledButton.icon(
+                onPressed: _busy ? null : _chat,
+                style: FilledButton.styleFrom(
+                    backgroundColor: BingoPalette.primary,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(0, 48),
+                    textStyle: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w600),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(horizontal: 10)),
+                icon: const PartnerActionIcon(
+                    symbol: PartnerActionSymbol.chat,
+                    size: 20,
+                    color: Colors.white),
+                label: Text(_busy ? '正在进入…' : '进入聊天',
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w600))))
+      ])),
     );
   }
 

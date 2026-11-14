@@ -1,13 +1,16 @@
+import 'package:bingo/core/design/bingo_page.dart';
+import 'package:bingo/features/voices/data/voice_gateway.dart';
+import 'package:bingo/features/voices/models/voice_option.dart';
+import 'package:bingo/features/voices/presentation/voice_cover.dart';
+import 'package:bingo/features/voices/presentation/voice_editor_page.dart';
+import 'package:bingo/features/voices/presentation/voice_library_page.dart';
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:bingo/core/role_avatar_store.dart';
 import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/core/widgets/center_toast.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/auth/presentation/avatar_crop_page.dart';
-import 'package:bingo/features/auth/presentation/voice_record_page.dart';
-import 'package:bingo/features/auth/presentation/voice_clone_progress.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/roles/role_traits.dart';
 import 'package:bingo/shared/widgets/assistant_avatar.dart';
@@ -30,6 +33,7 @@ class _RoleEditorPageState extends State<RoleEditorPage>
     with WidgetsBindingObserver {
   static const _device = MethodChannel('bingo/device_tools');
   final _form = GlobalKey<FormState>();
+  final _editorScroll = ScrollController();
   late final TextEditingController _name;
   late final TextEditingController _background;
   late final TextEditingController _speakingStyle;
@@ -49,14 +53,81 @@ class _RoleEditorPageState extends State<RoleEditorPage>
   String? _voiceId;
   String? _error;
   bool _busy = false;
+  int _step = 0;
+  bool get _wizard => widget.role == null;
+  static const _steps = [
+    '认识你的新搭子',
+    '找到喜欢的聊天语气',
+    '让 TA 更有个性',
+    '一起补全 TA 的故事',
+    '为 TA 选择一个声音'
+  ];
+  void _changeStep(int step) {
+    setState(() => _step = step);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _editorScroll.hasClients) _editorScroll.jumpTo(0);
+    });
+  }
+
+  void _advance() {
+    FocusScope.of(context).unfocus();
+    if (!_form.currentState!.validate()) return;
+    if (_step == 2 && (_traits.length < 2 || _traits.length > 3)) {
+      showCenterToast(context, '请选择 2～3 个性格标签');
+      return;
+    }
+    if (_step < 4) {
+      _changeStep(_step + 1);
+    } else {
+      _save();
+    }
+  }
+
+  Widget _stepHeader() => Column(children: [
+        Row(children: [
+          for (var i = 0; i < 5; i++) ...[
+            if (i > 0) const SizedBox(width: 6),
+            Expanded(
+                child: Container(
+                    height: 4,
+                    decoration: BoxDecoration(
+                        color: i <= _step
+                            ? BingoPalette.primary
+                            : BingoPalette.line,
+                        borderRadius: BorderRadius.circular(3)))),
+          ]
+        ]),
+        const SizedBox(height: 14),
+        Row(children: [
+          Expanded(
+              child: Text(_steps[_step],
+                  style: const TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.w500))),
+          Text('${_step + 1} / 5',
+              style: const TextStyle(fontSize: 12, color: BingoPalette.muted)),
+        ]),
+        const SizedBox(height: 6),
+        Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+                const [
+                  '从一个名字开始，认识你的新搭子。',
+                  '选择你喜欢的表达方式，也可以自由描述。',
+                  '选出最能代表 TA 的 2～3 个标签。',
+                  '写下 TA 的经历、喜好，以及你们的相处方式。',
+                  '选一个喜欢的声音，让陪伴更有温度。',
+                ][_step],
+                style: const TextStyle(
+                    fontSize: 13, height: 1.6, color: BingoPalette.muted))),
+        const SizedBox(height: 12),
+      ]);
   bool _playing = false;
-  bool _saved = false;
-  bool _cloned = false;
-  bool _cloning = false;
   bool _expandedTraits = false;
-  bool _voiceExpanded = false;
-  final _voiceOptionsKey = GlobalKey();
   String _progress = '';
+  List<VoiceOption> _voices = [];
+  int _previewGeneration = 0;
+  VoiceGateway? get _voiceGateway =>
+      widget.gateway is VoiceGateway ? widget.gateway as VoiceGateway : null;
   late List<String> _traits;
 
   @override
@@ -73,20 +144,14 @@ class _RoleEditorPageState extends State<RoleEditorPage>
     _background = TextEditingController(text: widget.role?.background);
     _description = TextEditingController(text: widget.role?.description);
     _avatarData = widget.role?.avatarData;
-    _voiceId = _builtin
-        ? widget.role!.id
-        : widget.role?.voiceSourceId ?? widget.roles.firstOrNull?.id;
-    if (!_builtin &&
-        widget.role?.hasVoice == true &&
-        !widget.roles.any((role) => role.id == _voiceId)) {
-      _voiceId = widget.role!.id;
-    }
-    _cloned = widget.role?.hasClonedVoice ?? false;
+    _voiceId = widget.role?.voiceId;
+    _loadVoices();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
+      _previewGeneration++;
       unawaited(_device.invokeMethod<void>('stopPreviewAudio'));
     }
   }
@@ -95,15 +160,13 @@ class _RoleEditorPageState extends State<RoleEditorPage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     unawaited(_device.invokeMethod<void>('stopPreviewAudio'));
-    if (!_saved && widget.role == null && _role != null) {
-      unawaited(widget.gateway.deleteRole(_role!.id).catchError((Object _) {}));
-      RoleAvatarStore.set(_role!.name, null);
-    }
+    _previewGeneration++;
     _name.dispose();
     _background.dispose();
     _speakingStyle.dispose();
     _description.dispose();
     _roleType.dispose();
+    _editorScroll.dispose();
     super.dispose();
   }
 
@@ -143,7 +206,7 @@ class _RoleEditorPageState extends State<RoleEditorPage>
           ? _speakingStyle.text.trim()
           : null,
       avatarData: _avatarData,
-      voiceSourceId: _voiceId,
+      voiceId: _voiceId,
       draft: draft,
       traits: _traits,
     );
@@ -151,64 +214,59 @@ class _RoleEditorPageState extends State<RoleEditorPage>
     return result;
   }
 
-  Future<void> _record() async {
-    if (!_form.currentState!.validate()) return;
-    await _device.invokeMethod<void>('stopPreviewAudio');
-    if (!mounted) return;
-    final audio = await Navigator.of(context).push<Uint8List>(
-        MaterialPageRoute(builder: (_) => const VoiceRecordPage()));
-    if (audio == null || !mounted) return;
-    setState(() {
-      _busy = true;
-      _cloning = true;
-      _error = null;
-      _progress = '正在上传录音…';
-    });
+  Future<void> _loadVoices() async {
+    final gateway = _voiceGateway;
+    if (gateway == null) return;
     try {
-      final role = await _persist(draft: widget.role == null);
-      final job = await widget.gateway.cloneRoleVoice(role.id, audio);
-      if (mounted) setState(() => _progress = '正在复刻声音，请稍等…');
-      final deadline = DateTime.now().add(const Duration(minutes: 5));
-      while (DateTime.now().isBefore(deadline)) {
-        final status = await widget.gateway.voiceJob(job);
-        if (!mounted) return;
-        setState(() => _progress = switch (status['stage']) {
-              'pending' => '录音已收到，等待处理…',
-              'uploading' => '正在准备录音下载…',
-              'cloning' => '正在复刻声音，请稍等…',
-              'verifying' => '正在验证音色是否可用…',
-              _ => '正在复刻声音，请稍等…',
-            });
-        if (status['status'] == 'ready') {
-          if (mounted) {
-            setState(() {
-              _cloned = true;
-              _voiceId = role.id;
-            });
-            showCenterToast(context, '声音复刻成功，点击试听听听效果');
-          }
-          return;
-        }
-        if (status['status'] == 'failed') {
-          throw ApiException(status['error'] as String? ?? '复刻失败，请重新录制');
-        }
-        await Future<void>.delayed(const Duration(seconds: 2));
-      }
-      throw const ApiException('复刻仍在处理中，请稍后重试');
-    } on Exception catch (error) {
-      if (mounted) {
-        setState(() =>
-            _error = error is ApiException ? error.message : '声音复刻失败，请检查网络后重试');
-      }
-    } finally {
+      final voices = await gateway.listVoices();
       if (mounted) {
         setState(() {
-          _busy = false;
-          _cloning = false;
-          _progress = '';
+          _voices = voices;
+          _voiceId ??= voices
+              .where((voice) => voice.ready && voice.scope == 'system')
+              .firstOrNull
+              ?.id;
         });
       }
+    } catch (error) {
+      if (mounted) {
+        setState(() =>
+            _error = error is ApiException ? error.message : '音色库加载失败，请重试');
+      }
     }
+  }
+
+  Future<void> _pickVoice() async {
+    final gateway = _voiceGateway;
+    if (gateway == null) return;
+    _previewGeneration++;
+    await _device.invokeMethod<void>('stopPreviewAudio');
+    if (!mounted) return;
+    final voice = await Navigator.of(context).push<VoiceOption>(
+        MaterialPageRoute(
+            builder: (_) => VoiceLibraryPage(
+                gateway: gateway, picking: true, selectedId: _voiceId)));
+    if (!mounted) return;
+    if (voice != null) {
+      setState(() {
+        _voiceId = voice.id;
+        _playing = false;
+      });
+    }
+    await _loadVoices();
+  }
+
+  Future<void> _record() async {
+    final gateway = _voiceGateway;
+    if (gateway == null) return;
+    _previewGeneration++;
+    await _device.invokeMethod<void>('stopPreviewAudio');
+    if (!mounted) return;
+    final voice = await Navigator.of(context).push<VoiceOption>(
+        MaterialPageRoute(builder: (_) => VoiceEditorPage(gateway: gateway)));
+    if (!mounted) return;
+    if (voice?.ready == true) setState(() => _voiceId = voice!.id);
+    await _loadVoices();
   }
 
   Future<void> _preview() async {
@@ -224,8 +282,9 @@ class _RoleEditorPageState extends State<RoleEditorPage>
       _progress = '正在生成中文试听…';
     });
     try {
-      final audio = await widget.gateway.previewRoleVoice(voiceId);
-      if (!mounted) return;
+      final generation = ++_previewGeneration;
+      final audio = await _voiceGateway!.previewVoice(voiceId);
+      if (!mounted || generation != _previewGeneration) return;
       setState(() {
         _busy = false;
         _playing = true;
@@ -262,7 +321,6 @@ class _RoleEditorPageState extends State<RoleEditorPage>
     try {
       await _device.invokeMethod<void>('stopPreviewAudio');
       final role = await _persist(draft: false);
-      _saved = true;
       if (mounted) Navigator.of(context).pop(role);
     } on Exception catch (error) {
       if (mounted) {
@@ -279,22 +337,6 @@ class _RoleEditorPageState extends State<RoleEditorPage>
     }
   }
 
-  List<RoleOption> get _voiceChoices {
-    final choices = widget.roles.where((role) => role.hasVoice).toList();
-    if (_cloned && _role != null) {
-      choices.removeWhere((role) => role.id == _role!.id);
-      choices.add(RoleOption(
-          id: _role!.id,
-          name: _role!.name,
-          nickname: _name.text.trim(),
-          avatarData: _avatarData,
-          builtin: false,
-          hasClonedVoice: true,
-          voiceSourceId: _role!.id));
-    }
-    return choices;
-  }
-
   Widget _traitPicker() {
     final options = roleTraits.keys.toList();
     final visible = _expandedTraits
@@ -307,9 +349,9 @@ class _RoleEditorPageState extends State<RoleEditorPage>
       Row(children: [
         const Expanded(
             child: Text('选择 2～3 个性格标签',
-                style: TextStyle(fontSize: 12, color: Color(0xFF738297)))),
+                style: TextStyle(fontSize: 12, color: BingoPalette.muted))),
         Text('已选 ${_traits.length} / 3',
-            style: const TextStyle(fontSize: 11, color: Color(0xFF738297))),
+            style: const TextStyle(fontSize: 11, color: BingoPalette.muted)),
       ]),
       const SizedBox(height: 12),
       Wrap(spacing: 7, runSpacing: 8, children: [
@@ -319,13 +361,13 @@ class _RoleEditorPageState extends State<RoleEditorPage>
               selected: _traits.contains(label),
               child: Material(
                   color: _traits.contains(label)
-                      ? const Color(0xFFE7F4EC)
-                      : const Color(0xFFF9FCFA),
+                      ? const Color(0xFFF7ECE7)
+                      : Colors.white,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                       side: BorderSide(
                           color: _traits.contains(label)
-                              ? const Color(0xFF9FCDB8)
+                              ? BingoPalette.primary.withValues(alpha: .3)
                               : BingoPalette.line)),
                   child: InkWell(
                       borderRadius: BorderRadius.circular(16),
@@ -350,7 +392,7 @@ class _RoleEditorPageState extends State<RoleEditorPage>
                             const SizedBox(width: 4),
                             Text(label,
                                 style: const TextStyle(
-                                    fontSize: 11, color: Color(0xFF527464))),
+                                    fontSize: 11, color: BingoPalette.muted)),
                           ]))))),
       ]),
       TextButton(
@@ -363,173 +405,44 @@ class _RoleEditorPageState extends State<RoleEditorPage>
   }
 
   Widget _voicePicker(String voiceLabel) {
-    final choices = _voiceChoices;
-    final selected =
-        choices.any((role) => role.id == _voiceId) ? _voiceId : null;
+    final chosen = _voices.where((voice) => voice.id == _voiceId).firstOrNull;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      if (choices.isEmpty)
-        const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Text('暂无可用的搭子音色，可以通过录音创建。',
-                style: TextStyle(fontSize: 12, color: Color(0xFF738297))))
-      else
-        TapRegion(
-            onTapOutside: (_) {
-              if (_voiceExpanded) setState(() => _voiceExpanded = false);
-            },
-            child: Column(children: [
-              Material(
-                  color: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      side: const BorderSide(color: BingoPalette.line)),
-                  child: InkWell(
-                      key: const ValueKey('voice-selector'),
-                      borderRadius: BorderRadius.circular(14),
-                      onTap: () {
-                        setState(() => _voiceExpanded = !_voiceExpanded);
-                        if (_voiceExpanded) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            final optionsContext =
-                                _voiceOptionsKey.currentContext;
-                            if (mounted && optionsContext != null) {
-                              Scrollable.ensureVisible(optionsContext,
-                                  alignmentPolicy: ScrollPositionAlignmentPolicy
-                                      .keepVisibleAtEnd,
-                                  duration: const Duration(milliseconds: 180));
-                            }
-                          });
-                        }
-                      },
-                      child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 14),
-                          child: Row(children: [
-                            if (selected != null) ...[
-                              _voiceAvatar(choices
-                                  .firstWhere((role) => role.id == selected)),
-                              const SizedBox(width: 9),
-                            ],
-                            Expanded(
-                                child: Text(
-                                    choices
-                                            .where(
-                                                (role) => role.id == selected)
-                                            .firstOrNull
-                                            ?.displayName ??
-                                        '请选择音色',
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontSize: 13))),
-                            Icon(
-                                _voiceExpanded
-                                    ? Icons.keyboard_arrow_up_rounded
-                                    : Icons.keyboard_arrow_down_rounded,
-                                size: 22,
-                                color: const Color(0xFF738297)),
-                          ])))),
-              if (_voiceExpanded) ...[
-                const SizedBox(height: 6),
-                Material(
-                    key: _voiceOptionsKey,
-                    color: Colors.white,
-                    clipBehavior: Clip.antiAlias,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        side: const BorderSide(color: BingoPalette.line)),
-                    child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxHeight: 216),
-                        child: SingleChildScrollView(
-                            key: const ValueKey('voice-options'),
-                            child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  for (final role in choices)
-                                    ListTile(
-                                        key:
-                                            ValueKey('voice-option-${role.id}'),
-                                        dense: true,
-                                        leading: _voiceAvatar(role),
-                                        selected: role.id == selected,
-                                        selectedTileColor:
-                                            const Color(0xFFEFF7F2),
-                                        title: Text(role.displayName,
-                                            style:
-                                                const TextStyle(fontSize: 13)),
-                                        trailing: role.id == selected
-                                            ? const Icon(Icons.check_rounded,
-                                                size: 18,
-                                                color: BingoPalette.blue)
-                                            : null,
-                                        onTap: () async {
-                                          await _device.invokeMethod<void>(
-                                              'stopPreviewAudio');
-                                          if (mounted) {
-                                            setState(() {
-                                              _voiceId = role.id;
-                                              _voiceExpanded = false;
-                                            });
-                                          }
-                                        }),
-                                ])))),
-              ],
-            ])),
+      Material(
+          color: const Color(0xFFF8F8F8),
+          borderRadius: BorderRadius.circular(16),
+          child: ListTile(
+              key: const ValueKey('voice-selector'),
+              onTap: _pickVoice,
+              leading: chosen == null
+                  ? const Icon(Icons.graphic_eq_rounded)
+                  : VoiceCover(id: chosen.id, size: 40),
+              title: Text(chosen?.name ?? '选择音色',
+                  style: const TextStyle(fontSize: 15)),
+              subtitle: const Text('从独立音色库中选择',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF888888))),
+              trailing: const Icon(Icons.chevron_right_rounded))),
       Row(children: [
         Expanded(
             child: Text('当前音色：$voiceLabel',
                 style:
-                    const TextStyle(fontSize: 11, color: Color(0xFF738297)))),
+                    const TextStyle(fontSize: 12, color: Color(0xFF737373)))),
         TextButton.icon(
             onPressed: _voiceId == null ? null : _preview,
-            icon: Icon(_playing ? Icons.stop : Icons.play_arrow_rounded,
-                size: 16),
-            label: Text(_playing ? '停止试听' : '中文试听',
-                style: const TextStyle(fontSize: 11))),
+            icon: Icon(_playing ? Icons.stop_rounded : Icons.play_arrow_rounded,
+                size: 18),
+            label: Text(_playing ? '停止试听' : '试听')),
       ]),
-      const SizedBox(height: 4),
-      Material(
-          color: const Color(0xFFF5FAF7),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: const BorderSide(color: Color(0xFFC9E4D6))),
-          child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: _record,
-              child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Row(children: [
-                    const Icon(Icons.mic_none_rounded,
-                        size: 23, color: Color(0xFF5E9B7D)),
-                    const SizedBox(width: 10),
-                    Expanded(
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                          Text(_cloned ? '重新录音，复刻声音' : '录一段声音，让 TA 更熟悉',
-                              style: const TextStyle(
-                                  fontSize: 12, fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 5),
-                          const Text('按引导朗读 20～30 秒，无需手动上传音频',
-                              style: TextStyle(
-                                  fontSize: 10, color: Color(0xFF738297))),
-                        ])),
-                    const Icon(Icons.chevron_right_rounded,
-                        size: 20, color: Color(0xFF738297)),
-                  ])))),
-      const SizedBox(height: 10),
-      const Text('少于 15 秒需要重新录制，复刻完成后可试听。',
-          style: TextStyle(fontSize: 11, color: Color(0xFF738297))),
+      TextButton.icon(
+          onPressed: _record,
+          icon: const Icon(Icons.add_rounded, size: 18),
+          label: const Text('创建新音色')),
     ]);
   }
-
-  Widget _voiceAvatar(RoleOption role) =>
-      role.builtin || (role.avatarData?.isEmpty ?? true)
-          ? AssistantAvatar(role: role.name, size: 26)
-          : UserAvatar(avatarData: role.avatarData, size: 26);
 
   Widget _label(String title) => Padding(
       padding: const EdgeInsets.only(top: 18, bottom: 9),
       child: Text(title,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800)));
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)));
   Widget _field({
     required String keyName,
     required TextEditingController controller,
@@ -546,27 +459,43 @@ class _RoleEditorPageState extends State<RoleEditorPage>
           minLines: lines,
           maxLines: lines + (lines > 1 ? 2 : 0),
           maxLength: limit,
-          decoration: InputDecoration(hintText: hint, counterText: ''),
+          decoration: InputDecoration(
+              hintText: hint,
+              counterText: '',
+              filled: true,
+              fillColor: BingoPalette.softSurface,
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: Color(0xFFF0F0F0))),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: BingoPalette.primary))),
           validator: requiredValue && editable
               ? (value) => (value?.trim().isEmpty ?? true) ? '请填写此项人物资料' : null
               : null);
 
   @override
   Widget build(BuildContext context) {
-    final voiceLabel = _cloned && _voiceId == _role?.id
-        ? '我的复刻声音'
-        : widget.roles
-                .where((role) => role.id == _voiceId)
-                .firstOrNull
-                ?.displayName ??
-            '系统默认';
+    final voiceLabel =
+        _voices.where((voice) => voice.id == _voiceId).firstOrNull?.name ??
+            widget.role?.voiceName ??
+            '尚未选择';
     return PopScope(
-      canPop: !_busy,
+      canPop: !_busy && (!_wizard || _step == 0),
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && !_busy && _wizard && _step > 0) _changeStep(_step - 1);
+      },
       child: Stack(children: [
         Scaffold(
-          backgroundColor: BingoPalette.pageTop,
+          backgroundColor: Colors.white,
           appBar: AppBar(
               centerTitle: true,
+              leading: _wizard && _step > 0
+                  ? IconButton(
+                      tooltip: '上一步',
+                      onPressed: _busy ? null : () => _changeStep(_step - 1),
+                      icon: const Icon(Icons.arrow_back_rounded))
+                  : null,
               title: Text(widget.role == null ? '创建搭子' : '编辑搭子')),
           body: SafeArea(
               top: false,
@@ -575,216 +504,228 @@ class _RoleEditorPageState extends State<RoleEditorPage>
                   child: Form(
                       key: _form,
                       child: ListView(
-                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                          controller: _editorScroll,
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                           children: [
+                            if (_wizard) _stepHeader(),
                             Material(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(20),
+                                color:
+                                    _wizard ? Colors.transparent : Colors.white,
+                                borderRadius: BorderRadius.circular(24),
                                 child: Padding(
-                                    padding: const EdgeInsets.all(16),
+                                    padding: EdgeInsets.all(_wizard ? 0 : 16),
                                     child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          const Text('人物头像',
-                                              style: TextStyle(
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w800)),
-                                          const SizedBox(height: 12),
-                                          InkWell(
-                                              onTap: _builtin
-                                                  ? null
-                                                  : _chooseAvatar,
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
-                                              child: _builtin
-                                                  ? AssistantAvatar(
-                                                      role: widget.role!.name,
-                                                      size: 80)
-                                                  : _avatarData != null
-                                                      ? UserAvatar(
-                                                          avatarData:
-                                                              _avatarData,
-                                                          size: 80)
-                                                      : Container(
-                                                          width: 80,
-                                                          height: 80,
-                                                          decoration: BoxDecoration(
-                                                              color: BingoPalette
-                                                                  .softSurface,
-                                                              borderRadius:
-                                                                  BorderRadius.circular(
-                                                                      16),
-                                                              border: Border.all(
-                                                                  color: BingoPalette
-                                                                      .primary
-                                                                      .withValues(
-                                                                          alpha:
-                                                                              .4))),
-                                                          child: const Column(
-                                                              mainAxisAlignment:
-                                                                  MainAxisAlignment
-                                                                      .center,
-                                                              children: [
-                                                                Icon(
-                                                                    Icons
-                                                                        .add_rounded,
-                                                                    color: BingoPalette
-                                                                        .primary),
-                                                                SizedBox(
-                                                                    height: 4),
-                                                                Text('上传头像',
-                                                                    style: TextStyle(
-                                                                        fontSize:
-                                                                            10,
+                                          if (!_wizard || _step == 0) ...[
+                                            if (!_wizard)
+                                              const Text('人物头像',
+                                                  style: TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w600)),
+                                            const SizedBox(height: 12),
+                                            Align(
+                                                alignment: _wizard
+                                                    ? Alignment.center
+                                                    : Alignment.centerLeft,
+                                                child: ClipRRect(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            16),
+                                                    child: InkWell(
+                                                        onTap: _builtin
+                                                            ? null
+                                                            : _chooseAvatar,
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(16),
+                                                        child: _builtin
+                                                            ? AssistantAvatar(
+                                                                role: widget
+                                                                    .role!.name,
+                                                                size: 80)
+                                                            : _avatarData !=
+                                                                    null
+                                                                ? UserAvatar(
+                                                                    avatarData:
+                                                                        _avatarData,
+                                                                    size: 80)
+                                                                : Container(
+                                                                    width: 80,
+                                                                    height: 80,
+                                                                    decoration: BoxDecoration(
                                                                         color: BingoPalette
-                                                                            .primary))
-                                                              ]))),
-                                          _label('人物名称'),
-                                          _field(
-                                              keyName: 'role-name',
-                                              controller: _name,
-                                              hint: '给 TA 起一个亲切的名字',
-                                              limit: 30,
-                                              editable: !_builtin),
-                                          _label('人物关系'),
-                                          if (!_builtin) ...[
+                                                                            .softSurface,
+                                                                        borderRadius:
+                                                                            BorderRadius.circular(
+                                                                                16),
+                                                                        border: Border.all(
+                                                                            color: BingoPalette.primary.withValues(
+                                                                                alpha:
+                                                                                    .4))),
+                                                                    child: const Column(
+                                                                        mainAxisAlignment:
+                                                                            MainAxisAlignment.center,
+                                                                        children: [
+                                                                          Icon(
+                                                                              Icons.add_rounded,
+                                                                              color: BingoPalette.primary),
+                                                                          SizedBox(
+                                                                              height: 4),
+                                                                          Text(
+                                                                              '上传头像',
+                                                                              style: TextStyle(fontSize: 10, color: BingoPalette.primary))
+                                                                        ]))))),
+                                            _label('人物名称'),
+                                            _field(
+                                                keyName: 'role-name',
+                                                controller: _name,
+                                                hint: '给 TA 起一个亲切的名字',
+                                                limit: 30,
+                                                editable: !_builtin),
+                                            _label('人物关系'),
+                                            if (!_builtin && !_wizard) ...[
+                                              Wrap(
+                                                  spacing: 7,
+                                                  runSpacing: 6,
+                                                  children: [
+                                                    for (final relation in [
+                                                      '陪伴伙伴',
+                                                      '女朋友',
+                                                      '男朋友',
+                                                      '老师',
+                                                      '同事',
+                                                      '邻家大叔',
+                                                      '弟弟',
+                                                      '闺蜜',
+                                                      '好兄弟',
+                                                      '学姐',
+                                                      '学长',
+                                                      '树洞搭子',
+                                                      '运动搭子'
+                                                    ])
+                                                      ChoiceChip(
+                                                          label: Text(relation,
+                                                              style:
+                                                                  const TextStyle(
+                                                                      fontSize:
+                                                                          11)),
+                                                          selected:
+                                                              _roleType.text ==
+                                                                  relation,
+                                                          showCheckmark: false,
+                                                          selectedColor:
+                                                              BingoPalette
+                                                                  .blush,
+                                                          onSelected: (_) =>
+                                                              setState(() =>
+                                                                  _roleType
+                                                                          .text =
+                                                                      relation)),
+                                                  ]),
+                                              const SizedBox(height: 10),
+                                            ],
+                                            _field(
+                                                keyName: 'role-relationship',
+                                                controller: _roleType,
+                                                hint: '选择或填写 TA 与你的关系',
+                                                limit: 30,
+                                                editable: !_builtin),
+                                          ],
+                                          if (!_wizard || _step == 1) ...[
+                                            _label('说话风格'),
                                             Wrap(
                                                 spacing: 7,
                                                 runSpacing: 6,
                                                 children: [
-                                                  for (final relation in [
-                                                    '陪伴伙伴',
-                                                    '女朋友',
-                                                    '男朋友',
-                                                    '老师',
-                                                    '同事',
-                                                    '邻家大叔',
-                                                    '弟弟',
-                                                    '闺蜜',
-                                                    '好兄弟',
-                                                    '学姐',
-                                                    '学长',
-                                                    '树洞搭子',
-                                                    '运动搭子'
-                                                  ])
+                                                  for (final style
+                                                      in _personalities)
                                                     ChoiceChip(
-                                                        label: Text(relation,
+                                                        label: Text(style,
                                                             style:
                                                                 const TextStyle(
                                                                     fontSize:
-                                                                        11)),
-                                                        selected:
-                                                            _roleType.text ==
-                                                                relation,
+                                                                        12)),
+                                                        selected: _speakingStyle
+                                                                .text ==
+                                                            style,
                                                         showCheckmark: false,
                                                         selectedColor:
                                                             BingoPalette.blush,
                                                         onSelected: (_) =>
                                                             setState(() =>
-                                                                _roleType.text =
-                                                                    relation)),
+                                                                _speakingStyle
+                                                                        .text =
+                                                                    style)),
                                                 ]),
                                             const SizedBox(height: 10),
+                                            _field(
+                                                keyName: 'role-speaking-style',
+                                                controller: _speakingStyle,
+                                                hint: '例如：口语自然、简洁幽默，先倾听再给建议',
+                                                limit: 1000,
+                                                lines: 3),
+                                            if (_builtin)
+                                              const Padding(
+                                                  padding:
+                                                      EdgeInsets.only(top: 10),
+                                                  child: Text(
+                                                      '说话风格仅对你生效，共享搭子的其他人物资料保持一致。',
+                                                      style: TextStyle(
+                                                          fontSize: 11,
+                                                          color: BingoPalette
+                                                              .muted))),
                                           ],
-                                          _field(
-                                              keyName: 'role-relationship',
-                                              controller: _roleType,
-                                              hint: '选择或填写 TA 与你的关系',
-                                              limit: 30,
-                                              editable: !_builtin),
-                                          _label('说话风格'),
-                                          Wrap(
-                                              spacing: 7,
-                                              runSpacing: 6,
-                                              children: [
-                                                for (final style
-                                                    in _personalities)
-                                                  ChoiceChip(
-                                                      label: Text(style,
-                                                          style:
-                                                              const TextStyle(
-                                                                  fontSize:
-                                                                      12)),
-                                                      selected: _speakingStyle
-                                                              .text ==
-                                                          style,
-                                                      showCheckmark: false,
-                                                      selectedColor:
-                                                          BingoPalette.blush,
-                                                      onSelected: (_) =>
-                                                          setState(() =>
-                                                              _speakingStyle
-                                                                      .text =
-                                                                  style)),
-                                              ]),
-                                          const SizedBox(height: 10),
-                                          _field(
-                                              keyName: 'role-speaking-style',
-                                              controller: _speakingStyle,
-                                              hint: '例如：口语自然、简洁幽默，先倾听再给建议',
-                                              limit: 1000,
-                                              lines: 3),
-                                          if (_builtin)
-                                            const Padding(
-                                                padding:
-                                                    EdgeInsets.only(top: 10),
-                                                child: Text(
-                                                    '说话风格仅对你生效，共享搭子的其他人物资料保持一致。',
-                                                    style: TextStyle(
-                                                        fontSize: 11,
-                                                        color: BingoPalette
-                                                            .muted))),
-                                          _label('性格标签'),
-                                          if (_builtin)
-                                            Wrap(
-                                                spacing: 7,
-                                                runSpacing: 7,
-                                                children: _traits
-                                                    .map((label) => TraitBadge(
-                                                        label,
-                                                        outlined: true))
-                                                    .toList())
-                                          else
-                                            _traitPicker(),
-                                          _label('人物背景'),
-                                          _field(
-                                              keyName: 'role-background',
-                                              controller: _background,
-                                              hint: '描述 TA 的经历、职业、兴趣，以及你们如何认识',
-                                              limit: 2000,
-                                              lines: 4,
-                                              editable: !_builtin),
-                                          _label('人物声音'),
-                                          if (_builtin)
-                                            TextButton.icon(
-                                                onPressed: _preview,
-                                                icon: Icon(_playing
-                                                    ? Icons.stop
-                                                    : Icons.play_arrow_rounded),
-                                                label: Text(_playing
-                                                    ? '停止试听'
-                                                    : '试听 ${widget.role!.displayName}的声音'))
-                                          else
+                                          if (!_wizard || _step == 2) ...[
+                                            _label('性格标签'),
+                                            if (_builtin)
+                                              Wrap(
+                                                  spacing: 7,
+                                                  runSpacing: 7,
+                                                  children: _traits
+                                                      .map((label) =>
+                                                          TraitBadge(label,
+                                                              outlined: true))
+                                                      .toList())
+                                            else
+                                              _traitPicker(),
+                                          ],
+                                          if (!_wizard || _step == 3) ...[
+                                            _label('人物背景'),
+                                            _field(
+                                                keyName: 'role-background',
+                                                controller: _background,
+                                                hint:
+                                                    '描述 TA 的经历、职业、兴趣，以及你们如何认识',
+                                                limit: 2000,
+                                                lines: 4,
+                                                editable: !_builtin),
+                                          ],
+                                          if (!_wizard || _step == 4) ...[
+                                            _label('人物声音'),
                                             _voicePicker(voiceLabel),
-                                          if (!_builtin)
-                                            ExpansionTile(
-                                                tilePadding: EdgeInsets.zero,
-                                                title: const Text('更多资料',
-                                                    style: TextStyle(
-                                                        fontSize: 14,
-                                                        fontWeight:
-                                                            FontWeight.w800)),
-                                                children: [
-                                                  _label('一句话介绍'),
-                                                  _field(
-                                                      keyName:
-                                                          'role-description',
-                                                      controller: _description,
-                                                      hint: '用一句话描述你的搭子',
-                                                      limit: 200,
-                                                      requiredValue: false),
-                                                ]),
+                                            if (!_builtin)
+                                              ExpansionTile(
+                                                  tilePadding: EdgeInsets.zero,
+                                                  title: const Text('更多资料',
+                                                      style: TextStyle(
+                                                          fontSize: 14,
+                                                          fontWeight:
+                                                              FontWeight.w500)),
+                                                  children: [
+                                                    _label('一句话介绍'),
+                                                    _field(
+                                                        keyName:
+                                                            'role-description',
+                                                        controller:
+                                                            _description,
+                                                        hint: '用一句话描述你的搭子',
+                                                        limit: 200,
+                                                        requiredValue: false),
+                                                  ]),
+                                          ],
                                           if (_error != null)
                                             Text(_error!,
                                                 style: TextStyle(
@@ -798,22 +739,23 @@ class _RoleEditorPageState extends State<RoleEditorPage>
                                                 child: Text(_progress)),
                                         ]))),
                           ])))),
-          bottomNavigationBar: SafeArea(
-              top: false,
-              child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
-                  child: FilledButton(
-                      onPressed: _busy ? null : _save,
-                      style: FilledButton.styleFrom(
-                          backgroundColor: BingoPalette.primary,
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size(double.infinity, 54)),
-                      child: Text(widget.role == null ? '创建搭子' : '保存修改',
-                          style: const TextStyle(
-                              fontSize: 17, fontWeight: FontWeight.w700))))),
+          bottomNavigationBar: BingoActionBar(
+              child: FilledButton(
+                  onPressed: _busy
+                      ? null
+                      : _wizard
+                          ? _advance
+                          : _save,
+                  style: FilledButton.styleFrom(
+                      backgroundColor: BingoPalette.primary,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(double.infinity, 48),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14))),
+                  child: Text(_wizard ? (_step < 4 ? '下一步' : '创建搭子') : '保存修改',
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w500)))),
         ),
-        if (_cloning)
-          Positioned.fill(child: VoiceCloneProgress(message: _progress)),
       ]),
     );
   }

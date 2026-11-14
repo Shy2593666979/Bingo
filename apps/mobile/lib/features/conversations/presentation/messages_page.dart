@@ -239,7 +239,7 @@ class MessagesPageState extends State<MessagesPage> {
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                         fontSize: 18,
-                                        fontWeight: FontWeight.w800,
+                                        fontWeight: FontWeight.w500,
                                         color: refInk)),
                                 const SizedBox(height: 4),
                                 Text(
@@ -364,59 +364,78 @@ class MessagesPageState extends State<MessagesPage> {
             bottom: false,
             child: Column(children: [
               Padding(
-                  padding: const EdgeInsets.fromLTRB(15, 0, 15, 0),
-                  child: CompanionLaunchHeader('消息',
-                      horizontalPadding: 0,
-                      actions: [
-                        IconButton(
-                            tooltip: '搜索聊天',
-                            onPressed: _focusSearch,
-                            icon: const Icon(Icons.search_rounded, size: 23)),
-                        if (widget.showCreateAction)
-                          IconButton(
-                              key: _newButtonKey,
-                              tooltip: '新建',
-                              onPressed: _newMenu,
-                              icon: const Icon(Icons.add_circle_outline_rounded,
-                                  size: 26)),
-                      ])),
-              if (_showSearch || _query.isNotEmpty)
+                  padding: EdgeInsets.zero,
+                  child: SizedBox(
+                      height: 56,
+                      child: Stack(alignment: Alignment.center, children: [
+                        Align(
+                            alignment: Alignment.centerLeft,
+                            child: IconButton(
+                                tooltip: '搜索聊天',
+                                onPressed: _focusSearch,
+                                icon: const Icon(Icons.search_rounded,
+                                    size: 24))),
+                        Text('聊天',
+                            style: CompanionLaunch.text(18,
+                                weight: FontWeight.w600)),
+                        Align(
+                            alignment: Alignment.centerRight,
+                            child:
+                                Row(mainAxisSize: MainAxisSize.min, children: [
+                              if (widget.showCreateAction)
+                                IconButton(
+                                    key: _newButtonKey,
+                                    tooltip: '新建',
+                                    onPressed: _newMenu,
+                                    icon: const Icon(Icons.add_rounded,
+                                        size: 26)),
+                            ])),
+                      ]))),
+              if (_showSearch)
                 Padding(
-                    padding: const EdgeInsets.fromLTRB(18, 10, 18, 14),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
                     child: TextField(
                         controller: _searchController,
+                        onTap: _focusSearch,
                         focusNode: _searchFocus,
                         onChanged: (value) =>
                             setState(() => _query = value.trim()),
-                        style: const TextStyle(fontSize: 13),
+                        style: const TextStyle(fontSize: 14),
                         decoration: const InputDecoration(
+                            fillColor: BingoPalette.blush,
+                            enabledBorder: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(24)),
+                                borderSide: BorderSide.none),
                             hintText: '搜索搭子或聊天记录',
                             prefixIconConstraints:
                                 BoxConstraints(minWidth: 40, minHeight: 40),
                             hintStyle: TextStyle(
-                                fontSize: 13,
-                                height: 1.5,
+                                fontSize: 14,
+                                height: 1.4,
                                 color: BingoPalette.muted),
                             isDense: true,
                             contentPadding: EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 12),
+                                horizontal: 12, vertical: 9),
                             prefixIcon: Icon(Icons.search_rounded, size: 20)))),
-              Padding(
-                  padding: EdgeInsets.zero,
-                  child: CompanionLaunchTabs(
-                      tabs: const [
-                        (value: 0, label: '全部'),
-                        (value: 1, label: '单聊'),
-                        (value: 2, label: '群聊')
-                      ],
-                      selected: _filter,
-                      onSelected: (value) => setState(() => _filter = value))),
+              if (_showSearch || _filter != 0)
+                Padding(
+                    padding: EdgeInsets.zero,
+                    child: CompanionLaunchTabs(
+                        tabs: const [
+                          (value: 0, label: '全部'),
+                          (value: 1, label: '单聊'),
+                          (value: 2, label: '群聊')
+                        ],
+                        selected: _filter,
+                        onSelected: (value) =>
+                            setState(() => _filter = value))),
               if (_busy) const LinearProgressIndicator(minHeight: 2),
               Expanded(
                   child: RefreshIndicator(
                       onRefresh: refresh,
                       child: ListView(
-                          padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
+                          padding: const EdgeInsets.only(bottom: 24),
                           physics: const AlwaysScrollableScrollPhysics(),
                           children: [
                             if (_loading)
@@ -564,7 +583,7 @@ class MessagesPageState extends State<MessagesPage> {
               onTap: () => Navigator.pop(context, value),
               child: Padding(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
                   child: Row(children: [
                     Container(
                         width: 45,
@@ -586,7 +605,7 @@ class MessagesPageState extends State<MessagesPage> {
                           Text(title,
                               style: const TextStyle(
                                   fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w500,
                                   color: refInk)),
                           const SizedBox(height: 5),
                           Text(subtitle,
@@ -596,10 +615,12 @@ class MessagesPageState extends State<MessagesPage> {
                   ]))));
   String _name(_Chat item) => item.role?.displayName ?? item.group!.name;
   Widget _avatar(_Chat item, double size) => item.role != null
-      ? AssistantAvatar(role: item.role!.name, size: size)
+      ? SizedBox.square(
+          dimension: size,
+          child: AssistantAvatar(
+              role: item.role!.name, size: size, closePortrait: true))
       : GroupAvatar(members: item.group!.activeMembers, size: size);
   Widget _tile(_Chat item, {bool divider = true}) {
-    final compact = CompanionLaunch.compact(context);
     final role = item.role, group = item.group;
     final unread = role?.unreadCount ?? group!.unread;
     final muted = role?.muted ?? group!.muted;
@@ -610,68 +631,82 @@ class MessagesPageState extends State<MessagesPage> {
             : '${group.senderNameFor(group.lastMessage!)}：${ChatSticker.preview(group.lastMessage!.content)}';
     return Material(
         key: ValueKey('chat-${role?.id ?? group!.id}'),
-        color: Colors.white,
+        color: Colors.transparent,
         child: InkWell(
             onTap: () => _open(item),
             onLongPress: () => _actions(item),
             child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
                 decoration: BoxDecoration(
                     border: divider
                         ? const Border(
                             bottom: BorderSide(color: BingoPalette.line))
                         : null),
                 child: Row(children: [
-                  _avatar(item, CompanionLaunch.compact(context) ? 59 : 64),
+                  _avatar(item, 50),
                   const SizedBox(width: 12),
                   Expanded(
                       child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                        Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                  child: Row(children: [
+                                Flexible(
+                                    child: Text(_name(item),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                            fontSize: 17,
+                                            height: 1.25,
+                                            fontWeight: FontWeight.w600,
+                                            letterSpacing: 0,
+                                            color: Color(0xFF262626)))),
+                              ])),
+                              const SizedBox(width: 10),
+                              Text(_time(item.date),
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      height: 1.35,
+                                      fontWeight: FontWeight.w400,
+                                      color: Color(0xFF999999))),
+                            ]),
+                        const SizedBox(height: 5),
                         Row(children: [
-                          Flexible(
-                              child: Text(_name(item),
+                          Expanded(
+                              child: Text(ChatSticker.preview(preview),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: CompanionLaunch.text(compact ? 17 : 18,
-                                      weight: FontWeight.w700))),
-                          if (group != null) ...[
+                                  style: const TextStyle(
+                                      fontSize: 14,
+                                      height: 1.35,
+                                      fontWeight: FontWeight.w400,
+                                      letterSpacing: 0,
+                                      color: Color(0xFF666666)))),
+                          if (unread > 0) ...[
+                            const SizedBox(width: 10),
+                            UnreadBadge(count: unread)
+                          ] else if (item.pin || muted) ...[
+                            const SizedBox(width: 10),
+                            Icon(
+                                muted
+                                    ? Icons.notifications_off_outlined
+                                    : Icons.push_pin_outlined,
+                                size: 13,
+                                color: BingoPalette.muted)
+                          ],
+                          if ((group?.unreadMentions ?? 0) > 0) ...[
                             const SizedBox(width: 6),
-                            const BingoIcon(BingoSymbol.group,
-                                size: 17, color: BingoPalette.muted)
-                          ]
+                            const Text('@我',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: BingoPalette.primaryText))
+                          ],
                         ]),
-                        const SizedBox(height: 2),
-                        Text(ChatSticker.preview(preview),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: CompanionLaunch.text(compact ? 14 : 16,
-                                color: CompanionLaunch.muted))
                       ])),
-                  const SizedBox(width: 8),
-                  Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                    Text(_time(item.date),
-                        style: CompanionLaunch.text(compact ? 12 : 14,
-                            color: CompanionLaunch.muted)),
-                    if (unread > 0) ...[
-                      const SizedBox(height: 7),
-                      UnreadBadge(count: unread)
-                    ] else if (item.pin || muted) ...[
-                      const SizedBox(height: 7),
-                      Icon(
-                          muted
-                              ? Icons.notifications_off_outlined
-                              : Icons.push_pin_outlined,
-                          size: 13,
-                          color: BingoPalette.muted)
-                    ],
-                    if ((group?.unreadMentions ?? 0) > 0)
-                      const Padding(
-                          padding: EdgeInsets.only(top: 3),
-                          child: Text('@我',
-                              style: TextStyle(
-                                  fontSize: 10, color: Color(0xFFFF4D4F))))
-                  ])
                 ]))));
   }
 }

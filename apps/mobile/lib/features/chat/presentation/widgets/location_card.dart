@@ -151,7 +151,7 @@ class LocationCard extends StatelessWidget {
                                     style: const TextStyle(
                                         fontSize: 11,
                                         height: 1.7,
-                                        color: Color(0xFF698776))),
+                                        color: BingoPalette.muted)),
                               ])),
                           const SizedBox(width: 13),
                           Container(
@@ -174,7 +174,7 @@ class LocationCard extends StatelessWidget {
                         Divider(
                             height: 1,
                             color: isUser
-                                ? const Color(0xFFCFE4D6)
+                                ? BingoPalette.blush
                                 : BingoPalette.line),
                         Padding(
                             padding: const EdgeInsets.only(top: 10),
@@ -184,7 +184,8 @@ class LocationCard extends StatelessWidget {
                               const SizedBox(width: 5),
                               Text(isUser ? '我分享的位置' : '位置',
                                   style: const TextStyle(
-                                      fontSize: 10, color: Color(0xFF5C8971))),
+                                      fontSize: 10,
+                                      color: BingoPalette.primary)),
                             ])),
                       ])))));
 }
@@ -233,20 +234,20 @@ class LocationDetailPage extends StatelessWidget {
                       const SizedBox(height: 12),
                       Text(location.address,
                           style: const TextStyle(
-                              color: Color(0xFF7D918A), height: 1.8)),
+                              color: BingoPalette.muted, height: 1.8)),
                       const SizedBox(height: 8),
                       Text(
                           location.source == 'current'
                               ? '用户发送的当时位置，不是实时位置'
                               : '用户选择的地点，不代表当前所在位置',
                           style: const TextStyle(
-                              fontSize: 12, color: Color(0xFF7D918A))),
+                              fontSize: 12, color: BingoPalette.muted)),
                       if (location.precision == 'approximate')
                         const Padding(
                             padding: EdgeInsets.only(top: 8),
                             child: Text('此位置为大致定位，仅供参考',
                                 style: TextStyle(
-                                    fontSize: 12, color: Color(0xFF7D918A)))),
+                                    fontSize: 12, color: BingoPalette.muted))),
                       const SizedBox(height: 20),
                       Wrap(spacing: 10, runSpacing: 10, children: [
                         if (location.hasCoordinates)

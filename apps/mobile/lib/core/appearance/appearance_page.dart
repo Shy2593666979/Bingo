@@ -84,7 +84,7 @@ class _AppearancePageState extends State<AppearancePage> {
               Padding(
                   padding: const EdgeInsets.fromLTRB(18, 4, 18, 16),
                   child: ClipRRect(
-                      borderRadius: BorderRadius.circular(22),
+                      borderRadius: BorderRadius.circular(16),
                       child: SizedBox(
                           height: 154,
                           child: AppearanceScope(
@@ -150,7 +150,7 @@ class _AppearancePageState extends State<AppearancePage> {
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(24)),
+                          borderRadius: BorderRadius.circular(16)),
                       child: Row(children: [
                         for (final (i, label) in [(1, '背景'), (2, '气泡')])
                           Expanded(
@@ -272,7 +272,8 @@ class _AppearancePageState extends State<AppearancePage> {
                     ? '${value.toStringAsFixed(1)}×'
                     : '${(value * 100).round()}%',
                 textAlign: TextAlign.right,
-                style: const TextStyle(fontSize: 11, color: Color(0xFF718078))))
+                style:
+                    const TextStyle(fontSize: 11, color: BingoPalette.muted)))
       ]);
 
   Widget _tile(ChatSkin skin) {

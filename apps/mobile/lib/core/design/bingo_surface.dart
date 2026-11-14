@@ -32,5 +32,5 @@ class BingoSectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(title,
       style: const TextStyle(
-          fontSize: 16, fontWeight: FontWeight.w700, color: BingoPalette.ink));
+          fontSize: 16, fontWeight: FontWeight.w600, color: BingoPalette.ink));
 }

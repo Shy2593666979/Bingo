@@ -121,7 +121,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
   @override
   Widget build(BuildContext context) {
     final accent = widget.appearanceStore == null
-        ? const Color(0xFF4D846B)
+        ? BingoPalette.primary
         : ChatSkin.find(widget.appearanceStore!.effective(widget.roleId).bubble)
             .accent;
     final canSave = !_loading &&
@@ -136,70 +136,88 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
           appBar: _appBar('聊天信息'),
           body: AbsorbPointer(
               absorbing: _clearing,
-              child: ListView(padding: const EdgeInsets.all(16), children: [
-                Container(
-                    decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14)),
-                    padding: const EdgeInsets.fromLTRB(22, 25, 22, 20),
-                    alignment: Alignment.centerLeft,
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      AssistantAvatar(role: widget.partnerRole, size: 55),
-                      const SizedBox(height: 8),
-                      ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 140),
-                          child: Text(widget.partnerName,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                  fontSize: 13, color: Color(0xFF929C96)))),
-                    ])),
-                const SizedBox(height: 12),
-                _group([
-                  _row('查找聊天记录',
-                      onTap: () => Navigator.of(context).push<void>(
-                          MaterialPageRoute(
-                              builder: (_) => ChatSearchPage(info: widget)))),
-                  if (widget.onCall != null) _row('语音通话', onTap: widget.onCall)
-                ]),
-                if (_loading) const LinearProgressIndicator(minHeight: 2),
-                if (_failed)
-                  TextButton(
-                      onPressed: _load, child: const Text('设置读取失败，点击重试')),
-                _group([
-                  _toggle('消息免打扰', _settings.muted,
-                      canSave ? (value) => _save(muted: value) : null, accent),
-                  _toggle('置顶聊天', _settings.pinned,
-                      canSave ? (value) => _save(pinned: value) : null, accent),
-                  ListenableBuilder(
-                      listenable: widget.controller,
-                      builder: (context, child) => _toggle(
-                          '开启声音',
-                          widget.controller.readAloudEnabled,
-                          (value) => widget.controller.setReadAloud(value),
-                          accent)),
-                ]),
-                if (widget.appearanceStore != null)
-                  _group([
-                    _row('聊天外观',
-                        icon: Icons.palette_outlined,
-                        onTap: () => _appearance(2)),
-                  ]),
-                if (widget.controller.userId != null)
-                  _group([
-                    _row('陪伴记录',
-                        onTap: () => Navigator.of(context).push<void>(
-                            MaterialPageRoute(
-                                builder: (_) => CompanionRecordsPage(
-                                    userId: widget.controller.userId!,
-                                    conversationId:
-                                        widget.controller.conversationId)))),
-                  ]),
-                if (widget.gateway != null)
-                  _group([
-                    _row(_clearing ? '正在清空…' : '清空聊天记录',
-                        onTap: _clearing ? null : _clear),
-                  ]),
-              ])),
+              child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                  children: [
+                    Container(
+                        decoration: BoxDecoration(
+                            color: BingoPalette.softSurface,
+                            borderRadius: BorderRadius.circular(14)),
+                        padding: const EdgeInsets.all(18),
+                        alignment: Alignment.centerLeft,
+                        child: Row(children: [
+                          AssistantAvatar(role: widget.partnerRole, size: 56),
+                          const SizedBox(width: 16),
+                          Expanded(
+                              child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                Text(widget.partnerName,
+                                    style: const TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w500)),
+                                const SizedBox(height: 6),
+                                const Text('聊天偏好与陪伴记录',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: BingoPalette.muted)),
+                              ])),
+                        ])),
+                    const SizedBox(height: 12),
+                    _group([
+                      _row('查找聊天记录',
+                          onTap: () => Navigator.of(context).push<void>(
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      ChatSearchPage(info: widget)))),
+                      if (widget.onCall != null)
+                        _row('语音通话', onTap: widget.onCall)
+                    ]),
+                    if (_loading) const LinearProgressIndicator(minHeight: 2),
+                    if (_failed)
+                      TextButton(
+                          onPressed: _load, child: const Text('设置读取失败，点击重试')),
+                    _group([
+                      _toggle(
+                          '消息免打扰',
+                          _settings.muted,
+                          canSave ? (value) => _save(muted: value) : null,
+                          accent),
+                      _toggle(
+                          '置顶聊天',
+                          _settings.pinned,
+                          canSave ? (value) => _save(pinned: value) : null,
+                          accent),
+                      ListenableBuilder(
+                          listenable: widget.controller,
+                          builder: (context, child) => _toggle(
+                              '开启声音',
+                              widget.controller.readAloudEnabled,
+                              (value) => widget.controller.setReadAloud(value),
+                              accent)),
+                    ]),
+                    if (widget.appearanceStore != null)
+                      _group([
+                        _row('聊天外观',
+                            icon: Icons.palette_outlined,
+                            onTap: () => _appearance(2)),
+                      ]),
+                    if (widget.controller.userId != null)
+                      _group([
+                        _row('陪伴记录',
+                            onTap: () => Navigator.of(context).push<void>(
+                                MaterialPageRoute(
+                                    builder: (_) => CompanionRecordsPage(
+                                        userId: widget.controller.userId!,
+                                        conversationId: widget
+                                            .controller.conversationId)))),
+                      ]),
+                    if (widget.gateway != null)
+                      _group([
+                        _row(_clearing ? '正在清空…' : '清空聊天记录',
+                            onTap: _clearing ? null : _clear),
+                      ]),
+                  ])),
         ));
   }
 }
@@ -211,7 +229,7 @@ AppBar _appBar(String title) => AppBar(
     elevation: 0,
     centerTitle: true,
     title: Text(title,
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
     leading: Builder(
         builder: (context) => IconButton(
             tooltip: '返回',
@@ -220,13 +238,14 @@ AppBar _appBar(String title) => AppBar(
 
 Widget _group(List<Widget> rows) => Container(
     decoration: BoxDecoration(
-        color: Colors.white, borderRadius: BorderRadius.circular(14)),
+        color: BingoPalette.softSurface,
+        borderRadius: BorderRadius.circular(16)),
     margin: const EdgeInsets.only(bottom: 12),
     padding: const EdgeInsets.only(left: 20),
     child: Column(children: [
       for (var i = 0; i < rows.length; i++) ...[
         if (i > 0)
-          const Divider(height: 1, thickness: .5, color: Color(0xFFE8ECE9)),
+          const Divider(height: 1, thickness: .5, color: BingoPalette.line),
         rows[i],
       ]
     ]));
@@ -234,7 +253,7 @@ Widget _group(List<Widget> rows) => Container(
 Widget _row(String title,
         {VoidCallback? onTap, Widget? trailing, IconData? icon}) =>
     Material(
-        color: Colors.white,
+        color: Colors.transparent,
         child: InkWell(
             onTap: onTap,
             child: ConstrainedBox(
@@ -249,11 +268,11 @@ Widget _row(String title,
                       Expanded(
                           child: Text(title,
                               style:
-                                  const TextStyle(fontSize: 16, color: _ink))),
+                                  const TextStyle(fontSize: 15, color: _ink))),
                       const SizedBox(width: 12),
                       trailing ??
                           const Icon(Icons.chevron_right_rounded,
-                              size: 24, color: Color(0xFFA7AFAA)),
+                              size: 24, color: BingoPalette.muted),
                     ])))));
 
 Widget _toggle(String title, bool value, ValueChanged<bool>? onChanged,
@@ -351,7 +370,7 @@ class ChatSearchPageState extends State<ChatSearchPage> {
                             child: Text(
                                 _query.isEmpty ? '输入关键词，查找这段对话' : '没有找到相关聊天记录',
                                 style: const TextStyle(
-                                    fontSize: 14, color: Color(0xFF929C96))))
+                                    fontSize: 14, color: BingoPalette.muted)))
                         : ListView.separated(
                             itemCount: _results.length,
                             separatorBuilder: (context, child) =>
@@ -367,7 +386,7 @@ class ChatSearchPageState extends State<ChatSearchPage> {
                                               : widget.info.partnerName,
                                           style: const TextStyle(
                                               fontSize: 13,
-                                              color: Color(0xFF929C96))),
+                                              color: BingoPalette.muted)),
                                       subtitle: Text(message.content,
                                           maxLines: 3,
                                           overflow: TextOverflow.ellipsis,
@@ -402,8 +421,8 @@ class ChatSearchPageState extends State<ChatSearchPage> {
                                                                   _date(message
                                                                       .createdAt!),
                                                                   style: const TextStyle(
-                                                                      color: Color(
-                                                                          0xFF929C96)))),
+                                                                      color: BingoPalette
+                                                                          .muted))),
                                                         MessageBubble(
                                                             message: message,
                                                             assistantRole: widget

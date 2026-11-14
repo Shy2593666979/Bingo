@@ -1,3 +1,4 @@
+import 'package:bingo/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:bingo/core/role_avatar_assets.dart';
 
@@ -6,7 +7,7 @@ class AvatarFrame extends StatelessWidget {
   const AvatarFrame(
       {required this.size,
       required this.child,
-      this.color = const Color(0xFFE8F8F2),
+      this.color = BingoPalette.softSurface,
       this.cornerRadius,
       super.key});
   final double size;

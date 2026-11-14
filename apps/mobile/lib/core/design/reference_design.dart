@@ -1,5 +1,5 @@
+import 'package:bingo/core/design/approved_art.dart';
 import 'dart:math' as math;
-import 'package:bingo/core/design/companion_launch_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:bingo/core/design/bingo_icon.dart';
 import 'package:bingo/core/theme/app_theme.dart';
@@ -85,99 +85,8 @@ class ReferenceBackdrop extends StatelessWidget {
   final bool group;
   final bool showHeaderArt;
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-      decoration: const BoxDecoration(
-          gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-            BingoPalette.pageTop,
-            BingoPalette.ice,
-            BingoPalette.pageBottom
-          ])),
-      child: Stack(children: [
-        if (showHeaderArt)
-          Positioned(
-              top: MediaQuery.paddingOf(context).top + 2,
-              right: 0,
-              width: chat ? 106 : 180,
-              height: chat ? 63 : 59,
-              child: IgnorePointer(
-                  child: Opacity(
-                      opacity: .9,
-                      child: _softArt(
-                          chat ? 'group_chat' : 'home',
-                          chat
-                              ? const Rect.fromLTWH(650, 60, 190, 112)
-                              : const Rect.fromLTWH(515, 60, 426, 138))))),
-        if (chat && group)
-          Positioned(
-              top: MediaQuery.sizeOf(context).height * .24,
-              right: 3,
-              width: 78,
-              height: 60,
-              child: IgnorePointer(
-                  child: _softArt(
-                      'group_chat', const Rect.fromLTWH(725, 403, 195, 150)))),
-        if (chat)
-          Positioned(
-              top: MediaQuery.sizeOf(context).height * .36,
-              right: 2,
-              width: 93,
-              height: group ? 96 : 85,
-              child: IgnorePointer(
-                  child: Opacity(
-                      opacity: .88,
-                      child: _softArt(
-                          group ? 'group_chat' : 'single_chat',
-                          group
-                              ? const Rect.fromLTWH(721, 657, 210, 217)
-                              : const Rect.fromLTWH(685, 800, 240, 220))))),
-        if (chat)
-          Positioned(
-              bottom: 0,
-              right: 0,
-              width: 88,
-              height: 175,
-              child: IgnorePointer(
-                  child: Opacity(
-                      opacity: .55,
-                      child: _softArt('group_chat',
-                          const Rect.fromLTWH(800, 1280, 141, 280))))),
-        Positioned.fill(child: child),
-      ]));
-
-  Widget _softArt(String page, Rect region) => ShaderMask(
-      blendMode: BlendMode.dstIn,
-      shaderCallback: (bounds) => const LinearGradient(colors: [
-            Colors.transparent,
-            Colors.white,
-            Colors.white,
-            Colors.transparent
-          ], stops: [
-            0,
-            .08,
-            .92,
-            1
-          ]).createShader(bounds),
-      child: ShaderMask(
-          blendMode: BlendMode.dstIn,
-          shaderCallback: (bounds) => const LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.white,
-                    Colors.white,
-                    Colors.transparent
-                  ],
-                  stops: [
-                    0,
-                    .08,
-                    .92,
-                    1
-                  ]).createShader(bounds),
-          child: ReferenceArt(page, region)));
+  Widget build(BuildContext context) =>
+      ColoredBox(color: Colors.white, child: child);
 }
 
 class ReferenceHeader extends StatelessWidget {
@@ -204,8 +113,8 @@ class ReferenceHeader extends StatelessWidget {
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(title,
               style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w500,
                   color: refInk,
                   height: 1.3)),
           if (subtitle.isNotEmpty) ...[
@@ -227,10 +136,8 @@ class ReferenceSurface extends StatelessWidget {
   final EdgeInsets padding;
   @override
   Widget build(BuildContext context) => Material(
-      color: BingoPalette.surface.withValues(alpha: .96),
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: Colors.white.withValues(alpha: .9))),
+      color: const Color(0xFFFAFAFA),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(padding: padding, child: child));
 }
 
@@ -258,7 +165,7 @@ class ReferenceButton extends StatelessWidget {
               padding: EdgeInsets.symmetric(
                   horizontal: small ? 13 : 20, vertical: 8),
               side:
-                  outlined ? const BorderSide(color: Color(0xFFB7EEE0)) : null,
+                  outlined ? const BorderSide(color: BingoPalette.blush) : null,
               shape: const StadiumBorder()),
           child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -324,98 +231,65 @@ class ReferenceNavigation extends StatelessWidget {
       this.creating = false,
       this.unread = 0,
       super.key});
-  final int selected;
+  final int selected, unread;
   final ValueChanged<int> onSelected;
   final VoidCallback onCreate;
   final bool creating;
-  final int unread;
   @override
   Widget build(BuildContext context) {
-    final compact = CompanionLaunch.compact(context);
-    final labelSize = compact ? 13.0 : 15.0;
-    final extraLabelHeight =
-        (MediaQuery.textScalerOf(context).scale(labelSize) - labelSize) * 1.25;
-    return DecoratedBox(
-        decoration: const BoxDecoration(
-            color: Colors.white,
-            border: Border(top: BorderSide(color: CompanionLaunch.line))),
-        child: SafeArea(
-            top: false,
-            child: SizedBox(
-                height: (compact ? 73 : 78) + extraLabelHeight,
-                child: Padding(
-                    padding: const EdgeInsets.fromLTRB(15, 6, 15, 6),
-                    child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _item(0, '首页', BingoSymbol.home, labelSize),
-                          _item(1, '聊天', BingoSymbol.chat, labelSize),
-                          Expanded(
-                              child: Semantics(
-                                  label: '创建中心',
-                                  button: true,
-                                  excludeSemantics: true,
-                                  child: InkWell(
-                                      onTap: onCreate,
-                                      child: SizedBox(
-                                          height: 61,
-                                          child: Align(
-                                              alignment: Alignment(0, -.6),
-                                              child: Container(
-                                                  width: 41,
-                                                  height: 41,
-                                                  decoration:
-                                                      const BoxDecoration(
-                                                          shape:
-                                                              BoxShape.circle,
-                                                          gradient:
-                                                              LinearGradient(
-                                                                  colors: [
-                                                                Color(
-                                                                    0xFF12C59E),
-                                                                CompanionLaunch
-                                                                    .primary,
-                                                              ])),
-                                                  child: const Icon(
-                                                      Icons.add_rounded,
-                                                      color: Colors.white,
-                                                      size: 26))))))),
-                          _item(2, '社区', BingoSymbol.partners, labelSize),
-                          _item(3, '我的', BingoSymbol.profile, labelSize),
-                        ])))));
-  }
-
-  Widget _item(int index, String title, BingoSymbol symbol, double labelSize) {
-    final active = selected == index && !creating;
-    final color = active ? CompanionLaunch.primary : const Color(0xFF334D3D);
-    return Expanded(
-        child: Semantics(
-            button: true,
-            selected: active,
-            child: InkWell(
-                onTap: () => onSelected(index),
-                child: Padding(
-                    padding: const EdgeInsets.only(top: 3),
-                    child: Column(children: [
-                      Badge(
-                          isLabelVisible: index == 1 && unread > 0,
-                          backgroundColor: const Color(0xFFFF4D4F),
-                          label: Text(unread > 99 ? '99+' : '$unread'),
-                          child: index == 3
-                              ? Icon(
-                                  active
-                                      ? Icons.person_rounded
-                                      : Icons.person_outline_rounded,
-                                  color: color,
-                                  size: 27)
-                              : BingoIcon(symbol,
-                                  color: color,
-                                  size: 27,
-                                  selected: index == 0 && active)),
-                      const SizedBox(height: 6),
-                      Text(title,
-                          style: CompanionLaunch.text(labelSize,
-                              color: color, height: 1.25)),
+    final page =
+        creating ? 2 : switch (selected) { 0 => 0, 1 => 1, 2 => 3, _ => 4 };
+    final extra = (MediaQuery.textScalerOf(context).scale(13) - 13) * 1.4;
+    return Material(
+        color: Colors.white,
+        child: DecoratedBox(
+            decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: BingoPalette.line))),
+            child: SafeArea(
+                top: false,
+                child: SizedBox(
+                    height: 75 + extra,
+                    child: Row(children: [
+                      for (var slot = 0; slot < 5; slot++)
+                        Expanded(
+                            child: Semantics(
+                                label: slot == 2 ? '创建中心' : null,
+                                button: true,
+                                selected: slot != 2 && slot == page,
+                                onTap: slot == 2 ? onCreate : null,
+                                excludeSemantics: slot == 2,
+                                child: InkWell(
+                                    onTap: () => slot == 2
+                                        ? onCreate()
+                                        : onSelected(
+                                            slot > 2 ? slot - 1 : slot),
+                                    child: Padding(
+                                        padding: const EdgeInsets.only(top: 9),
+                                        child: Column(children: [
+                                          ApprovedNavIcon(
+                                              page: page, item: slot),
+                                          if (slot != 2) ...[
+                                            const SizedBox(height: 3),
+                                            Text(
+                                                const [
+                                                  '首页',
+                                                  '聊天',
+                                                  '',
+                                                  '社区',
+                                                  '我的'
+                                                ][slot],
+                                                style: TextStyle(
+                                                    fontSize: 13,
+                                                    height: 1.4,
+                                                    fontWeight: slot == page
+                                                        ? FontWeight.w600
+                                                        : FontWeight.w400,
+                                                    color: slot == page
+                                                        ? BingoPalette.ink
+                                                        : const Color(
+                                                            0xFF909090)))
+                                          ],
+                                        ])))))
                     ])))));
   }
 }

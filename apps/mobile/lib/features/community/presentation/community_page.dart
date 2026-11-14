@@ -16,6 +16,7 @@ class CommunityPage extends StatefulWidget {
       required this.onInstalled,
       required this.onOpenCopy,
       this.referenceDesign = false,
+      this.onPartners,
       this.onCreateGroup,
       this.onChatCopy,
       super.key});
@@ -25,6 +26,7 @@ class CommunityPage extends StatefulWidget {
   final Future<void> Function(String) onOpenCopy;
   final Future<void> Function(String)? onCreateGroup, onChatCopy;
   final bool referenceDesign;
+  final VoidCallback? onPartners;
   @override
   State<CommunityPage> createState() => CommunityPageState();
 }
@@ -209,6 +211,7 @@ class CommunityPageState extends State<CommunityPage> {
   @override
   Widget build(BuildContext context) => widget.referenceDesign
       ? CommunityScene(
+          onPartners: widget.onPartners,
           gateway: widget.gateway,
           items: _items,
           hotItems: _hotItems,
@@ -276,7 +279,7 @@ class CommunityPageState extends State<CommunityPage> {
                                           decoration: BoxDecoration(
                                               gradient: const LinearGradient(
                                                   colors: [
-                                                    Color(0xFFE1F1E7),
+                                                    BingoPalette.softSurface,
                                                     Color(0xFFF0EDE0)
                                                   ]),
                                               borderRadius:
@@ -300,8 +303,8 @@ class CommunityPageState extends State<CommunityPage> {
                                                       '分享 · 加入 · 改编 · 再分享',
                                                       style: TextStyle(
                                                           fontSize: 11,
-                                                          color: Color(
-                                                              0xFF718777))),
+                                                          color: BingoPalette
+                                                              .muted)),
                                                   const SizedBox(height: 14),
                                                   InkWell(
                                                       onTap: _publish,
@@ -485,7 +488,7 @@ class CommunityPageState extends State<CommunityPage> {
                 height: 105,
                 width: double.infinity,
                 color: [
-                  const Color(0xFFEDF1E9),
+                  BingoPalette.softSurface,
                   const Color(0xFFF4E8E4),
                   const Color(0xFFEDEAF5)
                 ][index % 3],

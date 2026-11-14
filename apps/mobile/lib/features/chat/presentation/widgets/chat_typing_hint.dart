@@ -1,3 +1,4 @@
+import 'package:bingo/core/theme/app_theme.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:bingo/shared/widgets/assistant_avatar.dart';
@@ -59,7 +60,7 @@ class _ChatTypingHintState extends State<ChatTypingHint>
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                                fontSize: 11, color: Color(0xFF7A958A)))),
+                                fontSize: 11, color: BingoPalette.muted))),
                     const SizedBox(width: 7),
                     AnimatedBuilder(
                         animation: _animation,
@@ -80,7 +81,7 @@ class _ChatTypingHintState extends State<ChatTypingHint>
                                                     2),
                                         child: const DecoratedBox(
                                             decoration: BoxDecoration(
-                                                color: Color(0xFF8DA89D),
+                                                color: BingoPalette.muted,
                                                 shape: BoxShape.circle),
                                             child:
                                                 SizedBox.square(dimension: 3))))

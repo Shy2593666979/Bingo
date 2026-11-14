@@ -1,3 +1,5 @@
+import 'package:bingo/features/voices/data/voice_gateway.dart';
+import 'package:bingo/features/voices/models/voice_option.dart';
 import 'package:bingo/features/stickers/sticker.dart';
 import 'dart:async';
 import 'package:bingo/features/community/data/community_gateway.dart';
@@ -394,6 +396,7 @@ abstract interface class RoleGateway {
       String? personality,
       String? avatarData,
       String? voiceSourceId,
+      String? voiceId,
       String? description,
       List<String>? categories,
       List<String>? traits,
@@ -474,6 +477,7 @@ class HttpApiGateway
         AccountGateway,
         AccountDeletionGateway,
         RoleGateway,
+        VoiceGateway,
         RoleConversationGateway,
         ChatGateway,
         ConversationGateway,
@@ -1593,6 +1597,7 @@ class HttpApiGateway
       String? personality,
       String? avatarData,
       String? voiceSourceId,
+      String? voiceId,
       String? description,
       List<String>? categories,
       List<String>? traits,
@@ -1613,7 +1618,8 @@ class HttpApiGateway
           if (description != null) 'description': description,
           if (personality != null) 'personality': personality,
           'avatar_data': avatarData,
-          'voice_source_id': voiceSourceId,
+          if (voiceId != null) 'voice_id': voiceId,
+          if (voiceId == null) 'voice_source_id': voiceSourceId,
           'draft': draft,
           if (categories != null) 'categories': categories,
           if (traits != null) 'traits': traits,
@@ -1646,6 +1652,68 @@ class HttpApiGateway
         'POST', config.endpoint('/roles/$id/voice-preview'),
         responseTimeout: const Duration(seconds: 100)) as Map<String, dynamic>;
     return base64Decode(json['audio'] as String);
+  }
+
+  @override
+  Future<List<VoiceOption>> listVoices({String? scope, String? gender}) async {
+    final json = await _request(
+        'GET',
+        config.endpoint('/voices').replace(queryParameters: {
+          if (scope != null) 'scope': scope,
+          if (gender != null) 'gender': gender,
+        })) as List;
+    return json
+        .map((item) =>
+            VoiceOption.fromJson(Map<String, dynamic>.from(item as Map)))
+        .toList();
+  }
+
+  @override
+  Future<VoiceOption> createVoice(
+          {required String name,
+          String description = '',
+          String gender = 'unknown'}) async =>
+      VoiceOption.fromJson(await _request('POST', config.endpoint('/voices'),
+          body: {
+            'name': name,
+            'description': description,
+            'gender': gender
+          }) as Map<String, dynamic>);
+  @override
+  Future<VoiceOption> updateVoice(String id,
+          {required String name,
+          String description = '',
+          String gender = 'unknown'}) async =>
+      VoiceOption.fromJson(await _request('PUT', config.endpoint('/voices/$id'),
+          body: {
+            'name': name,
+            'description': description,
+            'gender': gender
+          }) as Map<String, dynamic>);
+  @override
+  Future<void> deleteVoice(String id) async {
+    await _request('DELETE', config.endpoint('/voices/$id'));
+  }
+
+  @override
+  Future<String> cloneVoice(String id, Uint8List audio) async {
+    final json = await _request('POST', config.endpoint('/voices/$id/clone'),
+            body: {'audio': base64Encode(audio), 'consent': true})
+        as Map<String, dynamic>;
+    return json['id'] as String;
+  }
+
+  @override
+  Future<Uint8List> previewVoice(String id) async {
+    final json = await _request('POST', config.endpoint('/voices/$id/preview'))
+        as Map<String, dynamic>;
+    return base64Decode(json['audio'] as String);
+  }
+
+  @override
+  Future<void> assignRoleVoice(String roleId, String voiceId) async {
+    await _request('PUT', config.endpoint('/roles/$roleId/voice'),
+        body: {'voice_id': voiceId});
   }
 
   Future<Object?> _request(String method, Uri uri,

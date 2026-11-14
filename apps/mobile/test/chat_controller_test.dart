@@ -227,6 +227,17 @@ class FakeEngagementGateway implements EngagementGateway {
   Future<List<ProactiveMessage>> listProactiveMessages() async => proactive;
 }
 
+class _PendingEngagementGateway extends FakeEngagementGateway {
+  final pending = Completer<List<ProactiveMessage>>();
+  bool requested = false;
+
+  @override
+  Future<List<ProactiveMessage>> listProactiveMessages() {
+    requested = true;
+    return pending.future;
+  }
+}
+
 class MemoryChatStore implements LocalChatStore {
   final Map<String, LocalConversation> conversations = {};
   String? activeId;
@@ -312,6 +323,20 @@ class RecoveringChatGateway implements ChatGateway, ConversationGateway {
 }
 
 void main() {
+  test('startup account binding does not wait for engagement requests',
+      () async {
+    final engagement = _PendingEngagementGateway();
+    final controller = ChatController(
+        gateway: FakeChatGateway(),
+        localStore: MemoryChatStore(),
+        engagement: engagement);
+    await controller.bindAccount('startup-user', waitForSync: false);
+    expect(engagement.requested, isTrue);
+    expect(engagement.pending.isCompleted, isFalse);
+    engagement.pending.complete([]);
+    await Future<void>.delayed(Duration.zero);
+    controller.dispose();
+  });
   testWidgets(
       'pending AI welcome shows typing then reveals sentence bubbles gradually',
       (tester) async {
@@ -643,10 +668,13 @@ void main() {
     expect(find.text('陪伴中'), findsNothing);
     expect(tester.getCenter(find.byTooltip('返回角色')).dx,
         lessThan(tester.getCenter(find.text('暖暖')).dx));
-    expect(find.byTooltip('查找聊天记录'), findsOneWidget);
+    expect(find.text('在线'), findsOneWidget);
+    expect(find.byIcon(Icons.menu), findsOneWidget);
+    expect(tester.getCenter(find.text('暖暖')).dx, closeTo(180, 1));
     await tester.tap(find.byTooltip('聊天信息'));
     await tester.pumpAndSettle();
     expect(find.text('聊天信息'), findsOneWidget);
+    expect(find.text('查找聊天记录'), findsOneWidget);
     await tester.tap(find.text('语音通话'));
     await tester.pumpAndSettle();
     expect(controller.readAloudEnabled, isTrue);
@@ -1213,7 +1241,8 @@ void main() {
     expect(find.byIcon(Icons.settings_rounded), findsNothing);
     final avatars =
         tester.widgetList<AssistantAvatar>(find.byType(AssistantAvatar));
-    expect(avatars.length, 2);
+    expect(avatars.length, 1);
+    expect(find.byKey(const ValueKey('chat-header-avatar')), findsNothing);
     expect(avatars.every((avatar) => avatar.role == '男朋友'), isTrue);
     final welcomeAvatar = find.byKey(const ValueKey('empty-chat-avatar'));
     expect(tester.getSize(welcomeAvatar), const Size(104, 104));

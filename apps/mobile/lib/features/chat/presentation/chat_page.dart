@@ -250,11 +250,11 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                       onAvatarLongPress: _insertPartnerName,
                       assistantName: widget.assistantName,
                       onBack: widget.onBack,
-                      assistantRole: widget.assistantRole,
-                      onSearch: () => Navigator.of(context).push<void>(
-                          MaterialPageRoute(
-                              builder: (_) =>
-                                  ChatSearchPage(info: _chatInfo()))),
+                      status: controller.errorMessage != null
+                          ? '连接异常'
+                          : controller.isBusy
+                              ? '正在输入…'
+                              : '在线',
                       onInfo: () => Navigator.of(context).push<void>(
                           MaterialPageRoute(builder: (_) => _chatInfo())),
                     ),
@@ -263,7 +263,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                           padding: const EdgeInsets.symmetric(horizontal: 20),
                           child: Text(message,
                               style: const TextStyle(
-                                  fontSize: 12, color: Color(0xFF71817D)))),
+                                  fontSize: 12, color: BingoPalette.muted))),
                     if (controller.errorMessage case final message?)
                       Container(
                         margin: const EdgeInsets.fromLTRB(18, 4, 18, 8),
@@ -531,75 +531,81 @@ class _MessageTimeDivider extends StatelessWidget {
 class _ChatHeader extends StatelessWidget {
   const _ChatHeader(
       {required this.assistantName,
-      required this.assistantRole,
+      required this.status,
       this.onBack,
       this.onAvatarTap,
       this.onAvatarLongPress,
-      required this.onInfo,
-      required this.onSearch});
-  final String assistantName;
-  final String? assistantRole;
+      required this.onInfo});
+  final String assistantName, status;
   final VoidCallback? onBack;
-  final VoidCallback onInfo, onSearch;
+  final VoidCallback onInfo;
   final VoidCallback? onAvatarTap, onAvatarLongPress;
 
   @override
-  Widget build(BuildContext context) => ChatGlass(
-      child: Container(
-          decoration: const BoxDecoration(color: Colors.transparent),
-          padding: const EdgeInsets.fromLTRB(8, 7, 10, 11),
-          child: Row(children: [
-            IconButton(
-                onPressed: onBack ?? () => Navigator.maybePop(context),
-                tooltip: '返回角色',
-                icon: const Icon(Icons.chevron_left_rounded,
-                    size: 25, color: ChatScene.ink)),
-            ChatPortrait(
-                key: const ValueKey('chat-header-avatar'),
-                onTap: onAvatarTap,
-                onLongPress: onAvatarLongPress,
-                size: 36,
-                child: AssistantAvatar(role: assistantRole, size: 36)),
-            const SizedBox(width: 9),
-            Expanded(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                  Row(children: [
-                    Flexible(
-                        child: Text(assistantName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w700,
-                                color: ChatScene.ink))),
-                    const SizedBox(width: 7),
-                    Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 5, vertical: 2),
-                        decoration: BoxDecoration(
-                            color: Colors.transparent,
-                            border: Border.all(color: const Color(0xFFB9DED2)),
-                            borderRadius: BorderRadius.circular(3)),
-                        child: const Text('AI',
-                            style: TextStyle(
-                                fontSize: 10,
-                                color: BingoPalette.primary,
-                                fontWeight: FontWeight.w700)))
-                  ]),
-                ])),
-            IconButton(
-                onPressed: onSearch,
-                tooltip: '查找聊天记录',
-                icon: const Icon(Icons.search_rounded,
-                    size: 21, color: ChatScene.ink)),
-            IconButton(
-                onPressed: onInfo,
-                tooltip: '聊天信息',
-                icon: const Icon(Icons.more_horiz_rounded,
-                    size: 24, color: ChatScene.ink)),
-          ])));
+  Widget build(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
+    final height = (scaler.scale(16) * 1.2 + scaler.scale(12) * 1.2 + 12)
+        .clamp(56.0, double.infinity);
+    return ColoredBox(
+        color: Colors.white,
+        child: SizedBox(
+            height: height,
+            child: Stack(alignment: Alignment.center, children: [
+              Positioned(
+                  left: 4,
+                  top: 0,
+                  bottom: 0,
+                  child: IconButton(
+                      onPressed: onBack ?? () => Navigator.maybePop(context),
+                      tooltip: '返回角色',
+                      icon: const Icon(Icons.arrow_back,
+                          size: 21, color: Color(0xFF222222)))),
+              Positioned(
+                  left: 64,
+                  right: 64,
+                  child: Semantics(
+                      label: 'AI搭子详情',
+                      button: true,
+                      child: GestureDetector(
+                          key: const ValueKey('chat-header-title'),
+                          behavior: HitTestBehavior.opaque,
+                          onTap: onAvatarTap,
+                          onLongPress: onAvatarLongPress,
+                          child:
+                              Column(mainAxisSize: MainAxisSize.min, children: [
+                            Text(assistantName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontSize: 16,
+                                    height: 1.2,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0,
+                                    color: Color(0xFF222222))),
+                            const SizedBox(height: 3),
+                            Text(status,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    height: 1.2,
+                                    fontWeight: FontWeight.w400,
+                                    letterSpacing: 0,
+                                    color: status == '连接异常'
+                                        ? BingoPalette.muted
+                                        : BingoPalette.online)),
+                          ])))),
+              Positioned(
+                  right: 4,
+                  top: 0,
+                  bottom: 0,
+                  child: IconButton(
+                      onPressed: onInfo,
+                      tooltip: '聊天信息',
+                      icon: const Icon(Icons.menu,
+                          size: 23, color: Color(0xFF222222)))),
+            ])));
+  }
 }
 
 class _RecommendationRows extends StatelessWidget {

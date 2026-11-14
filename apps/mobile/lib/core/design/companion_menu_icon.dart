@@ -1,3 +1,4 @@
+import 'package:bingo/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 enum CompanionMenuSymbol {
@@ -12,7 +13,7 @@ enum CompanionMenuSymbol {
 /// The approved HTML menu outlines; appearance uses the app-wide palette glyph.
 class CompanionMenuIcon extends StatelessWidget {
   const CompanionMenuIcon(this.symbol,
-      {this.size = 25, this.color = const Color(0xFF284A33), super.key});
+      {this.size = 25, this.color = BingoPalette.ink, super.key});
   final CompanionMenuSymbol symbol;
   final double size;
   final Color color;

@@ -7,26 +7,7 @@ class _HeaderTitle extends StatelessWidget {
   final TextStyle style;
 
   @override
-  Widget build(BuildContext context) => Align(
-      alignment: Alignment.centerLeft,
-      child: Stack(children: [
-        Positioned.fill(
-            bottom: 2,
-            child: IgnorePointer(
-                child: Align(
-                    alignment: Alignment.bottomRight,
-                    child: FractionallySizedBox(
-                        widthFactor: .37,
-                        child: Transform.rotate(
-                            angle: -.05236,
-                            child: Container(
-                                height: 7,
-                                decoration: const BoxDecoration(
-                                    color: Color(0x806DDBA0),
-                                    borderRadius: BorderRadius.all(
-                                        Radius.elliptical(100, 50))))))))),
-        Text(title, style: style),
-      ]));
+  Widget build(BuildContext context) => Text(title, style: style);
 }
 
 class ReleasePlainHeader extends StatelessWidget {
@@ -46,10 +27,10 @@ class ReleasePlainHeader extends StatelessWidget {
             Expanded(
                 child: _HeaderTitle(title,
                     style: const TextStyle(
-                        fontSize: 25,
+                        fontSize: 22,
                         height: 1.3,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: -.7))),
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0))),
             for (final action in actions)
               SizedBox(width: 38, height: 40, child: action),
           ])));
@@ -66,7 +47,7 @@ class ReleasePageHeader extends StatelessWidget {
         Expanded(
             child: _HeaderTitle(title,
                 style: const TextStyle(
-                    fontSize: 24, height: 1.3, fontWeight: FontWeight.w600))),
+                    fontSize: 22, height: 1.3, fontWeight: FontWeight.w500))),
         for (final action in actions)
           SizedBox(width: 38, height: 40, child: action),
       ]));
@@ -85,7 +66,7 @@ class ReleaseSegmentedTabs extends StatelessWidget {
   Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-          color: const Color(0xFFECF2EF),
+          color: BingoPalette.softSurface,
           borderRadius: BorderRadius.circular(10)),
       child: Row(children: [
         for (final tab in tabs)
@@ -113,7 +94,7 @@ class ReleaseSegmentedTabs extends StatelessWidget {
                                           fontSize: 12,
                                           height: 1.5,
                                           fontWeight: tab.value == selected
-                                              ? FontWeight.w600
+                                              ? FontWeight.w500
                                               : FontWeight.w400,
                                           color: tab.value == selected
                                               ? BingoPalette.ink

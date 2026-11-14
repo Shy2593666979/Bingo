@@ -1,3 +1,5 @@
+import 'package:bingo/core/design/bingo_page.dart';
+import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/core/widgets/bingo_confirm_dialog.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/core/design/bingo_icon.dart';
@@ -86,12 +88,12 @@ class _AccountDeletionPageState extends State<AccountDeletionPage> {
           const SizedBox(height: 22),
           const Text('准备和 Bingo 告别吗？',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w500)),
           const SizedBox(height: 12),
           const Text('这不是退出登录。注销处理完成后，原账号与相关内容将无法继续使用或恢复。',
               textAlign: TextAlign.center,
               style: TextStyle(
-                  fontSize: 14, height: 1.8, color: Color(0xFF75827C))),
+                  fontSize: 14, height: 1.8, color: BingoPalette.muted)),
           const SizedBox(height: 24),
           for (final impact in _impacts)
             Container(
@@ -99,15 +101,15 @@ class _AccountDeletionPageState extends State<AccountDeletionPage> {
               padding: const EdgeInsets.all(17),
               decoration: BoxDecoration(
                   color: Colors.white,
-                  border: Border.all(color: const Color(0xFFE5EDE7)),
-                  borderRadius: BorderRadius.circular(18)),
+                  border: Border.all(color: BingoPalette.softSurface),
+                  borderRadius: BorderRadius.circular(16)),
               child:
                   Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 if (impact.$1 == Icons.chat_bubble_outline_rounded)
                   const BingoIcon(BingoSymbol.chat,
-                      size: 22, color: Color(0xFF78A68F))
+                      size: 22, color: BingoPalette.muted)
                 else
-                  Icon(impact.$1, size: 22, color: const Color(0xFF78A68F)),
+                  Icon(impact.$1, size: 22, color: BingoPalette.muted),
                 const SizedBox(width: 13),
                 Expanded(
                     child: Column(
@@ -121,14 +123,14 @@ class _AccountDeletionPageState extends State<AccountDeletionPage> {
                           style: const TextStyle(
                               fontSize: 13,
                               height: 1.8,
-                              color: Color(0xFF75827C))),
+                              color: BingoPalette.muted)),
                     ])),
               ]),
             ),
           const SizedBox(height: 8),
           const Text('确认后将直接注销当前登录的账号，此操作无法撤销。',
               style: TextStyle(
-                  fontSize: 13, height: 1.8, color: Color(0xFF75827C))),
+                  fontSize: 13, height: 1.8, color: BingoPalette.muted)),
           if (_error != null)
             Padding(
                 padding: const EdgeInsets.only(top: 12),
@@ -144,30 +146,24 @@ class _AccountDeletionPageState extends State<AccountDeletionPage> {
                   : (value) => setState(() => _acknowledged = value ?? false),
               title: const Text('我已了解注销后的影响', style: TextStyle(fontSize: 13))),
         ]),
-        bottomNavigationBar: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                        style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFFF0D9D3),
-                            foregroundColor: const Color(0xFFA6645C),
-                            padding: const EdgeInsets.symmetric(vertical: 15)),
-                        onPressed: _acknowledged && !_deleting ? _delete : null,
-                        child: _deleting
-                            ? const SizedBox.square(
-                                dimension: 20,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2))
-                            : const Text('注销账号'))),
-                TextButton(
-                    onPressed:
-                        _deleting ? null : () => Navigator.of(context).pop(),
-                    child: const Text('保留账号，返回')),
-              ]),
-            )),
+        bottomNavigationBar: BingoActionBar(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+          SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                  style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFFF0D9D3),
+                      foregroundColor: const Color(0xFFA6645C),
+                      padding: const EdgeInsets.symmetric(vertical: 15)),
+                  onPressed: _acknowledged && !_deleting ? _delete : null,
+                  child: _deleting
+                      ? const SizedBox.square(
+                          dimension: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Text('注销账号'))),
+          TextButton(
+              onPressed: _deleting ? null : () => Navigator.of(context).pop(),
+              child: const Text('保留账号，返回')),
+        ])),
       ));
 }

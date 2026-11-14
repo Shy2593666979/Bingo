@@ -70,8 +70,8 @@ class H2Group extends StatelessWidget {
   final List<Widget> children;
   @override
   Widget build(BuildContext context) => Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
+      color: BingoPalette.softSurface,
+      borderRadius: BorderRadius.circular(16),
       clipBehavior: Clip.antiAlias,
       child: Column(children: [
         for (var i = 0; i < children.length; i++) ...[

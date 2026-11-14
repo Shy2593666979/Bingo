@@ -1,7 +1,7 @@
+import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/shared/widgets/avatar_frame.dart';
 import 'package:flutter/material.dart';
 import 'package:bingo/core/role_avatar_store.dart';
-import 'package:bingo/core/role_avatar_assets.dart';
 
 String assistantAvatarAsset(String? role) => switch (role) {
       '男朋友' => 'assets/images/boyfriend.png',
@@ -28,6 +28,9 @@ class AssistantAvatar extends StatelessWidget {
     required this.size,
     this.showOnline = false,
     this.cornerRadius,
+    this.closePortrait = false,
+    this.onlineDotSize,
+    this.onlineBorderWidth = 1.5,
     super.key,
   });
 
@@ -35,6 +38,9 @@ class AssistantAvatar extends StatelessWidget {
   final double size;
   final bool showOnline;
   final double? cornerRadius;
+  final bool closePortrait;
+  final double? onlineDotSize;
+  final double onlineBorderWidth;
 
   Widget _asset() => Image.asset(
       squareAvatarAsset(
@@ -47,7 +53,7 @@ class AssistantAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dotSize = size * 0.27;
+    final dotSize = onlineDotSize ?? size * 0.17;
     return SizedBox.square(
       dimension: size + (showOnline ? dotSize * 0.18 : 0),
       child: Stack(
@@ -58,17 +64,16 @@ class AssistantAvatar extends StatelessWidget {
               builder: (context, images, _) => AvatarFrame(
                   size: size,
                   cornerRadius: cornerRadius,
-                  color: isTransparentRoleAvatarAsset(
-                          RoleAvatarStore.assets[role] ??
-                              assistantAvatarAsset(role))
-                      ? Colors.transparent
-                      : const Color(0xFFE8F8F2),
-                  child: images[role] != null
-                      ? Image.memory(images[role]!,
-                          gaplessPlayback: true,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _asset())
-                      : _asset())),
+                  color: const Color(0xFFEDE7EB),
+                  child: Transform.scale(
+                      scale: closePortrait ? 1.38 : 1,
+                      alignment: Alignment.topCenter,
+                      child: images[role] != null
+                          ? Image.memory(images[role]!,
+                              gaplessPlayback: true,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => _asset())
+                          : _asset()))),
           if (showOnline)
             Positioned(
               right: 0,
@@ -77,9 +82,10 @@ class AssistantAvatar extends StatelessWidget {
                 width: dotSize,
                 height: dotSize,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF20B477),
+                  color: BingoPalette.online,
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 3),
+                  border:
+                      Border.all(color: Colors.white, width: onlineBorderWidth),
                 ),
               ),
             ),

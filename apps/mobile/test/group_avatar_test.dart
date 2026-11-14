@@ -40,7 +40,10 @@ void main() {
         final rows = <double, List<Rect>>{};
         for (final cell in cells) {
           expect(bounds.contains(cell.topLeft), isTrue);
-          expect(bounds.contains(cell.bottomRight), isTrue);
+          expect(cell.right, lessThanOrEqualTo(bounds.right + .001));
+          expect(cell.bottom, lessThanOrEqualTo(bounds.bottom + .001));
+          expect(cell.width, closeTo(cell.height, .001));
+          expect(cell.width, closeTo(cells.first.width, .001));
           rows.putIfAbsent(cell.top, () => []).add(cell);
         }
         expect(
@@ -75,6 +78,10 @@ void main() {
         MaterialApp(home: Center(child: GroupAvatar(members: people))));
     await tester.pumpAndSettle();
     expect(find.byType(AssistantAvatar), findsNWidgets(8));
+    for (final widget
+        in tester.widgetList<AssistantAvatar>(find.byType(AssistantAvatar))) {
+      expect(widget.showOnline, isFalse);
+    }
     expect(find.byType(UserAvatar), findsNothing);
     expect(find.byKey(const ValueKey('group-avatar-tile-7')), findsOneWidget);
     expect(find.byKey(const ValueKey('group-avatar-tile-8')), findsNothing);
@@ -96,7 +103,7 @@ void main() {
                 body: Padding(
                     padding: const EdgeInsets.all(28),
                     child: Column(children: [
-                      const Text('群聊头像 · 1–9 人排版',
+                      const Text('Group avatars / 1–9 members',
                           style: TextStyle(
                               fontSize: 24, fontWeight: FontWeight.w700)),
                       const SizedBox(height: 20),
@@ -121,7 +128,7 @@ void main() {
                                             size: 110),
                                         const SizedBox(height: 14),
                                         Text(
-                                            '$count 人 · ${expectedRows[count - 1].join(' + ')}'),
+                                            '$count / ${expectedRows[count - 1].join(' + ')}'),
                                       ]))
                           ])),
                     ]))))));

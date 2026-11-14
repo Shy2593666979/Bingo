@@ -75,63 +75,69 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
       appBar: AppBar(title: Text(_changing ? '修改密码' : '找回密码')),
       body: DecoratedBox(
           decoration: const BoxDecoration(gradient: BingoPalette.softGradient),
-          child: ListView(padding: const EdgeInsets.all(24), children: [
-            Form(
-                key: _form,
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(_changing ? '设置一个新的登录密码' : '验证你的账号信息',
-                          style: const TextStyle(
-                              fontSize: 25, fontWeight: FontWeight.w800)),
-                      const SizedBox(height: 10),
-                      Text(
-                          _changing
-                              ? '修改成功后，所有设备需要重新登录。'
-                              : '核对注册手机号、用户昵称和生日后，即可设置新密码。',
-                          style: const TextStyle(color: Color(0xFF7D918A))),
-                      const SizedBox(height: 24),
-                      if (!_changing) ...[
-                        _field(_phone, '注册手机号'),
-                        _field(_username, '用户昵称'),
-                        OutlinedButton.icon(
-                            icon: const Icon(Icons.cake_outlined),
-                            label: Text(
-                                _birthday?.toIso8601String().substring(0, 10) ??
+          child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+              children: [
+                Form(
+                    key: _form,
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(_changing ? '设置一个新的登录密码' : '验证你的账号信息',
+                              style: const TextStyle(
+                                  fontSize: 22, fontWeight: FontWeight.w500)),
+                          const SizedBox(height: 10),
+                          Text(
+                              _changing
+                                  ? '修改成功后，所有设备需要重新登录。'
+                                  : '核对注册手机号、用户昵称和生日后，即可设置新密码。',
+                              style:
+                                  const TextStyle(color: BingoPalette.muted)),
+                          const SizedBox(height: 24),
+                          if (!_changing) ...[
+                            _field(_phone, '注册手机号'),
+                            _field(_username, '用户昵称'),
+                            OutlinedButton.icon(
+                                icon: const Icon(Icons.cake_outlined),
+                                label: Text(_birthday
+                                        ?.toIso8601String()
+                                        .substring(0, 10) ??
                                     '选择生日'),
-                            onPressed: _busy
-                                ? null
-                                : () async {
-                                    final date = await showBirthdayPicker(
-                                        context,
-                                        initialDate: _birthday);
-                                    if (date != null && mounted) {
-                                      setState(() => _birthday = date);
-                                    }
-                                  }),
-                        const SizedBox(height: 14),
-                      ],
-                      if (_changing)
-                        _field(_code, '当前密码', secret: true, minLength: 8),
-                      _field(_password, '新密码（至少 8 位）',
-                          secret: true, minLength: 8),
-                      _field(_confirm, '再次输入新密码', secret: true, confirm: true),
-                      if (_error != null)
-                        Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: Text(_error!,
-                                style: TextStyle(
-                                    color:
-                                        Theme.of(context).colorScheme.error))),
-                      FilledButton(
-                          onPressed: _busy ? null : _submit,
-                          child: Text(_busy
-                              ? '正在验证…'
-                              : _changing
-                                  ? '确认修改'
-                                  : '验证并重置密码')),
-                    ]))
-          ])));
+                                onPressed: _busy
+                                    ? null
+                                    : () async {
+                                        final date = await showBirthdayPicker(
+                                            context,
+                                            initialDate: _birthday);
+                                        if (date != null && mounted) {
+                                          setState(() => _birthday = date);
+                                        }
+                                      }),
+                            const SizedBox(height: 14),
+                          ],
+                          if (_changing)
+                            _field(_code, '当前密码', secret: true, minLength: 8),
+                          _field(_password, '新密码（至少 8 位）',
+                              secret: true, minLength: 8),
+                          _field(_confirm, '再次输入新密码',
+                              secret: true, confirm: true),
+                          if (_error != null)
+                            Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: Text(_error!,
+                                    style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .error))),
+                          FilledButton(
+                              onPressed: _busy ? null : _submit,
+                              child: Text(_busy
+                                  ? '正在验证…'
+                                  : _changing
+                                      ? '确认修改'
+                                      : '验证并重置密码')),
+                        ]))
+              ])));
   Widget _field(TextEditingController controller, String label,
           {bool secret = false, int minLength = 1, bool confirm = false}) =>
       Padding(

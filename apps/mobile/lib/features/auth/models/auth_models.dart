@@ -100,6 +100,8 @@ class RoleOption {
       this.avatarAsset,
       this.sourcePublicationId,
       this.voiceSourceId,
+      this.voiceId,
+      this.voiceName,
       this.hasVoice = true,
       this.hasClonedVoice = false,
       this.description = '',
@@ -140,6 +142,7 @@ class RoleOption {
   final String? avatarData;
   final String? avatarAsset, sourcePublicationId;
   final String? voiceSourceId;
+  final String? voiceId, voiceName;
   final bool hasVoice;
   final bool hasClonedVoice;
   final String description;
@@ -171,6 +174,8 @@ class RoleOption {
       avatarAsset: _avatarAsset(json['avatar_asset'] as String?),
       sourcePublicationId: json['source_publication_id'] as String?,
       voiceSourceId: json['voice_source_id'] as String?,
+      voiceId: json['voice_id'] as String?,
+      voiceName: json['voice_name'] as String?,
       hasVoice: json['has_voice'] as bool? ?? true,
       hasClonedVoice: json['has_cloned_voice'] as bool? ?? false,
       description: json['description'] as String? ?? '',

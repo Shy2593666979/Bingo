@@ -212,7 +212,7 @@ class RoleHomePageState extends State<RoleHomePage>
                           SizedBox(height: 5),
                           Text('在这里，慢慢聊~',
                               style: TextStyle(
-                                  fontSize: 12, color: Color(0xFF85928F))),
+                                  fontSize: 12, color: BingoPalette.muted)),
                         ])),
                     IconButton(
                         tooltip: '我的',
@@ -290,15 +290,15 @@ class RoleHomePageState extends State<RoleHomePage>
                                 borderRadius: BorderRadius.circular(17)),
                             child: const Row(children: [
                               Icon(Icons.explore_outlined,
-                                  color: Color(0xFF6B9380), size: 21),
+                                  color: BingoPalette.muted, size: 21),
                               SizedBox(width: 10),
                               Expanded(
                                   child: Text('去社区，遇见更多有趣的搭子',
                                       style: TextStyle(
                                           fontSize: 12,
-                                          color: Color(0xFF648574)))),
+                                          color: BingoPalette.muted))),
                               Icon(Icons.arrow_forward_rounded,
-                                  size: 17, color: Color(0xFF6B9380))
+                                  size: 17, color: BingoPalette.muted)
                             ])))),
               if (widget.showCreateButton)
                 Padding(
@@ -348,7 +348,7 @@ class RoleHomePageState extends State<RoleHomePage>
                                             ? Icons.push_pin_rounded
                                             : Icons.notifications_off_outlined,
                                         size: 15,
-                                        color: const Color(0xFF85928F)),
+                                        color: BingoPalette.muted),
                                     const SizedBox(width: 5),
                                   ],
                                   Expanded(
@@ -366,7 +366,7 @@ class RoleHomePageState extends State<RoleHomePage>
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                         fontSize: 12,
-                                        color: Color(0xFF85928F))),
+                                        color: BingoPalette.muted)),
                               ])),
                         ]),
                         const SizedBox(height: 12),
@@ -422,7 +422,7 @@ class RoleHomePageState extends State<RoleHomePage>
             child: TextButton.icon(
                 onPressed: _openingId == null ? () => _open(role) : null,
                 style: TextButton.styleFrom(
-                    backgroundColor: const Color(0xFFE9F8F2),
+                    backgroundColor: BingoPalette.softSurface,
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     shape: const StadiumBorder()),
                 icon: _openingId == role.id

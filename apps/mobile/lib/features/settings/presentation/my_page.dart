@@ -57,7 +57,7 @@ class _MyPageState extends State<MyPage> {
             Text(
                 '${_profile.gender ?? '未设置性别'} · ${_profile.birthday ?? '未设置生日'}',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Color(0xFF85988D))),
+                style: const TextStyle(color: BingoPalette.muted)),
             const SizedBox(height: 28),
             Material(
                 color: Colors.white,
@@ -95,6 +95,6 @@ class _MyPageState extends State<MyPage> {
           leading: leading ?? Icon(icon, color: BingoPalette.blue),
           title: Text(title),
           subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
-          trailing: const Icon(Icons.chevron_right, color: Color(0xFF8CA397)),
+          trailing: const Icon(Icons.chevron_right, color: BingoPalette.muted),
           onTap: onTap);
 }

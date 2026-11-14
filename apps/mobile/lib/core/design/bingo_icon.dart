@@ -1,3 +1,4 @@
+import 'package:bingo/core/theme/app_theme.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
@@ -109,7 +110,7 @@ class _BingoIconPainter extends CustomPainter {
               Paint()
                 ..color = selected
                     ? (color.computeLuminance() > .7
-                        ? const Color(0xFF159C80)
+                        ? BingoPalette.primary
                         : Colors.white)
                     : color);
         }
@@ -137,10 +138,7 @@ class _BingoIconPainter extends CustomPainter {
         canvas.drawOval(const Rect.fromLTWH(-12.5, -4.8, 25, 9.6), stroke);
         canvas.restore();
         canvas.drawCircle(
-            const Offset(14, 13),
-            8.2,
-            Paint()
-              ..color = Colors.white);
+            const Offset(14, 13), 8.2, Paint()..color = Colors.white);
         canvas.drawCircle(const Offset(14, 13), 8.2, stroke);
         canvas.drawCircle(const Offset(11.4, 12), 1, fill);
         canvas.drawCircle(const Offset(16.6, 12), 1, fill);

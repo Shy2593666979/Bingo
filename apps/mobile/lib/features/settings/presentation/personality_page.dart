@@ -1,3 +1,4 @@
+import 'package:bingo/core/design/bingo_page.dart';
 import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/core/widgets/center_toast.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
@@ -63,16 +64,16 @@ class _PersonalityPageState extends State<PersonalityPage> {
             body: ListView(padding: const EdgeInsets.all(24), children: [
               const SizedBox(height: 18),
               const Text('你喜欢怎样的回应？',
-                  style: TextStyle(fontSize: 25, fontWeight: FontWeight.w800)),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w500)),
               const SizedBox(height: 12),
               const Text('这是默认性格。每位搭子也可以拥有自己的性格。',
-                  style: TextStyle(color: Color(0xFF7D918A), height: 1.7)),
+                  style: TextStyle(color: BingoPalette.muted, height: 1.7)),
               const SizedBox(height: 24),
               Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24)),
+                      color: BingoPalette.softSurface,
+                      borderRadius: BorderRadius.circular(16)),
                   child: Wrap(spacing: 9, runSpacing: 10, children: [
                     for (final option in widget.options)
                       ChoiceChip(
@@ -96,28 +97,26 @@ class _PersonalityPageState extends State<PersonalityPage> {
               Container(
                   padding: const EdgeInsets.all(22),
                   decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24)),
+                      color: BingoPalette.softSurface,
+                      borderRadius: BorderRadius.circular(16)),
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(_selected ?? '暂无可选性格',
                             style: const TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.w700)),
+                                fontSize: 16, fontWeight: FontWeight.w500)),
                         const SizedBox(height: 12),
                         Text(_descriptions[_selected] ?? '选择你喜欢的回应方式。',
                             style: const TextStyle(
-                                color: Color(0xFF7D918A), height: 1.8)),
+                                color: BingoPalette.muted, height: 1.8)),
                         const Text('不同角色依然保留自己的身份与表达方式。',
                             style: TextStyle(
-                                color: Color(0xFF7D918A), height: 1.8)),
+                                color: BingoPalette.muted, height: 1.8)),
                       ])),
             ]),
-            bottomNavigationBar: SafeArea(
-                child: Padding(
-                    padding: const EdgeInsets.all(22),
-                    child: FilledButton(
-                        onPressed: _busy || _selected == null ? null : _save,
-                        child: Text(_busy ? '正在保存…' : '保存性格')))),
+            bottomNavigationBar: BingoActionBar(
+                child: FilledButton(
+                    onPressed: _busy || _selected == null ? null : _save,
+                    child: Text(_busy ? '正在保存…' : '保存性格'))),
           )));
 }

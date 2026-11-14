@@ -1,3 +1,4 @@
+import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/core/appearance/chat_appearance.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/shared/widgets/assistant_avatar.dart';
@@ -65,10 +66,8 @@ class DeviceActionCard extends StatelessWidget {
     final buttonShape =
         RoundedRectangleBorder(borderRadius: BorderRadius.circular(11));
     final confirmStyle = FilledButton.styleFrom(
-        backgroundColor:
-            skin.id == 'mint' ? const Color(0xFFBFE5D4) : skin.user,
-        foregroundColor:
-            skin.id == 'mint' ? const Color(0xFF365E49) : skin.accent,
+        backgroundColor: skin.id == 'mint' ? BingoPalette.blush : skin.user,
+        foregroundColor: skin.id == 'mint' ? BingoPalette.ink : skin.accent,
         minimumSize: const Size(0, 38),
         padding: const EdgeInsets.symmetric(horizontal: 12),
         textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
@@ -119,12 +118,12 @@ class DeviceActionCard extends StatelessWidget {
                               style: TextStyle(
                                   fontSize: scheduledAt == null ? 14 : 29,
                                   height: 1.2,
-                                  color: const Color(0xFF21362D),
+                                  color: BingoPalette.ink,
                                   fontWeight: FontWeight.w600)),
                           const SizedBox(height: 5),
                           Text(metadata,
                               style: const TextStyle(
-                                  fontSize: 11, color: Color(0xFF7B8C81))),
+                                  fontSize: 11, color: BingoPalette.muted)),
                         ],
                       ),
                     ),
@@ -158,14 +157,14 @@ class DeviceActionCard extends StatelessWidget {
                     ]),
                   ] else ...[
                     const SizedBox(height: 14),
-                    const Divider(height: 1, color: Color(0xFFE0EBE4)),
+                    const Divider(height: 1, color: BingoPalette.softSurface),
                     const SizedBox(height: 12),
                     Row(children: [
                       Icon(statusIcon,
                           size: 17,
                           color: rejected
                               ? const Color(0xFFB5403C)
-                              : const Color(0xFF54765F)),
+                              : BingoPalette.muted),
                       const SizedBox(width: 7),
                       Expanded(
                         child: Text(statusLabel,
@@ -173,7 +172,7 @@ class DeviceActionCard extends StatelessWidget {
                                 fontSize: 12,
                                 color: rejected
                                     ? const Color(0xFFB5403C)
-                                    : const Color(0xFF54765F))),
+                                    : BingoPalette.muted)),
                       ),
                     ]),
                     if (action.result != null &&
@@ -194,8 +193,8 @@ class DeviceActionCard extends StatelessWidget {
                     if (action.status == 'processing') ...[
                       const SizedBox(height: 12),
                       const LinearProgressIndicator(
-                          color: Color(0xFF648775),
-                          backgroundColor: Color(0xFFE6F3EB)),
+                          color: BingoPalette.muted,
+                          backgroundColor: BingoPalette.softSurface),
                     ],
                   ],
                 ],

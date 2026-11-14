@@ -18,7 +18,6 @@ import 'package:bingo/features/group_chat/presentation/group_info_page.dart';
 import 'package:bingo/features/group_chat/presentation/widgets/chat_quote_card.dart';
 import 'package:bingo/features/group_chat/presentation/group_reply_presenter.dart';
 import 'package:bingo/shared/widgets/assistant_avatar.dart';
-import 'package:bingo/shared/widgets/group_avatar.dart';
 import 'package:bingo/shared/widgets/user_avatar.dart';
 import 'package:bingo/shared/widgets/speaking_wave.dart';
 import 'package:flutter/material.dart';
@@ -533,48 +532,60 @@ class _GroupChatPageState extends State<GroupChatPage>
                 child: SafeArea(
                     bottom: false,
                     child: Column(children: [
-                      ChatGlass(
-                          child: Container(
-                              padding: const EdgeInsets.fromLTRB(6, 5, 12, 10),
-                              child: Row(children: [
-                                IconButton(
-                                    tooltip: '返回',
-                                    onPressed: () => Navigator.pop(context),
-                                    icon: const Icon(Icons.chevron_left_rounded,
-                                        size: 29, color: ChatScene.ink)),
-                                GroupAvatar(
-                                    members: group?.activeMembers ?? [],
-                                    size: 44),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                    child: Row(children: [
-                                  Flexible(
-                                      child: Text(group?.name ?? '群聊',
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                              fontSize: 17,
-                                              fontWeight: FontWeight.w700,
-                                              color: ChatScene.ink))),
-                                  Text(' (${group?.activeMembers.length ?? 0})',
-                                      style: const TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600,
-                                          color: ChatScene.ink))
-                                ])),
-                                if (_chat.busy || _replies.busy)
-                                  IconButton(
-                                      tooltip: '停止本轮回复',
-                                      onPressed: _cancelRun,
-                                      icon: const Icon(
-                                          Icons.stop_circle_outlined,
-                                          size: 21,
-                                          color: ChatScene.muted)),
-                                IconButton(
-                                    tooltip: '群聊信息',
-                                    onPressed: _info,
-                                    icon: const Icon(Icons.more_horiz_rounded,
-                                        color: ChatScene.ink))
+                      Container(
+                          color: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          child: SizedBox(
+                              height: 64,
+                              child:
+                                  Stack(alignment: Alignment.center, children: [
+                                Positioned(
+                                    left: 54,
+                                    right: 80,
+                                    child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(group?.name ?? '群聊',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Color(0xFF222222))),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                              '${group?.activeMembers.length ?? 0} 位搭子',
+                                              style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: Color(0xFF8C8C8C))),
+                                        ])),
+                                Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: IconButton(
+                                        tooltip: '返回',
+                                        onPressed: () => Navigator.pop(context),
+                                        icon: const Icon(
+                                            Icons.arrow_back_rounded,
+                                            size: 22))),
+                                Align(
+                                    alignment: Alignment.centerRight,
+                                    child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (_chat.busy || _replies.busy)
+                                            IconButton(
+                                                tooltip: '停止本轮回复',
+                                                onPressed: _cancelRun,
+                                                icon: const Icon(
+                                                    Icons.stop_circle_outlined,
+                                                    size: 22)),
+                                          IconButton(
+                                              tooltip: '群聊信息',
+                                              onPressed: _info,
+                                              icon: const Icon(
+                                                  Icons.menu_rounded,
+                                                  size: 24)),
+                                        ])),
                               ]))),
                       if (_chat.error != null)
                         Container(
@@ -755,7 +766,7 @@ class _GroupChatPageState extends State<GroupChatPage>
                                             width: 32,
                                             height: 32,
                                             decoration: BoxDecoration(
-                                                color: const Color(0xFFE4F5EC),
+                                                color: BingoPalette.softSurface,
                                                 borderRadius:
                                                     BorderRadius.circular(10)),
                                             child: const Center(
@@ -964,8 +975,9 @@ class _GroupChatPageState extends State<GroupChatPage>
                                         else
                                           Text.rich(_contentSpan(message),
                                               style: const TextStyle(
-                                                  fontSize: 15,
-                                                  height: 1.45,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w400,
+                                                  height: 1.4,
                                                   color: ChatScene.ink)),
                                         if (message.status == 'failed')
                                           const Text('回复未完成',

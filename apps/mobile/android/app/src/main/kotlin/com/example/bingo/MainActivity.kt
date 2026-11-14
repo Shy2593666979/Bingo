@@ -332,11 +332,7 @@ class MainActivity : FlutterActivity() {
                         result.success(null)
                     }
                     "setCommunityChrome" -> {
-                        baseStatusBarColor = if (call.argument<Boolean>("enabled") == true) {
-                            Color.rgb(247, 251, 250)
-                        } else {
-                            Color.WHITE
-                        }
+                        baseStatusBarColor = Color.WHITE
                         updatePageChromeColors()
                         result.success(null)
                     }

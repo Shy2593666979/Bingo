@@ -20,7 +20,9 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.bingo"
+        val previewBuild = providers.environmentVariable("BINGO_PREVIEW").getOrElse("false") == "true"
+        applicationId = if (previewBuild) "com.example.bingo.preview" else "com.example.bingo"
+        manifestPlaceholders["appDisplayName"] = if (previewBuild) "Bingo 预览" else "Bingo"
         manifestPlaceholders["allowCleartextTraffic"] =
             providers.environmentVariable("BINGO_ALLOW_CLEARTEXT").getOrElse("false")
         minSdk = flutter.minSdkVersion

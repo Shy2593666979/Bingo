@@ -1,19 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:bingo/core/design/bingo_wordmark.dart';
+import 'package:bingo/core/theme/app_theme.dart';
 
-/// The approved E layout with D colors. Scoped to the four primary screens.
+/// Shared visual language for the main companion screens.
 abstract final class CompanionLaunch {
-  static const ink = Color(0xFF15271C);
-  static const muted = Color(0xFF718777);
-  static const primary = Color(0xFF00A786);
-  static const line = Color(0xFFE9F0EB);
-  static const tint = Color(0xFFEFFAF3);
-  static const icon = Color(0xFF65AD94);
-  static const background = BoxDecoration(
-      gradient: RadialGradient(
-          center: Alignment(1, 0),
-          radius: 1.3,
-          colors: [Color(0xFFF8FEFA), Colors.white]));
+  static const ink = BingoPalette.ink;
+  static const muted = BingoPalette.muted;
+  static const primary = BingoPalette.primary;
+  static const line = BingoPalette.line;
+  static const tint = BingoPalette.softSurface;
+  static const icon = BingoPalette.primary;
+  static const background = BoxDecoration(color: Colors.white);
   static bool compact(BuildContext context) =>
       MediaQuery.sizeOf(context).width <= 380;
   static bool narrow(BuildContext context) =>
@@ -21,9 +17,13 @@ abstract final class CompanionLaunch {
   static TextStyle text(double size,
           {Color color = ink,
           FontWeight weight = FontWeight.w400,
-          double height = 1.5}) =>
-      TextStyle(
-          fontSize: size, fontWeight: weight, height: height, color: color);
+          double height = 1.35}) =>
+      BingoTypography.body.copyWith(
+          fontSize: size,
+          fontWeight: weight,
+          height: height,
+          letterSpacing: 0,
+          color: color);
 }
 
 class CompanionLaunchHeader extends StatelessWidget {
@@ -34,50 +34,20 @@ class CompanionLaunchHeader extends StatelessWidget {
   final double horizontalPadding;
   @override
   Widget build(BuildContext context) {
-    final compact = CompanionLaunch.compact(context);
-    final narrow = CompanionLaunch.narrow(context);
-    return SizedBox(
-        height: 69,
-        child: Padding(
-            padding: EdgeInsets.fromLTRB(
-                horizontalPadding, 17, horizontalPadding, 16),
-            child: Row(children: [
-              BingoWordmark(
-                  width: narrow
-                      ? 77
-                      : compact
-                          ? 85
-                          : 93,
-                  height: narrow
-                      ? 31
-                      : compact
-                          ? 33
-                          : 36),
-              SizedBox(width: narrow ? 7 : 9),
-              Container(width: 1, height: 22, color: const Color(0xFFD6DFD8)),
-              SizedBox(
-                  width: narrow
-                      ? 11
-                      : compact
-                          ? 13
-                          : 17),
-              Expanded(
-                  child: Text(title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: CompanionLaunch.text(
-                          narrow
-                              ? 18
-                              : compact
-                                  ? 20
-                                  : 22,
-                          weight: FontWeight.w700,
-                          height: 1.2))),
-              for (final action in actions)
-                Padding(
-                    padding: const EdgeInsets.only(left: 9),
-                    child: SizedBox(width: 32, height: 36, child: action)),
-            ])));
+    return Padding(
+      padding: EdgeInsets.fromLTRB(horizontalPadding, 7, horizontalPadding, 7),
+      child: SizedBox(
+          height: 42,
+          child: Row(children: [
+            Expanded(
+                child: Text(title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: CompanionLaunch.text(18, weight: FontWeight.w600))),
+            for (final action in actions)
+              SizedBox(width: 42, height: 42, child: action),
+          ])),
+    );
   }
 }
 
@@ -91,42 +61,51 @@ class CompanionLaunchTabs extends StatelessWidget {
   final int selected;
   final ValueChanged<int> onSelected;
   @override
-  Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.fromLTRB(22, 3, 22, 9),
-      child: Row(children: [
-        for (final tab in tabs)
-          Expanded(
-              child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Semantics(
-                      button: true,
-                      selected: selected == tab.value,
-                      child: Material(
-                          color: selected == tab.value
-                              ? const Color(0xFFE7F8EE)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(23),
-                          child: InkWell(
-                              borderRadius: BorderRadius.circular(23),
-                              onTap: () => onSelected(tab.value),
-                              child: SizedBox(
-                                  height: 36,
-                                  child: Center(
-                                      child: Text(tab.label,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: CompanionLaunch.text(
-                                              CompanionLaunch.narrow(context)
-                                                  ? 14
-                                                  : 16,
-                                              weight: selected == tab.value
-                                                  ? FontWeight.w700
-                                                  : FontWeight.w400,
-                                              color: selected == tab.value
-                                                  ? CompanionLaunch.primary
-                                                  : const Color(
-                                                      0xFF6F8274))))))))))
-      ]));
+  Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: CompanionLaunch.line))),
+        child: Row(children: [
+          for (final tab in tabs)
+            Expanded(
+                child: Semantics(
+              button: true,
+              selected: selected == tab.value,
+              child: InkWell(
+                onTap: () => onSelected(tab.value),
+                borderRadius: BorderRadius.circular(8),
+                child: SizedBox(
+                    height: 46,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Expanded(
+                            child: Center(
+                                child: Text(tab.label,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: CompanionLaunch.text(15,
+                                        weight: selected == tab.value
+                                            ? FontWeight.w600
+                                            : FontWeight.w400,
+                                        color: selected == tab.value
+                                            ? CompanionLaunch.ink
+                                            : CompanionLaunch.muted)))),
+                        AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            width: 22,
+                            height: 3,
+                            decoration: BoxDecoration(
+                                color: selected == tab.value
+                                    ? CompanionLaunch.primary
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(2))),
+                      ],
+                    )),
+              ),
+            )),
+        ]),
+      );
 }
 
 class CompanionLaunchButton extends StatelessWidget {
@@ -141,24 +120,18 @@ class CompanionLaunchButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DecoratedBox(
       decoration: BoxDecoration(
-          gradient: enabled
-              ? const LinearGradient(
-                  colors: [Color(0xFF0ABD94), CompanionLaunch.primary])
-              : null,
-          color: enabled ? null : const Color(0xFFEDF5EF),
-          borderRadius: BorderRadius.circular(19)),
+          color: enabled ? CompanionLaunch.primary : BingoPalette.softSurface,
+          borderRadius: BorderRadius.circular(22)),
       child: TextButton(
           onPressed: enabled ? onPressed : null,
           style: TextButton.styleFrom(
               foregroundColor: Colors.white,
               disabledForegroundColor: CompanionLaunch.muted,
-              minimumSize: const Size(0, 32),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              minimumSize: const Size(0, 27),
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 3),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              textStyle: CompanionLaunch.text(
-                  CompanionLaunch.compact(context) ? 12 : 14,
-                  color: Colors.white,
-                  weight: FontWeight.w500)),
+              textStyle: CompanionLaunch.text(12,
+                  color: Colors.white, weight: FontWeight.w500)),
           child: Text(label)));
 }
 
@@ -172,26 +145,17 @@ class CompanionLaunchCreateAction extends StatelessWidget {
     final compact = CompanionLaunch.compact(context);
     final narrow = CompanionLaunch.narrow(context);
     return Material(
-        color: group ? const Color(0xFFF0FBF5) : const Color(0xFFF3FCF7),
-        borderRadius: BorderRadius.circular(21),
+        color: group ? const Color(0xFFF1F4F7) : BingoPalette.softSurface,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20), side: BorderSide.none),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
             onTap: onTap,
             child: Padding(
-                padding: EdgeInsets.only(
-                    left: narrow
-                        ? 10
-                        : compact
-                            ? 14
-                            : 20,
-                    right: 4),
+                padding: EdgeInsets.only(left: narrow ? 10 : 12, right: 8),
                 child: Row(children: [
                   SizedBox.square(
-                      dimension: narrow
-                          ? 32
-                          : compact
-                              ? 38
-                              : 44,
+                      dimension: narrow ? 26 : 32,
                       child: CustomPaint(painter: _LaunchCreateGlyph(group))),
                   SizedBox(width: compact ? 7 : 10),
                   Expanded(
@@ -201,25 +165,15 @@ class CompanionLaunchCreateAction extends StatelessWidget {
                           children: [
                         Text(group ? '创建群聊' : '创建搭子',
                             maxLines: 1,
-                            style: CompanionLaunch.text(
-                                narrow
-                                    ? 14
-                                    : compact
-                                        ? 16
-                                        : 18,
-                                color: const Color(0xFF3C6551),
-                                weight: FontWeight.w700)),
+                            style: CompanionLaunch.text(narrow ? 13 : 15,
+                                color: BingoPalette.ink,
+                                weight: FontWeight.w600)),
                         const SizedBox(height: 3),
                         Text(group ? '和伙伴们一起聊' : '一对一陪伴聊天',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: CompanionLaunch.text(
-                                narrow
-                                    ? 10
-                                    : compact
-                                        ? 12
-                                        : 14,
-                                color: const Color(0xFF7D9788))),
+                            style: CompanionLaunch.text(narrow ? 10 : 11,
+                                color: BingoPalette.muted)),
                       ])),
                 ]))));
   }

@@ -1,3 +1,4 @@
+import 'package:bingo/core/design/bingo_page.dart';
 import 'package:bingo/core/theme/app_theme.dart';
 import 'dart:convert';
 import 'dart:math';
@@ -9,7 +10,6 @@ import 'package:bingo/features/community/data/community_gateway.dart';
 import 'package:bingo/features/community/presentation/community_widgets.dart';
 import 'package:bingo/shared/widgets/assistant_avatar.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 class PublishCompanionPage extends StatefulWidget {
   const PublishCompanionPage(
@@ -25,15 +25,12 @@ class PublishCompanionPage extends StatefulWidget {
 }
 
 class _PublishCompanionPageState extends State<PublishCompanionPage> {
-  static const _device = MethodChannel('bingo/device_tools');
   final _introduction = TextEditingController();
   final _title = TextEditingController();
   final _tags = <String>{'治愈陪伴', '日常聊天'};
   final _form = GlobalKey<FormState>();
-  final _images = <Uint8List>[];
   String _requestId = '';
   String? _submittedContent;
-  String? _submittedImages;
   List<RoleOption>? _roles;
   RoleOption? _selected;
   bool _failed = false, _busy = false;
@@ -73,20 +70,6 @@ class _PublishCompanionPageState extends State<PublishCompanionPage> {
     super.dispose();
   }
 
-  Future<void> _addImage() async {
-    if (_images.length >= 3) return;
-    try {
-      final picked =
-          await _device.invokeMapMethod<String, dynamic>('pickImage');
-      if (!mounted || picked == null) return;
-      final bytes = picked['bytes'] as Uint8List?;
-      if (bytes == null || bytes.isEmpty) return;
-      setState(() => _images.add(bytes));
-    } on PlatformException catch (error) {
-      if (mounted) showCenterToast(context, error.message ?? '无法打开相册，请重试');
-    }
-  }
-
   Future<void> _submit() async {
     if (!_form.currentState!.validate() || _selected == null || _busy) return;
     FocusScope.of(context).unfocus();
@@ -96,13 +79,10 @@ class _PublishCompanionPageState extends State<PublishCompanionPage> {
       _introduction.text.trim(),
       _tags.toList()..sort()
     ]);
-    final imagesSignature = _images.map((image) => image.length).join(',');
-    if (_submittedContent != null &&
-        (_submittedContent != content || _submittedImages != imagesSignature)) {
+    if (_submittedContent != null && _submittedContent != content) {
       _newRequest();
     }
     _submittedContent = content;
-    _submittedImages = imagesSignature;
     setState(() => _busy = true);
     try {
       final gateway = widget.gateway;
@@ -113,13 +93,11 @@ class _PublishCompanionPageState extends State<PublishCompanionPage> {
                   introduction: _introduction.text.trim(),
                   title: _title.text.trim(),
                   shareTags: _tags.toList()..sort(),
-                  requestId: _requestId,
-                  images: _images.map(base64Encode).toList())
+                  requestId: _requestId)
           : await gateway.publishCompanion(
               roleId: _selected!.id,
               introduction: _introduction.text.trim(),
-              requestId: _requestId,
-              images: _images.map(base64Encode).toList());
+              requestId: _requestId);
       if (mounted) Navigator.pop(context, share);
     } on ApiException catch (error) {
       if (mounted) showCenterToast(context, error.message);
@@ -134,7 +112,7 @@ class _PublishCompanionPageState extends State<PublishCompanionPage> {
   Widget build(BuildContext context) => PopScope(
       canPop: !_busy,
       child: Scaffold(
-        backgroundColor: BingoPalette.pageTop,
+        backgroundColor: Colors.white,
         appBar:
             AppBar(title: const Text('分享搭子', style: TextStyle(fontSize: 18))),
         body: _failed
@@ -151,14 +129,14 @@ class _PublishCompanionPageState extends State<PublishCompanionPage> {
                         ListView(padding: const EdgeInsets.all(20), children: [
                       const Text('选择要分享的搭子',
                           style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w800)),
+                              fontSize: 15, fontWeight: FontWeight.w500)),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
                           initialValue: _selected?.id,
                           isExpanded: true,
                           decoration: InputDecoration(
                               filled: true,
-                              fillColor: Colors.white,
+                              fillColor: BingoPalette.softSurface,
                               border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
                                   borderSide: BorderSide.none)),
@@ -183,7 +161,7 @@ class _PublishCompanionPageState extends State<PublishCompanionPage> {
                         Container(
                             padding: const EdgeInsets.all(18),
                             decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: BingoPalette.softSurface,
                                 borderRadius: BorderRadius.circular(20)),
                             child: Row(children: [
                               AssistantAvatar(role: _selected!.name, size: 55),
@@ -208,7 +186,7 @@ class _PublishCompanionPageState extends State<PublishCompanionPage> {
                       const SizedBox(height: 24),
                       const Text('分享标题',
                           style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w800)),
+                              fontSize: 15, fontWeight: FontWeight.w500)),
                       const SizedBox(height: 12),
                       TextFormField(
                           controller: _title,
@@ -237,14 +215,14 @@ class _PublishCompanionPageState extends State<PublishCompanionPage> {
                               hintText: 'TA 是什么样的搭子？适合一起聊些什么？',
                               hintStyle: const TextStyle(fontSize: 13),
                               filled: true,
-                              fillColor: Colors.white,
+                              fillColor: BingoPalette.softSurface,
                               border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
                                   borderSide: BorderSide.none))),
                       const SizedBox(height: 18),
                       const Text('标签（最多选择3个）',
                           style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w800)),
+                              fontSize: 15, fontWeight: FontWeight.w500)),
                       const SizedBox(height: 10),
                       Wrap(spacing: 8, runSpacing: 6, children: [
                         for (final tag in [
@@ -270,92 +248,6 @@ class _PublishCompanionPageState extends State<PublishCompanionPage> {
                                       }))
                       ]),
                       const SizedBox(height: 20),
-                      Row(children: [
-                        const Text('封面图片',
-                            style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: communityInk)),
-                        const SizedBox(width: 8),
-                        Text('可选，最多 ${3 - _images.length} 张',
-                            style: const TextStyle(
-                                fontSize: 12, color: communityMuted)),
-                      ]),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                          height: 84,
-                          child: ListView.separated(
-                              scrollDirection: Axis.horizontal,
-                              itemCount:
-                                  _images.length + (_images.length < 3 ? 1 : 0),
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(width: 8),
-                              itemBuilder: (context, index) {
-                                if (index == _images.length) {
-                                  return _busy
-                                      ? const SizedBox(width: 84)
-                                      : InkWell(
-                                          onTap: _addImage,
-                                          borderRadius:
-                                              BorderRadius.circular(14),
-                                          child: Container(
-                                              width: 84,
-                                              height: 84,
-                                              decoration: BoxDecoration(
-                                                  color: Colors.white,
-                                                  borderRadius:
-                                                      BorderRadius.circular(14),
-                                                  border: Border.all(
-                                                      color: const Color(
-                                                          0xFFB9CFC2),
-                                                      width: 1.2)),
-                                              child: const Column(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
-                                                  children: [
-                                                    Icon(
-                                                        Icons
-                                                            .add_photo_alternate_outlined,
-                                                        size: 26,
-                                                        color: communityAccent),
-                                                    SizedBox(height: 4),
-                                                    Text('选图',
-                                                        style: TextStyle(
-                                                            fontSize: 11,
-                                                            color:
-                                                                communityMuted))
-                                                  ])));
-                                }
-                                return Stack(children: [
-                                  ClipRRect(
-                                      borderRadius: BorderRadius.circular(14),
-                                      child: Image.memory(_images[index],
-                                          width: 84,
-                                          height: 84,
-                                          fit: BoxFit.cover)),
-                                  Positioned(
-                                      top: 2,
-                                      right: 2,
-                                      child: _busy
-                                          ? const SizedBox(width: 22)
-                                          : InkWell(
-                                              onTap: () => setState(() =>
-                                                  _images.removeAt(index)),
-                                              child: Container(
-                                                  width: 20,
-                                                  height: 20,
-                                                  decoration: BoxDecoration(
-                                                      color: Colors.black
-                                                          .withValues(
-                                                              alpha: .45),
-                                                      shape: BoxShape.circle),
-                                                  child: const Icon(
-                                                      Icons.close_rounded,
-                                                      size: 14,
-                                                      color: Colors.white)))),
-                                ]);
-                              })),
-                      const SizedBox(height: 16),
                       const Text(
                           '其他人加入后会拥有独立副本，可自行编辑与再次分享。聊天记录与私人记忆不会分享，个人复刻音色会替换为系统音色。',
                           style: TextStyle(
@@ -369,15 +261,13 @@ class _PublishCompanionPageState extends State<PublishCompanionPage> {
                               height: 1.8,
                               color: communityMuted)),
                     ])),
-        bottomNavigationBar: SafeArea(
-            child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: FilledButton.icon(
-                    onPressed: _busy || _roles == null ? null : _submit,
-                    style: FilledButton.styleFrom(
-                        backgroundColor: communityAccent,
-                        minimumSize: const Size(double.infinity, 52)),
-                    icon: const Icon(Icons.ios_share_rounded, size: 19),
-                    label: Text(_busy ? '正在分享…' : '发布分享')))),
+        bottomNavigationBar: BingoActionBar(
+            child: FilledButton.icon(
+                onPressed: _busy || _roles == null ? null : _submit,
+                style: FilledButton.styleFrom(
+                    backgroundColor: communityAccent,
+                    minimumSize: const Size(double.infinity, 48)),
+                icon: const Icon(Icons.ios_share_rounded, size: 19),
+                label: Text(_busy ? '正在分享…' : '发布分享'))),
       ));
 }

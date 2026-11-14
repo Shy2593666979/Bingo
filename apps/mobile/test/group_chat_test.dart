@@ -553,7 +553,7 @@ void main() {
             speech: gateway)));
     await tester.pumpAndSettle();
     expect(find.text('快乐小窝'), findsOneWidget);
-    expect(find.text(' (2)'), findsOneWidget);
+    expect(find.text('2 位搭子'), findsOneWidget);
     expect(find.text('甜甜'), findsOneWidget);
     expect(find.text('暖暖'), findsOneWidget);
     expect(find.text('18:00'), findsNWidgets(3));

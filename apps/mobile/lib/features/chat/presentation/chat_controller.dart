@@ -263,12 +263,16 @@ class ChatController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> bindAccount(String userId) async {
+  Future<void> bindAccount(String userId, {bool waitForSync = true}) async {
     unbindUser();
     _userId = userId;
     _accountOnly = true;
-    await _refreshPendingCall();
-    await refreshEngagement();
+    if (waitForSync) {
+      await _refreshPendingCall();
+      await refreshEngagement();
+    } else {
+      unawaited(refreshEngagement());
+    }
     notifyListeners();
   }
 

@@ -1,4 +1,5 @@
 import 'package:bingo/features/stickers/sticker_widgets.dart';
+import 'package:bingo/core/widgets/startup_reveal.dart';
 import 'dart:async';
 
 import 'package:bingo/core/config/app_config.dart';
@@ -39,7 +40,6 @@ class _BingoAppState extends State<BingoApp> with WidgetsBindingObserver {
   late final TokenStore _tokenStore;
   late final PushRegistrationService _pushRegistration;
   late final CallPreferencesStore _callPreferencesStore;
-  bool _showSplash = true;
   bool _sessionResolved = false;
   bool _callCaptionsEnabled = false;
   UserProfile? _profile;
@@ -105,7 +105,7 @@ class _BingoAppState extends State<BingoApp> with WidgetsBindingObserver {
         _gateway.accessToken = token;
         _profile = await _gateway.getProfile();
         _controller.setAssistantRole(_profile!.role);
-        await _controller.bindAccount(_profile!.id);
+        await _controller.bindAccount(_profile!.id, waitForSync: false);
         if (_profile!.onboardingComplete &&
             _profile!.birthday != null &&
             _profile!.companionSelectionComplete) {
@@ -203,27 +203,13 @@ class _BingoAppState extends State<BingoApp> with WidgetsBindingObserver {
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       debugShowCheckedModeBanner: false,
       theme: buildBingoTheme(),
-      home: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 320),
-        child: _buildHome(),
-      ),
+      home: _buildHome(),
     );
   }
 
   Widget _buildHome() {
-    if (_showSplash) {
-      return SplashPage(
-        key: const ValueKey('splash'),
-        onFinished: () {
-          if (mounted) setState(() => _showSplash = false);
-        },
-      );
-    }
     if (!_sessionResolved) {
-      return const Scaffold(
-        key: ValueKey('session-loading'),
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const SplashPage(key: ValueKey('session-loading'));
     }
     final profile = _profile;
     if (profile == null) {
@@ -248,16 +234,18 @@ class _BingoAppState extends State<BingoApp> with WidgetsBindingObserver {
         onComplete: _onProfileSaved,
       );
     }
-    return AppShell(
-      key: const ValueKey('app'),
-      chatController: _controller,
-      gateway: _gateway,
-      profile: profile,
-      callCaptionsEnabled: _callCaptionsEnabled,
-      onCallCaptionsChanged: _setCallCaptionsEnabled,
-      onProfileSaved: _onProfileSaved,
-      onLogout: _logout,
-      onAccountDeleted: _accountDeleted,
-    );
+    return StartupReveal(
+        builder: (onReady) => AppShell(
+              onReady: onReady,
+              key: const ValueKey('app'),
+              chatController: _controller,
+              gateway: _gateway,
+              profile: profile,
+              callCaptionsEnabled: _callCaptionsEnabled,
+              onCallCaptionsChanged: _setCallCaptionsEnabled,
+              onProfileSaved: _onProfileSaved,
+              onLogout: _logout,
+              onAccountDeleted: _accountDeleted,
+            ));
   }
 }

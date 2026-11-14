@@ -16,7 +16,7 @@
     <application
         android:usesCleartextTraffic="${allowCleartextTraffic}"
         android:icon="@mipmap/ic_launcher"
-        android:label="Bingo"
+        android:label="${appDisplayName}"
         android:name="${applicationName}"
         android:roundIcon="@mipmap/ic_launcher"
         android:theme="@style/LaunchTheme"

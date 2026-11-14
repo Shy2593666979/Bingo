@@ -230,12 +230,12 @@ class _RealtimeCallPageState extends State<RealtimeCallPage> {
                   Text(
                     widget.assistantName,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w500,
                         ),
                   ),
                   const SizedBox(height: 8),
                   Text(_status,
-                      style: const TextStyle(color: Color(0xFF65716D))),
+                      style: const TextStyle(color: BingoPalette.muted)),
                   const SizedBox(height: 5),
                   Text('$minutes:$seconds',
                       style: const TextStyle(fontSize: 16)),
@@ -315,14 +315,14 @@ class _TranscriptCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: assistant ? const Color(0xFFDDF4EC) : Colors.white,
+        color: assistant ? BingoPalette.softSurface : Colors.white,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF68736F))),
+              style: const TextStyle(fontSize: 12, color: BingoPalette.muted)),
           const SizedBox(height: 5),
           Text(text, style: const TextStyle(fontSize: 16, height: 1.45)),
         ],

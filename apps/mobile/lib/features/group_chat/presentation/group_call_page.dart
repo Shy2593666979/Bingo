@@ -320,7 +320,7 @@ class _GroupCallPageState extends State<GroupCallPage>
           if (!didPop) unawaited(finish());
         },
         child: Scaffold(
-            backgroundColor: const Color(0xFFF1F8F5),
+            backgroundColor: BingoPalette.softSurface,
             body: SafeArea(
                 child: Padding(
                     padding: const EdgeInsets.fromLTRB(22, 24, 22, 24),
@@ -399,7 +399,7 @@ class _GroupCallPageState extends State<GroupCallPage>
                                     ])),
                       Text(status,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(color: Color(0xFF52746B))),
+                          style: const TextStyle(color: BingoPalette.muted)),
                       const SizedBox(height: 12),
                       SizedBox(
                           height: 100,
@@ -459,8 +459,7 @@ class _GroupCallPageState extends State<GroupCallPage>
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
                 fontSize: 13,
-                color:
-                    speaking ? BingoPalette.primary : const Color(0xFF253F38))),
+                color: speaking ? BingoPalette.primary : BingoPalette.ink)),
       ]);
 
   Widget _action(IconData icon, String label, VoidCallback onTap,
@@ -474,9 +473,8 @@ class _GroupCallPageState extends State<GroupCallPage>
                     : active
                         ? BingoPalette.primary
                         : Colors.white,
-                foregroundColor: destructive || active
-                    ? Colors.white
-                    : const Color(0xFF314B43),
+                foregroundColor:
+                    destructive || active ? Colors.white : BingoPalette.ink,
                 fixedSize: const Size(60, 60)),
             icon: Icon(icon, size: 27)),
         const SizedBox(height: 7),

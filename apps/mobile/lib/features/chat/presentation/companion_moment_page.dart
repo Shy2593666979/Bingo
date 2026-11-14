@@ -205,7 +205,7 @@ class _CompanionMomentPageState extends State<CompanionMomentPage>
       decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(26),
-          border: Border.all(color: const Color(0xFFE2F0E9))),
+          border: Border.all(color: BingoPalette.softSurface)),
       child: Material(
           type: MaterialType.transparency,
           child: Column(
@@ -223,7 +223,7 @@ class _CompanionMomentPageState extends State<CompanionMomentPage>
               labelStyle: TextStyle(
                   color: value == option
                       ? BingoPalette.chatMenuInk
-                      : const Color(0xFF809589),
+                      : BingoPalette.muted,
                   fontWeight:
                       value == option ? FontWeight.w600 : FontWeight.w400),
               side: BorderSide(
@@ -392,7 +392,7 @@ class _CompanionMomentPageState extends State<CompanionMomentPage>
                       child: CircularProgressIndicator(
                           value: 1 - remaining / focus.totalSeconds,
                           strokeWidth: 7,
-                          backgroundColor: const Color(0xFFEAF5EF))),
+                          backgroundColor: BingoPalette.softSurface)),
                   Text(_duration(remaining),
                       style: const TextStyle(
                           fontSize: 38, fontWeight: FontWeight.w600)),
@@ -611,7 +611,7 @@ class _CompanionMomentPageState extends State<CompanionMomentPage>
           const SizedBox(height: 12),
           const Center(
               child: Text('故事会自然接着讲，无需回复',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF809589)))),
+                  style: TextStyle(fontSize: 12, color: BingoPalette.muted))),
         ],
         if (sleep?.loading == true)
           const Padding(
@@ -752,7 +752,7 @@ class _CompanionMomentPageState extends State<CompanionMomentPage>
                                       Text(widget.kind.description,
                                           style: const TextStyle(
                                               fontSize: 12,
-                                              color: Color(0xFF71817D))),
+                                              color: BingoPalette.muted)),
                                     ]))
                               ]),
                               const SizedBox(height: 22),

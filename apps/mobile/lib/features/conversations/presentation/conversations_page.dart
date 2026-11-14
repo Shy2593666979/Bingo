@@ -1,3 +1,4 @@
+import 'package:bingo/core/theme/app_theme.dart';
 import 'dart:async';
 
 import 'package:bingo/core/widgets/center_toast.dart';
@@ -154,7 +155,7 @@ class ConversationsPageState extends State<ConversationsPage> {
                                     padding: const EdgeInsets.only(bottom: 9),
                                     child: Material(
                                         color: role.pinned
-                                            ? const Color(0xFFEEF3EB)
+                                            ? BingoPalette.softSurface
                                             : Colors.white,
                                         borderRadius: BorderRadius.circular(19),
                                         child: InkWell(
@@ -251,22 +252,22 @@ class ConversationsPageState extends State<ConversationsPage> {
                                                                         2),
                                                                 decoration: BoxDecoration(
                                                                     color: role.muted
-                                                                        ? const Color(
-                                                                            0xFFAAB5AE)
+                                                                        ? BingoPalette
+                                                                            .muted
                                                                         : const Color(
                                                                             0xFFD29394),
                                                                     borderRadius:
                                                                         BorderRadius.circular(
                                                                             12)),
                                                                 child: Text(
-                                                                    role.unreadCount >
-                                                                            99
+                                                                    role.unreadCount > 99
                                                                         ? '99+'
                                                                         : '${role.unreadCount}',
                                                                     style: const TextStyle(
-                                                                        color:
-                                                                            Colors.white,
-                                                                        fontSize: 10))),
+                                                                        color: Colors
+                                                                            .white,
+                                                                        fontSize:
+                                                                            10))),
                                                         ]),
                                                       ])),
                                                 ]))))),

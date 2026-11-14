@@ -1,3 +1,4 @@
+import 'package:bingo/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 /// Identity belongs to the selected token, never to text that merely looks like @name.
@@ -125,7 +126,7 @@ class MentionEditingController extends TextEditingController {
       spans.add(TextSpan(
           text: text.substring(token.start, token.end),
           style: const TextStyle(
-              color: Color(0xFF4F8164), fontWeight: FontWeight.w600)));
+              color: BingoPalette.primary, fontWeight: FontWeight.w600)));
       cursor = token.end;
     }
     spans.add(TextSpan(text: text.substring(cursor)));

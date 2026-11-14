@@ -1,4 +1,6 @@
 import 'package:bingo/features/chat/data/chat_gateway.dart';
+import 'package:bingo/core/design/bingo_page.dart';
+import 'package:bingo/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 class MemoryPage extends StatefulWidget {
@@ -63,8 +65,7 @@ class _MemoryPageState extends State<MemoryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title:
-            const Text('长期记忆', style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text('长期记忆'),
         actions: [
           IconButton(
               onPressed: _refresh,
@@ -84,45 +85,45 @@ class _MemoryPageState extends State<MemoryPage> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return const Center(child: Text('无法读取记忆'));
+            return BingoEmptyState(
+              icon: Icons.cloud_off_outlined,
+              title: '无法读取记忆',
+              message: '检查网络后，再试一次。',
+              action: OutlinedButton(
+                  onPressed: _refresh, child: const Text('重新加载')),
+            );
           }
           final memories = snapshot.data ?? const [];
           if (memories.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.psychology_outlined,
-                    size: 44,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(height: 16),
-                  Text('暂无长期记忆',
-                      style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 6),
-                  const Text('你可以手动添加，或在对话中说“记住……”'),
-                ],
-              ),
+            return const BingoEmptyState(
+              icon: Icons.psychology_outlined,
+              title: '暂无长期记忆',
+              message: '你可以手动添加，或在对话中说“记住……”',
             );
           }
           return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             itemCount: memories.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final memory = memories[index];
-              return ListTile(
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-                leading: const Icon(Icons.bookmark_outline_rounded),
-                title: Text(memory.content),
-                trailing: IconButton(
-                  onPressed: () => _deleteMemory(memory),
-                  tooltip: '删除记忆',
-                  icon: const Icon(Icons.delete_outline_rounded),
-                ),
-              );
+              return BingoSection(
+                  padding: EdgeInsets.zero,
+                  child: ListTile(
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    leading: const Icon(Icons.bookmark_outline_rounded),
+                    title: Text(memory.content,
+                        style: const TextStyle(
+                            fontSize: 15,
+                            height: 1.6,
+                            color: BingoPalette.ink)),
+                    trailing: IconButton(
+                      onPressed: () => _deleteMemory(memory),
+                      tooltip: '删除记忆',
+                      icon: const Icon(Icons.delete_outline_rounded),
+                    ),
+                  ));
             },
           );
         },

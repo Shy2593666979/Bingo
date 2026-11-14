@@ -1,3 +1,4 @@
+import 'package:bingo/core/theme/app_theme.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
@@ -71,18 +72,16 @@ class TraitBadge extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-            color: outlined ? Colors.white : const Color(0xFFEDF8F5),
-            border:
-                outlined ? Border.all(color: const Color(0xFFB7E5DA)) : null,
+            color: outlined ? Colors.white : BingoPalette.softSurface,
+            border: outlined ? Border.all(color: BingoPalette.blush) : null,
             borderRadius: BorderRadius.circular(outlined ? 10 : 24)),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           TraitIcon(roleTraits[label] ?? 'chat',
-              size: 15, color: outlined ? const Color(0xFF00A786) : null),
+              size: 15, color: outlined ? BingoPalette.primary : null),
           const SizedBox(width: 5),
           Text(label,
               style: TextStyle(
-                  fontSize: outlined ? 12 : 10,
-                  color: const Color(0xFF294C46))),
+                  fontSize: outlined ? 12 : 10, color: BingoPalette.ink)),
         ]),
       );
 }
@@ -100,7 +99,7 @@ class _TraitPainter extends CustomPainter {
           'sun' || 'moon' || 'star' || 'bulb' => const Color(0xFFFFC62E),
           'plane' || 'book' => const Color(0xFF47B6D2),
           'coffee' => const Color(0xFFAA9993),
-          _ => const Color(0xFF119D83),
+          _ => BingoPalette.primary,
         };
     final fill = Paint()..color = color;
     final stroke = Paint()

@@ -1,4 +1,5 @@
 import 'package:bingo/app.dart';
+import 'package:bingo/core/design/bingo_wordmark.dart';
 import 'package:bingo/features/auth/data/auth_token_store.dart';
 import 'package:bingo/features/auth/presentation/password_recovery_page.dart';
 import 'package:bingo/features/auth/presentation/user_agreement_page.dart';
@@ -17,15 +18,15 @@ class EmptyTokenStore implements TokenStore {
 }
 
 void main() {
-  testWidgets('shows splash before authentication', (tester) async {
+  testWidgets('restores session without waiting for a splash animation',
+      (tester) async {
     await tester.pumpWidget(BingoApp(tokenStore: EmptyTokenStore()));
 
-    expect(find.byType(Image), findsOneWidget);
-    expect(find.text('你的个人智能助理'), findsOneWidget);
+    expect(find.byType(BingoWordmark), findsOneWidget);
+    expect(find.text('你的个人智能助理'), findsNothing);
 
-    await tester.pump(const Duration(milliseconds: 250));
-    await tester.pump(const Duration(milliseconds: 1300));
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump();
+    await tester.pump();
 
     expect(find.text('欢迎回来'), findsOneWidget);
     expect(find.text('请输入手机号'), findsOneWidget);

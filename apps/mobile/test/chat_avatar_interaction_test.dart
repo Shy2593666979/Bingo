@@ -45,7 +45,7 @@ void main() {
             onOpenSettings: () {},
             onOpenRoleDetails: () => opened++)));
     await tester.pumpAndSettle();
-    final header = find.byKey(const ValueKey('chat-header-avatar'));
+    final header = find.byKey(const ValueKey('chat-header-title'));
     final avatar = find.byKey(
         ValueKey('chat-message-avatar-${controller.messages.single.id}'));
     await tester.tap(header);

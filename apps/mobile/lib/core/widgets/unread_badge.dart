@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bingo/core/theme/app_theme.dart';
 
 class UnreadBadge extends StatelessWidget {
   const UnreadBadge({required this.count, super.key});
@@ -7,10 +8,10 @@ class UnreadBadge extends StatelessWidget {
   Widget build(BuildContext context) => Semantics(
       label: '$count条未读消息',
       child: Container(
-          constraints: const BoxConstraints(minWidth: 21, minHeight: 21),
+          constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
           padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
           decoration: BoxDecoration(
-              color: const Color(0xFFFF4D4F),
+              color: BingoPalette.primary,
               borderRadius: BorderRadius.circular(99)),
           child: Text(count > 99 ? '99+' : '$count',
               textAlign: TextAlign.center,
@@ -18,5 +19,5 @@ class UnreadBadge extends StatelessWidget {
                   fontSize: 11,
                   height: 1.45,
                   color: Colors.white,
-                  fontWeight: FontWeight.w600))));
+                  fontWeight: FontWeight.w400))));
 }

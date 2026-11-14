@@ -1,3 +1,4 @@
+import 'package:bingo/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:bingo/shared/widgets/partner_action_icon.dart';
 
@@ -91,9 +92,9 @@ class _PartnerSwipeCardState extends State<PartnerSwipeCard> {
                                     const PartnerActionIcon(
                                         symbol: PartnerActionSymbol.edit,
                                         size: 21,
-                                        color: Color(0xFF438064)),
-                                    const Color(0xFFD6ECDF),
-                                    const Color(0xFF438064),
+                                        color: BingoPalette.primary),
+                                    BingoPalette.softSurface,
+                                    BingoPalette.primary,
                                     widget.onEdit),
                                 if (widget.onDelete != null)
                                   _action(

@@ -98,8 +98,7 @@ class _HistoryPageState extends State<HistoryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title:
-            const Text('会话记录', style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text('会话记录'),
         actions: [
           IconButton(
             onPressed: _refresh,

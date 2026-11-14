@@ -116,12 +116,13 @@ class _UserSetupPageState extends State<UserSetupPage> {
               child: Form(
                   key: _form,
                   child: ListView(
-                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
                       children: [
-                        Text(widget.isEditing ? '个人资料' : '完善个人资料',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                fontSize: 25, fontWeight: FontWeight.w800)),
+                        if (!widget.isEditing)
+                          Text('完善个人资料',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  fontSize: 22, fontWeight: FontWeight.w500)),
                         const SizedBox(height: 8),
                         const Text('让 Bingo 从认识你开始',
                             textAlign: TextAlign.center,
@@ -132,7 +133,7 @@ class _UserSetupPageState extends State<UserSetupPage> {
                                 label: '选择用户头像',
                                 button: true,
                                 child: InkWell(
-                                    borderRadius: BorderRadius.circular(20),
+                                    borderRadius: BorderRadius.circular(16),
                                     onTap: _busy ? null : _chooseAvatar,
                                     child: Stack(children: [
                                       UserAvatar(
@@ -248,7 +249,7 @@ class _UserSetupPageState extends State<UserSetupPage> {
       color: Colors.white,
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: BingoPalette.line)),
       child: child);
 }

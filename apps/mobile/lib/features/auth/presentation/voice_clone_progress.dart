@@ -1,4 +1,5 @@
 import 'package:bingo/core/theme/app_theme.dart';
+import 'package:bingo/core/design/bingo_wordmark.dart';
 import 'package:flutter/material.dart';
 
 class VoiceCloneProgress extends StatelessWidget {
@@ -27,8 +28,7 @@ class VoiceCloneProgress extends StatelessWidget {
                             child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Image.asset('assets/images/bingo_logo.webp',
-                                      width: 68, height: 68),
+                                  const BingoWordmark(width: 116, height: 45),
                                   const SizedBox(height: 24),
                                   const Text('让搭子记住这个声音',
                                       textAlign: TextAlign.center,
@@ -38,7 +38,7 @@ class VoiceCloneProgress extends StatelessWidget {
                                   const SizedBox(height: 12),
                                   const Text('请稍等一下，正在处理这段录音。',
                                       style:
-                                          TextStyle(color: Color(0xFF7D918A))),
+                                          TextStyle(color: BingoPalette.muted)),
                                   const SizedBox(height: 30),
                                   for (var index = 0; index < 3; index++)
                                     Padding(
@@ -63,8 +63,8 @@ class VoiceCloneProgress extends StatelessWidget {
                                                           color: index == stage
                                                               ? BingoPalette
                                                                   .mintPrimary
-                                                              : const Color(
-                                                                  0xFF7D918A)))),
+                                                              : BingoPalette
+                                                                  .muted))),
                                           const SizedBox(width: 14),
                                           Expanded(
                                               child: Column(
@@ -85,15 +85,15 @@ class VoiceCloneProgress extends StatelessWidget {
                                                         color: index == stage
                                                             ? BingoPalette
                                                                 .mintPrimary
-                                                            : const Color(
-                                                                0xFF7D918A))),
+                                                            : BingoPalette
+                                                                .muted)),
                                                 if (index == stage) ...[
                                                   const SizedBox(height: 5),
                                                   Text(message,
                                                       style: const TextStyle(
                                                           fontSize: 12,
-                                                          color: Color(
-                                                              0xFF7D918A))),
+                                                          color: BingoPalette
+                                                              .muted)),
                                                 ],
                                               ])),
                                         ])),
@@ -109,7 +109,7 @@ class VoiceCloneProgress extends StatelessWidget {
                                   const Text('处理时间由声音服务决定，请稍候',
                                       style: TextStyle(
                                           fontSize: 12,
-                                          color: Color(0xFF7D918A))),
+                                          color: BingoPalette.muted)),
                                 ])))))));
   }
 }

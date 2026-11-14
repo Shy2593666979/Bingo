@@ -34,6 +34,7 @@ class MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isUser = message.role == ChatRole.user;
+    final defaultStyle = AppearanceScope.of(context).bubble == 'mint';
     final sticker = ChatSticker.parse(message.content);
     if (sticker != null) {
       return Align(
@@ -61,10 +62,12 @@ class MessageBubble extends StatelessWidget {
 
     final bubble = ConstrainedBox(
         constraints: BoxConstraints(
-            maxWidth: math.min(560, MediaQuery.sizeOf(context).width * .8)),
+            maxWidth: math.min(defaultStyle ? 480 : 560,
+                MediaQuery.sizeOf(context).width * (defaultStyle ? .72 : .8))),
         child: BubbleSurface(
           isUser: isUser,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding: EdgeInsets.symmetric(
+              horizontal: 12, vertical: defaultStyle ? 8 : 10),
           child: message.content.isEmpty
               ? const _TypingDots()
               : Column(
@@ -85,9 +88,13 @@ class MessageBubble extends StatelessWidget {
                       SelectableText(
                         message.content,
                         style: TextStyle(
-                          color: ChatScene.ink,
-                          fontSize: 15,
-                          height: 1.45,
+                          color: defaultStyle
+                              ? const Color(0xFF222222)
+                              : ChatScene.ink,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w400,
+                          height: defaultStyle ? 1.35 : 1.4,
+                          letterSpacing: 0,
                         ),
                       ),
                     if (message.status == ChatMessageStatus.interrupted) ...[
@@ -104,30 +111,60 @@ class MessageBubble extends StatelessWidget {
                 ),
         ));
 
+    final createdAt = message.createdAt?.toLocal();
+    final hasTime = defaultStyle && createdAt != null;
+    final content = hasTime
+        ? Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment:
+                isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            children: [
+                bubble,
+                const SizedBox(height: 3),
+                Text(
+                    '${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}',
+                    key: ValueKey('message-time-${message.id}'),
+                    style: const TextStyle(
+                        fontSize: 11,
+                        height: 1.3,
+                        fontWeight: FontWeight.w400,
+                        letterSpacing: 0,
+                        color: Color(0xFFA0A6A8))),
+              ])
+        : bubble;
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Padding(
-        padding: EdgeInsets.only(top: showAvatar ? 5 : 1, bottom: 4),
+        padding: EdgeInsets.only(
+            top: defaultStyle
+                ? 8
+                : showAvatar
+                    ? 5
+                    : 1,
+            bottom: defaultStyle ? 8 : 4),
         child: isUser
-            ? bubble
+            ? content
             : Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: defaultStyle
+                    ? CrossAxisAlignment.end
+                    : CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.only(right: 6, top: 0),
-                    child: showAvatar
+                    padding: EdgeInsets.only(
+                        right: defaultStyle ? 8 : 6, bottom: hasTime ? 17 : 0),
+                    child: showAvatar || defaultStyle
                         ? ChatPortrait(
                             key: ValueKey('chat-message-avatar-${message.id}'),
                             onTap: onAvatarTap,
                             onLongPress: onAvatarLongPress,
-                            size: 36,
+                            size: defaultStyle ? 32 : 36,
                             child: AssistantAvatar(
                                 role: message.assistantRole ?? assistantRole,
-                                size: 36))
+                                size: defaultStyle ? 32 : 36))
                         : const SizedBox.square(dimension: 36),
                   ),
-                  Flexible(child: bubble),
+                  Flexible(child: content),
                 ],
               ),
       ),
@@ -195,7 +232,7 @@ class CallRecordTile extends StatelessWidget {
                   Text(
                     '$statusLabel  $minutes:$seconds',
                     style: TextStyle(
-                      color: const Color(0xFF65716D),
+                      color: BingoPalette.muted,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),

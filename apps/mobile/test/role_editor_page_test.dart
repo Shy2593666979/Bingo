@@ -1,13 +1,43 @@
+import 'package:bingo/features/voices/data/voice_gateway.dart';
+import 'package:bingo/features/voices/models/voice_option.dart';
+import 'package:bingo/features/voices/presentation/voice_library_page.dart';
+import 'package:bingo/features/voices/presentation/voice_cover.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/features/auth/presentation/role_editor_page.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
-import 'package:bingo/shared/widgets/assistant_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-class _RoleGateway implements RoleGateway {
+class _RoleGateway implements RoleGateway, VoiceGateway {
+  @override
+  Future<List<VoiceOption>> listVoices({String? scope, String? gender}) async =>
+      const [
+        VoiceOption(
+            id: 'voice-system',
+            name: '清晰女声',
+            scope: 'system',
+            status: 'ready',
+            hasAudio: true),
+        VoiceOption(
+            id: 'voice-private',
+            name: '自己的声音',
+            scope: 'private',
+            status: 'ready',
+            hasAudio: true,
+            editable: true),
+        VoiceOption(
+            id: 'voice-community',
+            name: '社区声音',
+            scope: 'community',
+            status: 'ready',
+            hasAudio: true),
+      ];
+  @override
+  Future<Uint8List> previewVoice(String id) async => Uint8List(44);
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
   String? savedName;
   String? savedVoice;
   String? savedRoleType;
@@ -29,12 +59,13 @@ class _RoleGateway implements RoleGateway {
       String? personality,
       String? avatarData,
       String? voiceSourceId,
+      String? voiceId,
       String? description,
       List<String>? categories,
       List<String>? traits,
       bool draft = false}) async {
     savedName = name;
-    savedVoice = voiceSourceId;
+    savedVoice = voiceId;
     savedRoleType = relationship ?? roleType;
     savedPersonality = personality;
     savedBackground = background;
@@ -62,6 +93,24 @@ class _RoleGateway implements RoleGateway {
   Future<Uint8List> previewRoleVoice(String id) async => Uint8List(44);
 }
 
+Future<void> _nextStep(WidgetTester tester) async {
+  FocusManager.instance.primaryFocus?.unfocus();
+  await tester.pumpAndSettle();
+  await tester.tap(find.widgetWithText(FilledButton, '下一步'));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _goToStep(WidgetTester tester, int target) async {
+  await tester.enterText(find.byKey(const ValueKey('role-name')), '倾听搭子');
+  for (var i = 0; i < target; i++) {
+    if (i == 3) {
+      await tester.enterText(
+          find.byKey(const ValueKey('role-background')), '住在海边，喜欢读书');
+    }
+    await _nextStep(tester);
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   const device = MethodChannel('bingo/device_tools');
@@ -76,10 +125,11 @@ void main() {
     await tester.pumpWidget(MaterialApp(
         home: RoleEditorPage(gateway: _RoleGateway(), roles: const [])));
     final createStyle = tester
-        .widget<FilledButton>(find.widgetWithText(FilledButton, '创建搭子'))
+        .widget<FilledButton>(find.widgetWithText(FilledButton, '下一步'))
         .style!;
     expect(createStyle.backgroundColor!.resolve({}), BingoPalette.primary);
     expect(createStyle.foregroundColor!.resolve({}), Colors.white);
+    await _goToStep(tester, 3);
     final description = find.descendant(
         of: find.byKey(const ValueKey('role-background')),
         matching: find.byType(TextField));
@@ -92,36 +142,31 @@ void main() {
     expect(find.text('0/2000'), findsNothing);
   });
 
-  testWidgets('voice options expand below the field without a popup route',
+  testWidgets(
+      'voice field opens the standalone library and returns the selected asset',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 1000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(MaterialApp(
-        home: RoleEditorPage(gateway: _RoleGateway(), roles: const [
-      RoleOption(id: 'girl', name: '甜甜', builtin: true),
-      RoleOption(id: 'boy', name: '暖暖', builtin: true),
-    ])));
+        home: RoleEditorPage(gateway: _RoleGateway(), roles: const [])));
+    await tester.pumpAndSettle();
+    await _goToStep(tester, 4);
     final selector = find.byKey(const ValueKey('voice-selector'));
-    final options = find.byKey(const ValueKey('voice-options'));
     await tester.scrollUntilVisible(selector, 400,
         scrollable: find.byType(Scrollable).first);
+    await tester.ensureVisible(selector);
     await tester.pumpAndSettle();
-    final barrierCount = find.byType(ModalBarrier).evaluate().length;
     await tester.tap(selector);
     await tester.pumpAndSettle();
-    expect(options, findsOneWidget);
-    expect(tester.getRect(options).top,
-        greaterThanOrEqualTo(tester.getRect(selector).bottom));
-    expect(find.byType(ModalBarrier).evaluate().length, barrierCount);
-    await tester.tap(find.byKey(const ValueKey('voice-option-boy')));
+    expect(find.byType(VoiceLibraryPage), findsOneWidget);
+    await tester.tap(find.text('我的音色'));
     await tester.pumpAndSettle();
-    expect(options, findsNothing);
-    expect(find.text('当前音色：暖暖'), findsOneWidget);
-    await tester.tap(selector);
+    await tester.tap(find.byKey(const ValueKey('voice-asset-voice-private')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('人物声音'));
+    await tester.tap(find.text('使用此音色'));
     await tester.pumpAndSettle();
-    expect(options, findsNothing);
+    expect(find.byType(VoiceLibraryPage), findsNothing);
+    expect(find.text('当前音色：自己的声音'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -131,6 +176,7 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(MaterialApp(
         home: RoleEditorPage(gateway: _RoleGateway(), roles: const [])));
+    await _goToStep(tester, 2);
     await tester.scrollUntilVisible(find.text('性格标签'), 400,
         scrollable: find.byType(Scrollable).first);
     await tester.ensureVisible(find.text('性格标签'));
@@ -160,17 +206,27 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(MaterialApp(
         home: RoleEditorPage(gateway: _RoleGateway(), roles: const [])));
-    for (final label in [
-      '人物头像',
-      '人物名称',
-      '人物关系',
-      '说话风格',
-      '性格标签',
-      '人物背景',
-      '人物声音'
-    ]) {
-      expect(find.text(label), findsOneWidget);
-    }
+    expect(find.text('1 / 5'), findsOneWidget);
+    await _nextStep(tester);
+    expect(find.text('1 / 5'), findsOneWidget);
+    expect(find.text('请填写此项人物资料'), findsOneWidget);
+    await tester.enterText(find.byKey(const ValueKey('role-name')), '倾听搭子');
+    expect(find.text('人物名称'), findsOneWidget);
+    expect(find.text('人物关系'), findsOneWidget);
+    await _nextStep(tester);
+    expect(find.text('2 / 5'), findsOneWidget);
+    await _nextStep(tester);
+    expect(find.text('3 / 5'), findsOneWidget);
+    await _nextStep(tester);
+    expect(find.text('4 / 5'), findsOneWidget);
+    await tester.enterText(
+        find.byKey(const ValueKey('role-background')), '住在海边，喜欢读书');
+    await _nextStep(tester);
+    expect(find.text('5 / 5'), findsOneWidget);
+    await tester.tap(find.byTooltip('上一步'));
+    await tester.pumpAndSettle();
+    expect(find.text('住在海边，喜欢读书'), findsOneWidget);
+    await _nextStep(tester);
     expect(find.text('一句话介绍'), findsNothing);
     expect(find.text('开场白'), findsNothing);
     final action = find.widgetWithText(FilledButton, '创建搭子');
@@ -189,7 +245,7 @@ void main() {
     expect(find.text('一句话介绍'), findsOneWidget);
     expect(find.text('开场白'), findsNothing);
     expect(find.byKey(const ValueKey('role-opening')), findsNothing);
-    expect(find.text('暂无可用的搭子音色，可以通过录音创建。'), findsOneWidget);
+    expect(find.text('创建新音色'), findsOneWidget);
     expect(tester.getRect(action).bottom, lessThanOrEqualTo(800));
     expect(tester.takeException(), isNull);
   });
@@ -210,14 +266,7 @@ void main() {
           voiceSourceId: 'mine'),
     ])));
     expect(find.text('上传头像'), findsOneWidget);
-    await tester.enterText(find.byKey(const ValueKey('role-name')), '倾听搭子');
-    await tester.scrollUntilVisible(
-        find.byKey(const ValueKey('role-background')), 400,
-        scrollable: find.byType(Scrollable).first);
-    await tester.enterText(
-        find.byKey(const ValueKey('role-background')), '住在海边，喜欢读书');
-    FocusManager.instance.primaryFocus?.unfocus();
-    await tester.pumpAndSettle();
+    await _goToStep(tester, 4);
     await tester.scrollUntilVisible(
         find.byKey(const ValueKey('voice-selector')), 300,
         scrollable: find.byType(Scrollable).first);
@@ -226,39 +275,18 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('voice-selector')));
     await tester.pumpAndSettle();
-    expect(find.text('系统音色'), findsNothing);
-    expect(find.text('已有搭子'), findsNothing);
-    expect(find.byKey(const ValueKey('voice-option-system')), findsOneWidget);
-    expect(
-        find.descendant(
-            of: find.byKey(const ValueKey('voice-option-system')),
-            matching: find.byType(AssistantAvatar)),
-        findsOneWidget);
-    expect(
-        find.descendant(
-            of: find.byKey(const ValueKey('voice-option-mine')),
-            matching: find.byType(AssistantAvatar)),
-        findsOneWidget);
-    final voiceImage = tester.widget<Image>(find
-        .descendant(
-            of: find.byKey(const ValueKey('voice-option-mine')),
-            matching: find.byType(Image))
-        .first);
-    final provider = voiceImage.image;
-    expect(
-        ((provider is ResizeImage ? provider.imageProvider : provider)
-                as AssetImage)
-            .assetName,
-        'assets/images/bingo_logo.webp');
-    await tester.tap(find.byKey(const ValueKey('voice-option-mine')));
+    expect(find.byType(VoiceLibraryPage), findsOneWidget);
+    await tester.tap(find.text('我的音色'));
     await tester.pumpAndSettle();
-    expect(find.text('我的姐姐'), findsOneWidget);
-    expect(find.text('当前音色：我的姐姐'), findsOneWidget);
-    await tester.ensureVisible(find.widgetWithText(FilledButton, '创建搭子'));
+    expect(find.byType(VoiceCover), findsWidgets);
+    await tester.tap(find.byKey(const ValueKey('voice-asset-voice-private')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('使用此音色'));
+    await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, '创建搭子'));
     await tester.pumpAndSettle();
     expect(gateway.savedName, '倾听搭子');
-    expect(gateway.savedVoice, 'mine');
+    expect(gateway.savedVoice, 'voice-private');
     expect(gateway.savedCategories, isNull);
     expect(gateway.savedTraits, hasLength(2));
     expect(gateway.savedRoleType, '陪伴伙伴');
@@ -278,15 +306,17 @@ void main() {
         roleType: '董事长',
         background: '一位虚构的董事长。',
         speakingStyle: '幽默风趣',
-        voiceSourceId: 'hidden-community-source');
+        voiceSourceId: 'hidden-community-source',
+        voiceId: 'voice-community',
+        voiceName: '社区声音');
     await tester.pumpWidget(MaterialApp(
         home:
             RoleEditorPage(gateway: gateway, roles: const [role], role: role)));
-    expect(find.text('当前音色：老雷'), findsOneWidget);
+    expect(find.text('当前音色：社区声音'), findsOneWidget);
     await tester.tap(find.widgetWithText(FilledButton, '保存修改'));
     await tester.pumpAndSettle();
     expect(gateway.savedName, '老雷');
-    expect(gateway.savedVoice, 'community-copy');
+    expect(gateway.savedVoice, 'voice-community');
     expect(tester.takeException(), isNull);
   });
 

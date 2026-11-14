@@ -1,3 +1,4 @@
+import 'package:bingo/core/design/bingo_page.dart';
 import 'package:bingo/core/widgets/bingo_confirm_dialog.dart';
 import 'package:bingo/core/theme/app_theme.dart';
 import 'dart:math';
@@ -266,47 +267,43 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
                   onPressed: _more,
                   icon: const Icon(Icons.more_horiz_rounded))
             ]),
-        bottomNavigationBar: SafeArea(
-            top: false,
-            child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
-                child: Row(children: [
-                  OutlinedButton.icon(
-                      onPressed: published ? () => _reaction(false) : null,
-                      style: OutlinedButton.styleFrom(
-                          minimumSize: const Size(0, 46),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12))),
-                      icon: Icon(
-                          share.favorite
-                              ? Icons.bookmark_rounded
-                              : Icons.bookmark_border_rounded,
-                          size: 18),
-                      label: const Text('收藏', style: TextStyle(fontSize: 13))),
-                  const SizedBox(width: 12),
-                  Expanded(
-                      child: FilledButton.icon(
-                          onPressed:
-                              _busy || (!published && _installedId == null)
-                                  ? null
-                                  : _install,
-                          style: FilledButton.styleFrom(
-                              minimumSize: const Size(0, 46),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12)),
-                              textStyle: const TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.w600)),
-                          icon: Icon(
-                              _installedId == null
-                                  ? Icons.add_rounded
-                                  : Icons.arrow_forward_rounded,
-                              size: 18),
-                          label: Text(_busy
-                              ? '正在添加…'
-                              : _installedId == null
-                                  ? '添加为我的搭子'
-                                  : '进入聊天'))),
-                ]))),
+        bottomNavigationBar: BingoActionBar(
+            child: Row(children: [
+          OutlinedButton.icon(
+              onPressed: published ? () => _reaction(false) : null,
+              style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 46),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12))),
+              icon: Icon(
+                  share.favorite
+                      ? Icons.bookmark_rounded
+                      : Icons.bookmark_border_rounded,
+                  size: 18),
+              label: const Text('收藏', style: TextStyle(fontSize: 13))),
+          const SizedBox(width: 12),
+          Expanded(
+              child: FilledButton.icon(
+                  onPressed: _busy || (!published && _installedId == null)
+                      ? null
+                      : _install,
+                  style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, 46),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      textStyle: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w600)),
+                  icon: Icon(
+                      _installedId == null
+                          ? Icons.add_rounded
+                          : Icons.arrow_forward_rounded,
+                      size: 18),
+                  label: Text(_busy
+                      ? '正在添加…'
+                      : _installedId == null
+                          ? '添加为我的搭子'
+                          : '进入聊天'))),
+        ])),
         body: SafeArea(
             bottom: false,
             child: ListView(
@@ -346,7 +343,9 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
                   const SizedBox(height: 14),
                   Text(share.introduction,
                       style: const TextStyle(
-                          fontSize: 14, height: 1.9, color: Color(0xFF566D61))),
+                          fontSize: 14,
+                          height: 1.9,
+                          color: BingoPalette.muted)),
                   const SizedBox(height: 26),
                   Text('认识一下 ${share.name}',
                       style: const TextStyle(
@@ -528,7 +527,7 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
                                               style: const TextStyle(
                                                   fontSize: 12,
                                                   height: 1.5,
-                                                  color: Color(0xFF6F7F7B))),
+                                                  color: BingoPalette.muted)),
                                         ])),
                                     if (item.mine || share.mine)
                                       IconButton(

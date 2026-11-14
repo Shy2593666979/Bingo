@@ -5,6 +5,7 @@ import 'package:bingo/features/auth/presentation/password_recovery_page.dart';
 import 'package:bingo/features/auth/presentation/user_agreement_page.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:flutter/material.dart';
+import 'package:bingo/core/design/bingo_wordmark.dart';
 
 enum _AuthMode { login, register }
 
@@ -71,23 +72,9 @@ class _AuthPageState extends State<AuthPage> {
     final colors = Theme.of(context).colorScheme;
     final isLogin = _mode == _AuthMode.login;
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
-          const Positioned(
-            top: -150,
-            left: -110,
-            child: _BackgroundGlow(size: 310),
-          ),
-          const Positioned(
-            top: 95,
-            right: -150,
-            child: _BackgroundGlow(size: 280),
-          ),
-          const Positioned(
-            bottom: -180,
-            left: -150,
-            child: _BackgroundGlow(size: 310),
-          ),
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
@@ -99,27 +86,10 @@ class _AuthPageState extends State<AuthPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Center(
-                          child: Container(
-                            width: 128,
-                            height: 128,
-                            padding: const EdgeInsets.all(7),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(38),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color(0x17205F4F),
-                                  blurRadius: 32,
-                                  offset: Offset(0, 12),
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(31),
-                              child:
-                                  Image.asset('assets/images/bingo_logo.webp'),
-                            ),
+                        const Center(
+                          child: SizedBox(
+                            height: 76,
+                            child: BingoWordmark(width: 124, height: 48),
                           ),
                         ),
                         const SizedBox(height: 22),
@@ -129,14 +99,15 @@ class _AuthPageState extends State<AuthPage> {
                           style: Theme.of(context)
                               .textTheme
                               .headlineLarge
-                              ?.copyWith(fontWeight: FontWeight.w800),
+                              ?.copyWith(
+                                  fontSize: 24, fontWeight: FontWeight.w500),
                         ),
                         const SizedBox(height: 5),
                         Text(
                           isLogin ? '登录后继续使用 Bingo' : '注册后开启你的 Bingo 之旅',
                           textAlign: TextAlign.center,
                           style: const TextStyle(
-                            color: Color(0xFF788390),
+                            color: Color(0xFF888888),
                             fontSize: 15,
                           ),
                         ),
@@ -232,21 +203,14 @@ class _AuthPageState extends State<AuthPage> {
                         ],
                         DecoratedBox(
                           decoration: BoxDecoration(
-                            gradient: BingoPalette.brandGradient,
+                            color: BingoPalette.primary,
                             borderRadius: BorderRadius.circular(20),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x3020A077),
-                                blurRadius: 22,
-                                offset: Offset(0, 8),
-                              ),
-                            ],
                           ),
                           child: FilledButton(
                             style: FilledButton.styleFrom(
                               backgroundColor: Colors.transparent,
                               shadowColor: Colors.transparent,
-                              minimumSize: const Size.fromHeight(58),
+                              minimumSize: const Size.fromHeight(48),
                             ),
                             onPressed: _submitting ? null : _submit,
                             child: _submitting
@@ -262,7 +226,7 @@ class _AuthPageState extends State<AuthPage> {
                                     children: [
                                       Text(
                                         isLogin ? '登录' : '注册并继续',
-                                        style: const TextStyle(fontSize: 18),
+                                        style: const TextStyle(fontSize: 16),
                                       ),
                                       const SizedBox(width: 12),
                                       const Icon(Icons.arrow_forward_rounded),
@@ -284,59 +248,45 @@ class _AuthPageState extends State<AuthPage> {
     );
   }
 
-  Widget _modeSelector() => Container(
-        height: 54,
-        padding: const EdgeInsets.all(5),
-        decoration: BoxDecoration(
-          color: const Color(0xFFEDF5F2),
-          borderRadius: BorderRadius.circular(27),
-        ),
-        child: Row(
-          children: [
-            for (final (mode, label) in const [
-              (_AuthMode.login, '登录'),
-              (_AuthMode.register, '注册'),
-            ])
-              Expanded(
-                child: InkWell(
+  Widget _modeSelector() => SizedBox(
+      height: 48,
+      child: Row(children: [
+        for (final (mode, label) in [
+          (_AuthMode.login, '登录'),
+          (_AuthMode.register, '注册')
+        ])
+          Expanded(
+              child: InkWell(
                   onTap: _submitting
                       ? null
                       : () => setState(() {
                             _mode = mode;
                             _error = null;
                           }),
-                  borderRadius: BorderRadius.circular(24),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: _mode == mode ? Colors.white : Colors.transparent,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: _mode == mode
-                          ? const [
-                              BoxShadow(
-                                color: Color(0x14205F4F),
-                                blurRadius: 10,
-                              ),
-                            ]
-                          : null,
-                    ),
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        color: _mode == mode
-                            ? BingoPalette.blue
-                            : const Color(0xFF788390),
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      );
+                  child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Expanded(
+                            child: Center(
+                                child: Text(label,
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: _mode == mode
+                                            ? FontWeight.w600
+                                            : FontWeight.w400,
+                                        color: _mode == mode
+                                            ? const Color(0xFF222222)
+                                            : const Color(0xFF999999))))),
+                        Container(
+                            width: 22,
+                            height: 3,
+                            decoration: BoxDecoration(
+                                color: _mode == mode
+                                    ? BingoPalette.primary
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(2))),
+                      ]))),
+      ]));
 
   Widget _agreement() => Center(
         child: FittedBox(
@@ -379,24 +329,6 @@ class _AuthPageState extends State<AuthPage> {
               fontWeight: FontWeight.w600,
               decoration: TextDecoration.none,
             ),
-          ),
-        ),
-      );
-}
-
-class _BackgroundGlow extends StatelessWidget {
-  const _BackgroundGlow({required this.size});
-
-  final double size;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        width: size,
-        height: size,
-        decoration: const BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(
-            colors: [Color(0x3667CDAE), Color(0x0067CDAE)],
           ),
         ),
       );

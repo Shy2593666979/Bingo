@@ -1,3 +1,4 @@
+import 'package:bingo/core/design/bingo_page.dart';
 import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/core/design/reference_design.dart';
 import 'package:bingo/core/widgets/center_toast.dart';
@@ -86,7 +87,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
   Widget build(BuildContext context) => PopScope(
       canPop: !_saving,
       child: Scaffold(
-          backgroundColor: BingoPalette.pageTop,
+          backgroundColor: Colors.white,
           appBar: AppBar(title: const Text('创建群聊'), centerTitle: true),
           body: ReferenceBackdrop(
               showHeaderArt: false,
@@ -102,8 +103,8 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
                           Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                  color: const Color(0xFFF4FBF7),
-                                  borderRadius: BorderRadius.circular(20)),
+                                  color: BingoPalette.softSurface,
+                                  borderRadius: BorderRadius.circular(16)),
                               child: Center(
                                   child: GroupAvatar.roles(
                                       _roles!
@@ -115,7 +116,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
                           const SizedBox(height: 22),
                           const Text('群聊名称',
                               style: TextStyle(
-                                  fontSize: 15, fontWeight: FontWeight.w800)),
+                                  fontSize: 15, fontWeight: FontWeight.w600)),
                           const SizedBox(height: 10),
                           TextField(
                               controller: _name,
@@ -126,10 +127,10 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
                           const SizedBox(height: 12),
                           Text('选择搭子 ${_selected.length}/8',
                               style: const TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.w800)),
+                                  fontSize: 15, fontWeight: FontWeight.w500)),
                           const SizedBox(height: 7),
                           const Text('最多可选择8位搭子',
-                              style: TextStyle(fontSize: 11, color: refMuted)),
+                              style: TextStyle(fontSize: 12, color: refMuted)),
                           const SizedBox(height: 12),
                           for (final role in _roles!)
                             Padding(
@@ -145,12 +146,12 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
                                         title: Text(role.displayName,
                                             style: const TextStyle(
                                                 fontSize: 15,
-                                                fontWeight: FontWeight.w800)),
+                                                fontWeight: FontWeight.w500)),
                                         subtitle: Text(role.cardDescription,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: const TextStyle(
-                                                fontSize: 11, color: refMuted)),
+                                                fontSize: 12, color: refMuted)),
                                         shape: RoundedRectangleBorder(
                                             borderRadius:
                                                 BorderRadius.circular(17)),
@@ -168,10 +169,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
                                                   }
                                                 })))),
                         ])),
-          bottomNavigationBar: SafeArea(
-              top: false,
-              child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
-                  child: ReferenceButton(_saving ? '正在创建…' : '创建群聊',
-                      onPressed: _saving ? null : _save)))));
+          bottomNavigationBar: BingoActionBar(
+              child: ReferenceButton(_saving ? '正在创建…' : '创建群聊',
+                  onPressed: _saving ? null : _save))));
 }

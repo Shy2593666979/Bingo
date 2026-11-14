@@ -1,3 +1,4 @@
+import 'package:bingo/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 class DiaryMoodSelector extends StatelessWidget {
@@ -33,12 +34,12 @@ class DiaryMoodSelector extends StatelessWidget {
                                       const EdgeInsets.fromLTRB(2, 12, 2, 9),
                                   decoration: BoxDecoration(
                                       color: value == moods[index]
-                                          ? const Color(0xFFEDF6EF)
+                                          ? BingoPalette.softSurface
                                           : Colors.transparent,
                                       borderRadius: BorderRadius.circular(17),
                                       border: Border.all(
                                           color: value == moods[index]
-                                              ? const Color(0xFFB4CEBE)
+                                              ? BingoPalette.blush
                                               : Colors.transparent)),
                                   child: Column(
                                       mainAxisSize: MainAxisSize.min,
@@ -55,8 +56,8 @@ class DiaryMoodSelector extends StatelessWidget {
                                             style: TextStyle(
                                                 fontSize: 11,
                                                 color: value == moods[index]
-                                                    ? const Color(0xFF3E7058)
-                                                    : const Color(0xFF73887D),
+                                                    ? BingoPalette.primary
+                                                    : BingoPalette.muted,
                                                 fontWeight:
                                                     value == moods[index]
                                                         ? FontWeight.w600
@@ -75,13 +76,13 @@ class _MoodPainter extends CustomPainter {
     canvas.scale(size.width / 40, size.height / 40);
     const fills = [
       Color(0xFFFFF1C9),
-      Color(0xFFE1F2E8),
+      BingoPalette.softSurface,
       Color(0xFFEEE9F5),
       Color(0xFFE5EFF8)
     ];
     const edges = [
       Color(0xFFB69954),
-      Color(0xFF56856A),
+      BingoPalette.primary,
       Color(0xFF9482A9),
       Color(0xFF7C9FB4)
     ];

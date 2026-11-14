@@ -42,11 +42,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('个人资料'), findsOneWidget);
+    expect(find.text('账号与安全'), findsOneWidget);
     expect(gateway.healthChecks, 1);
     await tester.scrollUntilVisible(find.text('服务在线'), 250);
     expect(find.text('服务在线'), findsOneWidget);
     expect(find.byIcon(Icons.refresh_rounded), findsNothing);
-    expect(find.text('账号与安全'), findsOneWidget);
     expect(find.text('服务端地址'), findsNothing);
     expect(find.text('本地网络传输'), findsNothing);
 

@@ -141,7 +141,7 @@ class _IncomingCallPageState extends State<IncomingCallPage> {
                   Text(
                     widget.invitation.callerName,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w500,
                           color: BingoPalette.ink,
                         ),
                   ),
@@ -150,7 +150,7 @@ class _IncomingCallPageState extends State<IncomingCallPage> {
                     Text(
                       role,
                       style: const TextStyle(
-                        color: Color(0xFF65716D),
+                        color: BingoPalette.muted,
                         fontSize: 15,
                       ),
                     ),
@@ -158,7 +158,7 @@ class _IncomingCallPageState extends State<IncomingCallPage> {
                   const SizedBox(height: 20),
                   Text(
                     '邀请你进行语音通话 · $_secondsLeft 秒',
-                    style: const TextStyle(color: Color(0xFF7A8581)),
+                    style: const TextStyle(color: BingoPalette.muted),
                   ),
                   const Spacer(flex: 3),
                   Row(
@@ -173,7 +173,7 @@ class _IncomingCallPageState extends State<IncomingCallPage> {
                       _IncomingCallAction(
                         icon: Icons.call_rounded,
                         label: _busy ? '连接中' : '接听',
-                        color: const Color(0xFF35B779),
+                        color: BingoPalette.primary,
                         onPressed: _busy ? null : _accept,
                       ),
                     ],

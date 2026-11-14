@@ -1,3 +1,4 @@
+import 'package:bingo/core/theme/app_theme.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -19,7 +20,7 @@ class CompanionSelectionPage extends StatefulWidget {
 
 class _CompanionSelectionPageState extends State<CompanionSelectionPage>
     with WidgetsBindingObserver {
-  static const green = Color(0xFF00A786);
+  static const accent = BingoPalette.primary;
   final _pager = PageController(viewportFraction: .80);
   final _audio = IntroductionAudioPlayer();
   final _selected = <String>{};
@@ -163,18 +164,17 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage>
   Widget _trait(String label, double s) => Container(
       padding: EdgeInsets.symmetric(horizontal: 10 * s, vertical: 4 * s),
       decoration: BoxDecoration(
-          color: const Color(0xFFDDF6E5),
-          borderRadius: BorderRadius.circular(20)),
+          color: BingoPalette.blush, borderRadius: BorderRadius.circular(20)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         TraitIcon(roleTraits[label] ?? 'chat',
-            size: 15 * s, color: const Color(0xFF36B758)),
+            size: 15 * s, color: BingoPalette.primary),
         SizedBox(width: 5 * s),
         Text(label,
             style: TextStyle(
                 fontSize: 11 * s,
                 height: 1.35,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF28753D)))
+                color: BingoPalette.primary))
       ]));
 
   Widget _card(RoleOption role, double s) {
@@ -187,7 +187,7 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage>
                 borderRadius: BorderRadius.circular(27),
                 boxShadow: [
                   BoxShadow(
-                      color: const Color(0xFF53CE9E).withValues(alpha: .16),
+                      color: BingoPalette.primary.withValues(alpha: .16),
                       blurRadius: 25,
                       offset: const Offset(0, 12))
                 ]),
@@ -201,7 +201,7 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage>
                           borderRadius: BorderRadius.circular(27),
                           border: Border.all(
                               color: selected
-                                  ? const Color(0xFF6CD5A1)
+                                  ? BingoPalette.primary
                                   : Colors.white.withValues(alpha: .94),
                               width: 2)),
                       child: Stack(fit: StackFit.expand, children: [
@@ -230,7 +230,7 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage>
                                     backgroundColor:
                                         Colors.white.withValues(alpha: .96)),
                                 icon: Icon(Icons.volume_up_rounded,
-                                    size: 22 * s, color: green))),
+                                    size: 22 * s, color: accent))),
                         Positioned(
                             left: 0,
                             right: 0,
@@ -255,9 +255,9 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage>
                                                           fontSize: 27 * s,
                                                           height: 1.15,
                                                           fontWeight:
-                                                              FontWeight.w800,
-                                                          color: const Color(
-                                                              0xFF123C29)))),
+                                                              FontWeight.w600,
+                                                          color: BingoPalette
+                                                              .ink))),
                                               SizedBox(height: 3 * s),
                                               Text(
                                                   intro['relation']
@@ -266,8 +266,8 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage>
                                                   style: TextStyle(
                                                       fontSize: 13 * s,
                                                       height: 1.4,
-                                                      color: const Color(
-                                                          0xFF71867A))),
+                                                      color:
+                                                          BingoPalette.muted)),
                                               SizedBox(height: 8 * s),
                                               Wrap(
                                                   spacing: 7 * s,
@@ -294,8 +294,8 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage>
                                                               fontWeight:
                                                                   FontWeight
                                                                       .w500,
-                                                              color: const Color(
-                                                                  0xFF667D70))))),
+                                                              color: BingoPalette
+                                                                  .muted)))),
                                               SizedBox(height: 10 * s),
                                               SizedBox(
                                                   width: double.infinity,
@@ -303,8 +303,8 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage>
                                                   child: DecoratedBox(
                                                       decoration: BoxDecoration(
                                                           borderRadius:
-                                                              BorderRadius
-                                                                  .circular(30),
+                                                              BorderRadius.circular(
+                                                                  30),
                                                           gradient:
                                                               LinearGradient(
                                                                   begin: Alignment
@@ -314,19 +314,19 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage>
                                                                   colors:
                                                                       selected
                                                                           ? const [
-                                                                              Color(0xFFE7F9ED),
-                                                                              Color(0xFFDDF4E7)
+                                                                              BingoPalette.softSurface,
+                                                                              BingoPalette.softSurface
                                                                             ]
                                                                           : const [
-                                                                              Color(0xFF59D7AD),
-                                                                              Color(0xFF06A873),
-                                                                              Color(0xFF009E6C)
+                                                                              BingoPalette.primary,
+                                                                              BingoPalette.primary,
+                                                                              BingoPalette.primary
                                                                             ]),
                                                           boxShadow: selected
                                                               ? []
                                                               : [
                                                                   BoxShadow(
-                                                                      color: const Color(0xFF00AE78).withValues(
+                                                                      color: BingoPalette.primary.withValues(
                                                                           alpha:
                                                                               .15),
                                                                       blurRadius:
@@ -351,8 +351,9 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage>
                                                               padding: EdgeInsets.symmetric(
                                                                   horizontal:
                                                                       6 * s),
-                                                              backgroundColor: Colors
-                                                                  .transparent,
+                                                              backgroundColor:
+                                                                  Colors
+                                                                      .transparent,
                                                               disabledBackgroundColor:
                                                                   Colors
                                                                       .transparent,
@@ -360,11 +361,10 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage>
                                                                   .transparent,
                                                               foregroundColor:
                                                                   selected
-                                                                      ? green
+                                                                      ? accent
                                                                       : Colors
                                                                           .white),
-                                                          child:
-                                                              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                                                          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                                                             Icon(
                                                                 selected
                                                                     ? Icons
@@ -393,19 +393,19 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage>
   @override
   Widget build(BuildContext context) => AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
-          statusBarColor: Color(0xFFF0FCF6),
+          statusBarColor: BingoPalette.softSurface,
           statusBarIconBrightness: Brightness.dark,
           statusBarBrightness: Brightness.light,
-          systemNavigationBarColor: Color(0xFFF0FCF6),
+          systemNavigationBarColor: BingoPalette.softSurface,
           systemNavigationBarIconBrightness: Brightness.dark),
       child: Scaffold(
-          backgroundColor: const Color(0xFFF0FCF6),
+          backgroundColor: BingoPalette.softSurface,
           body: DecoratedBox(
               decoration: const BoxDecoration(
                   gradient: RadialGradient(
                       center: Alignment(0, -.1),
                       radius: 1.15,
-                      colors: [Color(0xFFDEF9EB), Color(0xFFF2FCF8)])),
+                      colors: [BingoPalette.blush, BingoPalette.softSurface])),
               child: SafeArea(
                   child: LayoutBuilder(builder: (context, constraints) {
                 final s = (constraints.maxHeight / 776).clamp(.78, 1.1);
@@ -417,10 +417,10 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage>
                             painter: const _TitleUnderline(),
                             child: Text('选几位喜欢的搭子',
                                 style: TextStyle(
-                                    fontSize: 26 * s,
+                                    fontSize: 24 * s,
                                     height: 1.4,
-                                    fontWeight: FontWeight.w800,
-                                    color: const Color(0xFF0D3624)))),
+                                    fontWeight: FontWeight.w600,
+                                    color: BingoPalette.ink))),
                         SizedBox(height: 8 * s),
                         Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -428,17 +428,17 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage>
                               Container(
                                   width: 24 * s,
                                   height: 1,
-                                  color: const Color(0xFFB5DDC8)),
+                                  color: BingoPalette.blush),
                               SizedBox(width: 12 * s),
                               Text('左右滑动，听听 TA 的介绍',
                                   style: TextStyle(
                                       fontSize: 13 * s,
-                                      color: const Color(0xFF71877C))),
+                                      color: BingoPalette.muted)),
                               SizedBox(width: 12 * s),
                               Container(
                                   width: 24 * s,
                                   height: 1,
-                                  color: const Color(0xFFB5DDC8))
+                                  color: BingoPalette.blush)
                             ])
                       ])),
                   Expanded(
@@ -502,7 +502,7 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage>
                                   onPressed: () => _nudge(-1),
                                   icon: Icon(Icons.chevron_left_rounded,
                                       size: 25 * s,
-                                      color: const Color(0xFF66A88E))),
+                                      color: BingoPalette.primary)),
                               Padding(
                                   padding:
                                       EdgeInsets.symmetric(horizontal: 8 * s),
@@ -510,15 +510,15 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage>
                                       '${(_index + 1).toString().padLeft(2, '0')} / ${_roles.length.toString().padLeft(2, '0')}',
                                       style: TextStyle(
                                           fontSize: 15 * s,
-                                          fontWeight: FontWeight.w800,
-                                          color: const Color(0xFF1D4533),
+                                          fontWeight: FontWeight.w600,
+                                          color: BingoPalette.ink,
                                           letterSpacing: .5))),
                               IconButton(
                                   tooltip: '下一位',
                                   onPressed: () => _nudge(1),
                                   icon: Icon(Icons.chevron_right_rounded,
                                       size: 25 * s,
-                                      color: const Color(0xFF66A88E)))
+                                      color: BingoPalette.primary))
                             ])),
                   if (_audioError != null)
                     TextButton(
@@ -545,13 +545,13 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage>
                                     TextSpan(
                                         text: '${_selected.length}',
                                         style: const TextStyle(
-                                            color: Color(0xFF1FA648),
-                                            fontWeight: FontWeight.w800)),
+                                            color: BingoPalette.primary,
+                                            fontWeight: FontWeight.w600)),
                                     const TextSpan(text: ' 位')
                                   ]),
                                   style: TextStyle(
                                       fontSize: 13 * s,
-                                      color: const Color(0xFF6D8477)))),
+                                      color: BingoPalette.muted))),
                           SizedBox(width: 12 * s),
                           Expanded(
                               child: SizedBox(
@@ -589,8 +589,8 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage>
                                                                     Icons
                                                                         .cancel,
                                                                     size: 11,
-                                                                    color: Color(
-                                                                        0xFF547C6A)))
+                                                                    color: BingoPalette
+                                                                        .primary))
                                                           ]))))))
                                           .toList())))
                         ]),
@@ -609,11 +609,10 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage>
                                     ? null
                                     : _submit,
                                 style: FilledButton.styleFrom(
-                                    backgroundColor: green,
+                                    backgroundColor: accent,
                                     disabledBackgroundColor:
-                                        const Color(0xFFE3EEEA),
-                                    disabledForegroundColor:
-                                        const Color(0xFF92AAA0),
+                                        BingoPalette.softSurface,
+                                    disabledForegroundColor: BingoPalette.muted,
                                     shape: RoundedRectangleBorder(
                                         borderRadius:
                                             BorderRadius.circular(13))),
@@ -656,7 +655,7 @@ class _CompanionBackdrop extends CustomPainter {
           ..shader = const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFFE8FAF2), Color(0xFFD9F7E9)])
+                  colors: [BingoPalette.softSurface, BingoPalette.blush])
               .createShader(rect));
     canvas.drawPath(
         Path()
@@ -666,7 +665,7 @@ class _CompanionBackdrop extends CustomPainter {
           ..lineTo(size.width, size.height)
           ..lineTo(0, size.height)
           ..close(),
-        Paint()..color = const Color(0xFFBAEFCF).withValues(alpha: .45));
+        Paint()..color = BingoPalette.blush.withValues(alpha: .45));
     canvas.drawPath(
         Path()
           ..moveTo(0, size.height * .47)
@@ -675,7 +674,7 @@ class _CompanionBackdrop extends CustomPainter {
           ..lineTo(size.width, size.height)
           ..lineTo(0, size.height)
           ..close(),
-        Paint()..color = const Color(0xFFE5FAEC).withValues(alpha: .75));
+        Paint()..color = BingoPalette.softSurface.withValues(alpha: .75));
   }
 
   @override
@@ -687,7 +686,7 @@ class _NameUnderline extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) => canvas.drawOval(
       Rect.fromLTWH(1, size.height * .70, size.width + 13, size.height * .25),
-      Paint()..color = const Color(0xFFDDF7E5));
+      Paint()..color = BingoPalette.blush);
   @override
   bool shouldRepaint(_NameUnderline oldDelegate) => false;
 }
@@ -701,7 +700,7 @@ class _TitleUnderline extends CustomPainter {
         ..quadraticBezierTo(
             size.width * .84, size.height - 5, size.width, size.height - 1),
       Paint()
-        ..color = const Color(0xFF6DDBA0).withValues(alpha: .8)
+        ..color = BingoPalette.primary.withValues(alpha: .8)
         ..strokeWidth = 3
         ..strokeCap = StrokeCap.round
         ..style = PaintingStyle.stroke);

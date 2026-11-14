@@ -83,7 +83,7 @@ class _BirthdayPickerSheetState extends State<BirthdayPickerSheet> {
           padding: const EdgeInsets.all(22),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             const Text('选择生日',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
             const SizedBox(height: 22),
             SizedBox(
                 height: 156,
@@ -103,7 +103,7 @@ class _BirthdayPickerSheetState extends State<BirthdayPickerSheet> {
                                 squeeze: 1,
                                 selectionOverlay: const DecoratedBox(
                                     decoration: BoxDecoration(
-                                        color: Color(0x1A67CDAE))),
+                                        color: Color(0x1ABA624B))),
                                 childCount: [
                                   _today.year - 1900 + 1,
                                   _lastMonth,
@@ -130,7 +130,7 @@ class _BirthdayPickerSheetState extends State<BirthdayPickerSheet> {
                                                   : FontWeight.w400,
                                               color: selected
                                                   ? BingoPalette.blue
-                                                  : const Color(0xFF7D918A))));
+                                                  : BingoPalette.muted)));
                                 }))),
                   ]
                 ])),
