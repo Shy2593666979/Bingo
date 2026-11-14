@@ -31,6 +31,7 @@ class Role(SQLModel, table=True):
     )
     avatar: str = Field(max_length=255)
     voice: str = Field(default="", max_length=255)
+    voice_id: str | None = Field(default=None, foreign_key="voices.id", index=True)
     enabled: bool = Field(default=True, sa_column=Column(Boolean, nullable=False, index=True))
     sort_order: int = Field(default=0, sa_column=Column(Integer, nullable=False))
     owner_id: str | None = Field(default=None, index=True, max_length=36)
@@ -85,6 +86,7 @@ class RolePreference(SQLModel, table=True):
     role_id: str = Field(primary_key=True, max_length=36)
     personality: str = Field(max_length=30)
     speaking_style: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
+    voice_id: str | None = Field(default=None, foreign_key="voices.id", index=True)
 
 
 class UserCompanion(SQLModel, table=True):
@@ -99,7 +101,8 @@ class VoiceJob(SQLModel, table=True):
 
     id: str = Field(default_factory=new_id, primary_key=True, max_length=36)
     user_id: str = Field(index=True, max_length=36)
-    role_id: str = Field(index=True, max_length=36)
+    role_id: str = Field(default="", index=True, max_length=36)
+    voice_id: str | None = Field(default=None, foreign_key="voices.id", index=True)
     kind: str = Field(default="clone", max_length=20)
     status: str = Field(default="pending", max_length=20, index=True)
     voice: str = Field(default="", max_length=255)

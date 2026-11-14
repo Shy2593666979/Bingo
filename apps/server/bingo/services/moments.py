@@ -1,3 +1,4 @@
+
 import re
 from datetime import timedelta
 from uuid import NAMESPACE_URL, uuid5
@@ -10,6 +11,7 @@ from bingo.db.repositories import ConversationRepository, RoleRepository
 from bingo.db.time import beijing_now
 from bingo.schemas.moments import MomentFinishRequest, MomentRequest
 from bingo.services.chat import _require_completed_profile
+from bingo.services.voices import effective_role
 
 
 async def _identity(context, session, user, conversation_id):
@@ -54,6 +56,7 @@ def narrative_prompt(payload: MomentRequest) -> str:
 async def subscribe_moment(payload, context, session, user):
     _, role, identity = await _identity(context, session, user, payload.conversation_id)
     messages = [ModelMessage("system", identity), ModelMessage("user", narrative_prompt(payload))]
+    role = await effective_role(session, user.id, role)
     voice = (role.voice if role else "") or context.settings.realtime_call.voice
     user_id = user.id
     await session.rollback()

@@ -21,6 +21,7 @@ from bingo.db.models import (
     RolePreference,
     User,
     UserCompanion,
+    Voice,
     VoiceJob,
 )
 from bingo.db.models.stickers import UserSticker
@@ -75,6 +76,8 @@ async def delete_account(user: User, session: AsyncSession, context: ServiceCont
     await session.exec(delete(UserSticker).where(UserSticker.user_id == user_id))
     jobs = list((await session.exec(select(VoiceJob).where(VoiceJob.user_id == user_id))).all())
     voices = {role.owned_voice for role in roles if role.owned_voice}
+    assets = (await session.exec(select(Voice).where(Voice.owner_id == user_id))).all()
+    voices.update(asset.provider_voice for asset in assets if asset.provider_voice)
     voices.update(job.voice for job in jobs if job.kind in {"clone", "delete"} and job.voice)
     prefixes = {
         "u" + job.id.replace("-", "")[:9]
@@ -127,6 +130,7 @@ async def delete_account(user: User, session: AsyncSession, context: ServiceCont
     )
     await session.exec(delete(RolePreference).where(RolePreference.role_id.in_(role_ids)))
     await session.exec(delete(Role).where(Role.owner_id == user_id))
+    await session.exec(delete(Voice).where(Voice.owner_id == user_id))
     await session.commit()
     for identifier in stickers:
         try:

@@ -22,6 +22,7 @@ from bingo.roles.community_catalog import (
     community_share_id,
 )
 from bingo.schemas.avatar import validate_avatar
+from bingo.schemas.roles import RolePayload
 from bingo.services.roles import response_for_user
 from tests.api_support import api_payload
 from tests.test_added_companion_welcome import WelcomeModel, drain, register
@@ -74,10 +75,22 @@ def test_seed_install_uses_the_copy_voice_and_personalized_welcome(client, entry
     assert not copied["builtin"]
     assert copied["character_name"] == character.name
     assert copied["relationship"] == character.relationship
+    assert copied["speaking_style"] == character.speaking_style
+    assert copied["background"] == character.background
+    assert copied["personality_tags"] == list(character.personality_tags)
     assert copied["source_publication_id"] == share_id
     assert validate_avatar(copied["avatar_data"]) == copied["avatar_data"]
     assert base64.b64decode(copied["avatar_data"]).startswith(b"\x89PNG\r\n\x1a\n")
     assert copied["voice_source_id"] == role_id(character.code)
+    # Validate the current editor fields rather than its legacy personality alias.
+    editor_payload = {
+        key: copied[key]
+        for key in (
+            "character_name", "relationship", "speaking_style", "personality_tags",
+            "background", "avatar_data", "voice_source_id", "categories",
+        )
+    }
+    RolePayload.model_validate(editor_payload)
     assert api_payload(client.post(route))["id"] == copied["id"]
     drain(client)
     opened = api_payload(client.post(P + f"/roles/{copied['id']}/conversation"))
@@ -86,6 +99,8 @@ def test_seed_install_uses_the_copy_voice_and_personalized_welcome(client, entry
     assert messages[0]["content"].startswith(f"小林，我是{character.name}。")
     assert len(api_payload(client.get(P + "/roles"))) == 13
     assert len(api_payload(client.get(P + "/onboarding/companions"))) == 12
+    saved = client.put(P + f"/roles/{copied['id']}", json=editor_payload)
+    assert saved.status_code == 200, saved.text
     edited = client.put(
         P + f"/roles/{copied['id']}",
         json={

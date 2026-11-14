@@ -28,6 +28,7 @@ from .push import PushDevice, PushOutbox
 from .roles import Role, RolePreference, UserCompanion, VoiceJob
 from .stickers import UserSticker
 from .users import AuthSession, User
+from .voices import Voice
 from .welcome import WelcomeJob
 
 __all__ = [
@@ -36,6 +37,7 @@ __all__ = [
     "RolePreference",
     "UserCompanion",
     "VoiceJob",
+    "Voice",
     "User",
     "AuthSession",
     "DeviceAction",

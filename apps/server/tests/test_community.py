@@ -22,6 +22,35 @@ PREFIX = "/api/v1"
 AVATAR = base64.b64encode(b"\x89PNG\r\n\x1a\n" + b"\x00" * 8 + b"\x00\x00\x00\x01" * 2).decode()
 
 
+def test_new_shares_reject_post_images_but_keep_character_avatar(community):
+    client, ((alice, _), _, _) = community
+    role = create_role(client, alice)
+    payload = {
+        "role_id": role["id"],
+        "introduction": "分享搭子本身，不附带配图",
+        "request_id": "share-without-post-images",
+    }
+    rejected = client.post(
+        PREFIX + "/community/characters",
+        headers=alice,
+        json={**payload, "images": [AVATAR]},
+    )
+    assert rejected.status_code == 422
+    accepted = client.post(
+        PREFIX + "/community/characters", headers=alice, json={**payload, "images": []}
+    )
+    assert accepted.status_code == 201
+    share = api_payload(accepted)
+    assert not share["has_images"]
+    assert share["image_count"] == 0
+    assert (
+        client.get(
+            PREFIX + f"/community/characters/{share['id']}/avatar", headers=alice
+        ).status_code
+        == 200
+    )
+
+
 def test_search_finds_another_users_shares_by_author_name(community):
     client, ((alice, _), (bob, _), (charlie, _)) = community
     assert (

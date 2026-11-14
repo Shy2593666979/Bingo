@@ -401,7 +401,7 @@ def test_short_recordings_and_consent_are_checked_server_side(client):
     assert "没有检测到声音" in api_payload(response)["detail"]
 
 
-def test_clone_job_cleans_sample_and_delete_invalidates_reused_voice(client, monkeypatch):
+def test_clone_job_cleans_sample_and_role_deletion_preserves_reusable_voice(client, monkeypatch):
     calls = []
 
     async def provider(self, action, **values):
@@ -456,13 +456,13 @@ def test_clone_job_cleans_sample_and_delete_invalidates_reused_voice(client, mon
     client.portal.call(finish_jobs)
     assert api_payload(client.get("/api/v1/me"))["role"] == "女朋友"
     remaining = api_payload(client.get("/api/v1/roles"))
-    fallback = next(item for item in remaining if item["name"] == "女朋友")
     assert (
-        next(item for item in remaining if item["id"] == second["id"])["voice_source_id"]
-        == fallback["id"]
+        next(item for item in remaining if item["id"] == second["id"])["voice_id"]
+        == second["voice_id"]
     )
     assert client.post(f"/api/v1/roles/{role['id']}/voice-preview").status_code == 404
-    assert ("delete_voice", {"voice_id": "private-clone"}) in calls
+    assert client.post(f"/api/v1/voices/{second['voice_id']}/preview").status_code == 200
+    assert ("delete_voice", {"voice_id": "private-clone"}) not in calls
 
 
 def test_voice_sample_is_temporary_and_unavailable_after_role_deletion(client):

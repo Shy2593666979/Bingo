@@ -114,8 +114,18 @@ def test_group_speech_uses_persisted_body_and_role_voice_with_owner_check(v2, mo
 
     async def set_voice():
         async with client.app.state.database.session_factory() as session:
+            from bingo.db.models import Voice
+
+            asset = Voice(
+                name="测试群聊音色",
+                provider_voice="role-specific-test-voice",
+                scope="system",
+                status="ready",
+            )
+            session.add(asset)
+            await session.flush()
             role = await session.get(Role, message["sender_role_id"])
-            role.voice = "role-specific-test-voice"
+            role.voice_id = asset.id
             await session.commit()
 
     client.portal.call(set_voice)

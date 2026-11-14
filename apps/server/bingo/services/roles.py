@@ -1,7 +1,5 @@
 import base64
-import binascii
 import json
-import secrets
 from datetime import timedelta
 
 from sqlalchemy import func
@@ -15,6 +13,7 @@ from bingo.db.models import (
     Role,
     RolePreference,
     User,
+    Voice,
     VoiceJob,
     new_id,
 )
@@ -25,10 +24,10 @@ from bingo.roles.catalog import BUILTIN_NICKNAMES, default_personality
 from bingo.roles.persona import speaking_style_for
 from bingo.schemas.chat import ConversationResponse
 from bingo.schemas.roles import ClonePayload, RolePayload
+from bingo.services import voices as voice_assets
 from bingo.services.companion_welcome import enqueue_role_welcome
 from bingo.services.context import BinaryAsset, ServiceContext
 from bingo.services.exceptions import ServiceError
-from bingo.services.voice_cloning import pcm_has_signal, pcm_wav
 from bingo.utils.stickers.content import preview_content
 
 
@@ -59,6 +58,7 @@ def role_response(
         "has_voice": bool(role.voice),
         "has_cloned_voice": bool(role.owned_voice),
         "voice_source_id": role.voice_source_id,
+        "voice_id": role.voice_id,
         "categories": json.loads(role.categories_json),
         "traits": json.loads(role.traits_json),
         "source_publication_id": role.source_publication_id,
@@ -80,9 +80,7 @@ async def apply_payload(session, user, role: Role, payload: RolePayload) -> None
         raise ServiceError(422, "请填写人物背景")
     available = (
         await session.exec(
-            select(Role).where(
-                Role.deleted.is_(False), RoleRepository.scope(user.id)
-            )
+            select(Role).where(Role.deleted.is_(False), RoleRepository.scope(user.id))
         )
     ).all()
     if any(
@@ -90,21 +88,30 @@ async def apply_payload(session, user, role: Role, payload: RolePayload) -> None
         for item in available
     ):
         raise ServiceError(409, "已有同名角色，请换一个名称")
-    source = await session.get(Role, payload.voice_source_id or role_id("girlfriend"))
-    if payload.voice_source_id == role.id and role.owned_voice:
-        role.voice = role.owned_voice
-        role.voice_source_id = role.id
-    elif (
-        source and source.enabled and (not source.deleted) and (source.owner_id in {None, user.id})
-    ):
-        role.voice = source.voice
-        role.voice_source_id = source.voice_source_id or source.id
+    if payload.voice_id:
+        asset = await voice_assets.get_voice(session, user.id, payload.voice_id, ready=True)
+        role.voice_source_id = None
+    elif role.voice_id and "voice_source_id" not in payload.model_fields_set:
+        asset = await voice_assets.get_voice(session, user.id, role.voice_id, ready=True)
     else:
+        source = await session.get(Role, payload.voice_source_id or role_id("girlfriend"))
+        if payload.voice_source_id == role.id and role.owned_voice:
+            asset = await voice_assets.legacy_asset(session, role, owned=True)
+            role.voice_source_id = role.id
+        elif (
+            source and source.enabled and not source.deleted and source.owner_id in {None, user.id}
+        ):
+            asset = await voice_assets.legacy_asset(session, source)
+            role.voice_source_id = source.voice_source_id or source.id
+        elif role.voice_id and payload.voice_source_id == role.voice_source_id:
+            asset = await voice_assets.get_voice(session, user.id, role.voice_id, ready=True)
+        else:
+            raise ServiceError(422, "所选音色已失效，请重新选择")
+    if asset is None:
         raise ServiceError(422, "所选音色已失效，请重新选择")
+    role.voice_id, role.voice = asset.id, asset.provider_voice
     role.display_name = payload.name
-    role.description = (
-        payload.description if payload.description is not None else background[:200]
-    )
+    role.description = payload.description if payload.description is not None else background[:200]
     role.background = background
     role.prompt = background  # Compatibility for older clients and community snapshots.
     if payload.speaking_style is not None:
@@ -126,7 +133,9 @@ async def save_personality(session, user, role, personality, speaking_style=None
     preference = await session.get(RolePreference, (user.id, role.id))
     if preference is None:
         preference = RolePreference(
-            user_id=user.id, role_id=role.id, personality=personality or "温柔体贴",
+            user_id=user.id,
+            role_id=role.id,
+            personality=personality or "温柔体贴",
             speaking_style=speaking_style,
         )
         session.add(preference)
@@ -138,10 +147,15 @@ async def save_personality(session, user, role, personality, speaking_style=None
 
 async def response_for_user(session, user, role):
     preference = await session.get(RolePreference, (user.id, role.id))
-    return role_response(
-        role, preference.personality if preference else default_personality(role, user.personality),
+    effective = await voice_assets.effective_role(session, user.id, role)
+    response = role_response(
+        effective,
+        preference.personality if preference else default_personality(role, user.personality),
         speaking_style_for(role, user.personality, preference),
     )
+    asset = await session.get(Voice, effective.voice_id) if effective.voice_id else None
+    response["voice_name"] = asset.name if asset and not asset.deleted else None
+    return response
 
 
 async def list_roles(user: User, session: AsyncSession) -> list[dict]:
@@ -202,19 +216,32 @@ async def open_role_conversation(
     if not await RoleRepository(session).can_access(user, role):
         raise ServiceError(404, "角色不存在")
     conversation = await ConversationRepository(session, user.id).get_or_create(None, role.id)
-    welcome = (await session.exec(select(Message).where(
-        Message.conversation_id == conversation.id,
-        Message.run_id.startswith("welcome-"))
-        .order_by(Message.created_at.desc()).limit(1))).first()
-    welcome_unread = bool(welcome and (welcome.status == "streaming" or
-        conversation.last_read_at is None or welcome.created_at > conversation.last_read_at))
+    welcome = (
+        await session.exec(
+            select(Message)
+            .where(
+                Message.conversation_id == conversation.id, Message.run_id.startswith("welcome-")
+            )
+            .order_by(Message.created_at.desc())
+            .limit(1)
+        )
+    ).first()
+    welcome_unread = bool(
+        welcome
+        and (
+            welcome.status == "streaming"
+            or conversation.last_read_at is None
+            or welcome.created_at > conversation.last_read_at
+        )
+    )
     conversation.last_read_at = beijing_now()
     user.role_id = role.id
     user.role = role.visible_name
     user.assistant_name = role.nickname
     await session.commit()
     return ConversationResponse.model_validate(conversation, from_attributes=True).model_copy(
-        update={"welcome_unread": welcome_unread})
+        update={"welcome_unread": welcome_unread}
+    )
 
 
 async def create_role(payload: RolePayload, user: User, session: AsyncSession) -> dict:
@@ -241,16 +268,20 @@ async def update_role(
 ) -> dict:
     role = await session.get(Role, identifier)
     if (
-        not role or role.deleted or role.owner_id not in {None, user.id}
+        not role
+        or role.deleted
+        or role.owner_id not in {None, user.id}
         or (role.owner_id is None and not await RoleRepository(session).can_access(user, role))
     ):
         raise ServiceError(404, "角色不存在")
     if role.owner_id is None:
         if not role.enabled:
             raise ServiceError(404, "角色不存在")
-        if payload.personality is None and payload.speaking_style is None:
+        if payload.personality is None and payload.speaking_style is None and not payload.voice_id:
             raise ServiceError(422, "请填写说话风格")
         await save_personality(session, user, role, payload.personality, payload.speaking_style)
+        if payload.voice_id:
+            await voice_assets.assign_voice(role.id, payload.voice_id, user, session)
         await session.commit()
         return await response_for_user(session, user, role)
     was_draft = not role.enabled
@@ -270,10 +301,9 @@ async def delete_role(
 ) -> None:
     role = await owned_role(session, user, identifier)
     fallback = await session.get(Role, role_id("girlfriend"))
-    affected = (await session.exec(select(Role).where(Role.voice_source_id == role.id))).all()
-    for dependent in affected:
-        dependent.voice = fallback.voice
-        dependent.voice_source_id = fallback.id
+    # Keep independently owned sounds even when their original companion is removed.
+    if role.owned_voice:
+        await voice_assets.legacy_asset(session, role, owned=True)
     selected = (await session.exec(select(User).where(User.role_id == role.id))).all()
     for selected_user in selected:
         selected_user.role_id = fallback.id
@@ -289,39 +319,12 @@ async def delete_role(
     ).all()
     for invitation in invitations:
         invitation.status = "cancelled"
-    cleanups = []
-    if role.owned_voice:
-        cleanups.append(
-            VoiceJob(user_id=user.id, role_id=role.id, kind="delete", voice=role.owned_voice)
-        )
-    uncertain_jobs = (
-        await session.exec(
-            select(VoiceJob).where(
-                VoiceJob.role_id == role.id,
-                VoiceJob.kind == "clone",
-                VoiceJob.status.in_(["failed", "pending", "processing"]),
-            )
-        )
-    ).all()
-    for job in uncertain_jobs:
-        cleanups.append(
-            VoiceJob(
-                user_id=user.id,
-                role_id=role.id,
-                kind="delete_prefix",
-                voice="u" + job.id.replace("-", "")[:9],
-            )
-        )
-    for cleanup in cleanups:
-        session.add(cleanup)
     role.deleted = True
     role.enabled = False
     role.voice = ""
     role.owned_voice = ""
     role.avatar_data = None
     await session.commit()
-    for cleanup in cleanups:
-        context.voice_cloning.schedule(cleanup.id)
     return None
 
 
@@ -332,59 +335,30 @@ async def clone_voice(
     session: AsyncSession,
     context: ServiceContext,
 ) -> dict:
-    await owned_role(session, user, identifier)
-    if not payload.consent:
-        raise ServiceError(422, "请确认录音为本人声音或已获得授权")
-    try:
-        audio = base64.b64decode(payload.audio, validate=True)
-    except (ValueError, binascii.Error) as error:
-        raise ServiceError(422, "录音格式无效") from error
-    if len(audio) < 16000 * 2 * 15:
-        raise ServiceError(422, "录音时间太短，请重新录制")
-    if len(audio) > 16000 * 2 * 60 or len(audio) % 2:
-        raise ServiceError(422, "请录制 15～60 秒的音频")
-    if not pcm_has_signal(audio):
-        raise ServiceError(422, "录音没有检测到声音，请检查麦克风后重新录制")
-    settings = context.settings
-    if not settings.realtime_call.api_key:
-        raise ServiceError(503, "服务器尚未配置声音复刻")
-    pending = (
-        await session.exec(
-            select(VoiceJob).where(
-                VoiceJob.role_id == identifier,
-                VoiceJob.kind == "clone",
-                VoiceJob.status.in_(["pending", "processing"]),
-            )
-        )
-    ).first()
-    if pending:
-        return {"id": pending.id, "status": pending.status}
-    public_url = settings.voice_cloning.public_base_url.rstrip("/")
-    if not public_url:
-        public_url = str(context.public_base_url).rstrip("/") + settings.server.api_prefix
-    job = (
+    role = await owned_role(session, user, identifier)
+    # Compatibility endpoint: cloning still creates a reusable asset, never a role-owned voice.
+    previous_job = (
         await session.exec(
             select(VoiceJob)
             .where(
-                VoiceJob.role_id == identifier,
+                VoiceJob.role_id == role.id,
+                VoiceJob.user_id == user.id,
                 VoiceJob.kind == "clone",
-                VoiceJob.status == "failed",
+                VoiceJob.voice_id.is_not(None),
             )
             .order_by(VoiceJob.created_at.desc())
         )
     ).first()
-    if job is None:
-        job = VoiceJob(user_id=user.id, role_id=identifier)
-    job.status = "pending"
-    job.error = None
-    job.created_at = beijing_now()
-    job.sample = base64.b64encode(pcm_wav(audio)).decode()
-    job.sample_token = secrets.token_urlsafe(32)
-    job.public_base_url = public_url
-    session.add(job)
-    await session.commit()
-    context.voice_cloning.schedule(job.id)
-    return {"id": job.id, "status": job.status}
+    asset = await session.get(Voice, previous_job.voice_id) if previous_job else None
+    if asset is None or asset.deleted or asset.owner_id != user.id:
+        asset = await voice_assets.legacy_asset(session, role, owned=True)
+    if asset is None:
+        asset = Voice(name=f"{role.nickname}的声音", owner_id=user.id)
+        session.add(asset)
+        await session.flush()
+    return await voice_assets.clone_voice(
+        asset.id, payload, user, session, context, legacy_role_id=role.id
+    )
 
 
 async def voice_job(
@@ -398,6 +372,7 @@ async def voice_job(
         "status": job.status,
         "error": job.error,
         "stage": context.voice_cloning.stages.get(job.id, job.status),
+        "voice_id": job.voice_id,
     }
 
 
@@ -410,9 +385,14 @@ async def voice_sample(token: str, session: AsyncSession) -> BinaryAsset:
         or (job.created_at < beijing_now() - timedelta(minutes=10))
     ):
         raise ServiceError(404, "录音不存在或已过期")
-    role = await session.get(Role, job.role_id)
-    if not role or role.deleted:
-        raise ServiceError(404, "录音不存在或已过期")
+    if job.voice_id:
+        asset = await session.get(Voice, job.voice_id)
+        if not asset or asset.deleted or asset.owner_id != job.user_id:
+            raise ServiceError(404, "录音不存在或已过期")
+    else:
+        role = await session.get(Role, job.role_id)
+        if not role or role.deleted:
+            raise ServiceError(404, "录音不存在或已过期")
     return BinaryAsset(
         data=base64.b64decode(job.sample),
         media_type="audio/wav",
@@ -426,6 +406,9 @@ async def preview_voice(
     role = await session.get(Role, identifier)
     if not role or role.deleted or role.owner_id not in {None, user.id} or (not role.voice):
         raise ServiceError(404, "音色不存在或已失效")
+    effective = await voice_assets.effective_role(session, user.id, role)
+    if effective.voice_id:
+        return await voice_assets.preview_voice(effective.voice_id, user, session, context)
     try:
         voice = role.voice
         audio = await context.voice_cloning.preview(voice)

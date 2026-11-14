@@ -1,3 +1,4 @@
+
 import base64
 import binascii
 from pathlib import Path
@@ -14,6 +15,7 @@ from bingo.services.chat_runs import ChatRunService
 from bingo.services.context import ServiceContext
 from bingo.services.exceptions import ServiceError
 from bingo.services.stickers import normalize_sticker
+from bingo.services.voices import effective_role
 
 IMAGE_DIRECTORY = Path(__file__).resolve().parents[2] / "data" / "images"
 
@@ -74,7 +76,7 @@ async def subscribe_chat(payload: ChatRequest, context: ServiceContext, user: Us
             )
             role = await RoleRepository(session).get(context_user.role_id)
             if role:
-                voice = role.voice or voice
+                voice = (await effective_role(session, user.id, role)).voice or voice
     chat_runs: ChatRunService = context.chat_runs
     subscription = await chat_runs.subscribe(
         user_id=user.id,

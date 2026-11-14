@@ -1,3 +1,4 @@
+
 from bingo.agent.context import build_context
 from bingo.db.repositories import (
     AuthSessionRepository,
@@ -7,6 +8,7 @@ from bingo.db.repositories import (
     RoleRepository,
 )
 from bingo.services.exceptions import ServiceError
+from bingo.services.voices import effective_role
 from bingo.tools.base import ToolContext
 
 
@@ -36,6 +38,7 @@ async def prepare_call(database, token: str, requested_conversation_id, requeste
         if role and (role.deleted or not role.enabled or role.owner_id not in {None, user.id}):
             raise ServiceError(409, "角色已失效，请重新选择")
 
+        role = await effective_role(session, user.id, role)
     return user, conversation, role, invitation, history, memories
 
 

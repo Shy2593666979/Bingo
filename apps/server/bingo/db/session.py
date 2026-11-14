@@ -16,6 +16,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bingo.db.models import MorningGreeting, Role, User
 from bingo.db.seeds.community import seed_community_characters
+from bingo.db.seeds.voices import seed_voice_assets, upgrade_voice_schema
 from bingo.db.time import BEIJING_TIMEZONE
 from bingo.roles import BUILTIN_ROLES, role_id
 from bingo.roles.catalog import BUILTIN_NICKNAMES, BUILTIN_RELATION_ALIASES
@@ -42,6 +43,7 @@ class Database:
         async with self.engine.begin() as connection:
             await connection.run_sync(SQLModel.metadata.create_all)
             await connection.run_sync(_upgrade_role_schema)
+            await connection.run_sync(upgrade_voice_schema)
             await connection.run_sync(_upgrade_community_source)
             await connection.run_sync(_upgrade_community_images)
             await connection.run_sync(_seed_builtin_roles)
@@ -53,6 +55,7 @@ class Database:
             await connection.run_sync(_upgrade_morning_greetings)
             await connection.run_sync(_upgrade_device_actions)
             await connection.run_sync(seed_community_characters)
+            await connection.run_sync(seed_voice_assets)
 
     async def dispose(self) -> None:
         await self.engine.dispose()

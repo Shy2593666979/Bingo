@@ -33,6 +33,7 @@ from bingo.db.time import beijing_now
 from bingo.schemas.group_chat import GroupCreate, GroupSend
 from bingo.services.exceptions import ServiceError
 from bingo.services.stickers import normalize_sticker
+from bingo.services.voices import effective_role
 from bingo.utils.assistant_text import clean_assistant_text, strip_mentions_for_speech
 from bingo.utils.stickers.content import parse_sticker, preview_content
 
@@ -132,7 +133,7 @@ class GroupChatService:
             role = await session.get(Role, message.sender_role_id)
             if not role or role.deleted or role.owner_id not in {None, user_id}:
                 raise ServiceError(404, "搭子音色已失效")
-            return text, role.voice
+            return text, (await effective_role(session, user_id, role)).voice
 
     async def start(self, proactive=False):
         # A restart never silently replays model generation or duplicates a user message.

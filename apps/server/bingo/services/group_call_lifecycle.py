@@ -15,6 +15,7 @@ from bingo.db.models.groups import ChatGroup, GroupCall, GroupMember, GroupMessa
 from bingo.db.time import beijing_now
 from bingo.services.exceptions import ServiceError
 from bingo.services.group_chat import owned
+from bingo.services.voices import effective_role
 
 
 async def participants(database, user_id, group_id, role_ids):
@@ -30,7 +31,7 @@ async def participants(database, user_id, group_id, role_ids):
             role = await session.get(Role, identifier)
             if not member or not member.active or not role or not role.enabled or role.deleted:
                 raise ServiceError(422, "只能邀请当前群内的搭子")
-            roles.append(role)
+            roles.append(await effective_role(session, user_id, role))
         history = (
             await session.exec(
                 select(GroupMessage)

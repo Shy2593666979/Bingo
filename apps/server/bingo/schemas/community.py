@@ -5,7 +5,7 @@ class ShareCreate(BaseModel):
     role_id: str = Field(min_length=1, max_length=36)
     introduction: str = Field(min_length=1, max_length=300)
     request_id: str = Field(min_length=8, max_length=80)
-    images: list[str] = Field(default_factory=list, max_length=3)
+    images: list[str] = Field(default_factory=list, max_length=0)
     title: str = Field(default="", max_length=60)
     share_tags: list[str] = Field(default_factory=list, max_length=3)
 
@@ -32,16 +32,6 @@ class ShareCreate(BaseModel):
         value = value.strip()
         if not value:
             raise ValueError("请写一句搭子介绍")
-        return value
-
-    @field_validator("images")
-    @classmethod
-    def check_images(cls, value):
-        for item in value:
-            if not item.strip():
-                raise ValueError("图片数据无效")
-            if len(item) > 6_000_000:
-                raise ValueError("图片太大，请选小一点的图片")
         return value
 
 

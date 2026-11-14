@@ -26,6 +26,7 @@ from bingo.api import (
     realtime_calls,
     roles,
     stickers,
+    voices,
 )
 from bingo.api.exceptions import register_exception_handlers
 from bingo.api.middleware import RequestLoggingMiddleware
@@ -174,6 +175,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.include_router(asr.router, prefix=resolved_settings.server.api_prefix)
     application.include_router(realtime_calls.router, prefix=resolved_settings.server.api_prefix)
     application.include_router(roles.router, prefix=resolved_settings.server.api_prefix)
+    application.include_router(voices.router, prefix=resolved_settings.server.api_prefix)
     application.include_router(community.router, prefix=resolved_settings.server.api_prefix)
     application.include_router(group_chat.router, prefix=resolved_settings.server.api_prefix)
     application.include_router(group_calls.router, prefix=resolved_settings.server.api_prefix)

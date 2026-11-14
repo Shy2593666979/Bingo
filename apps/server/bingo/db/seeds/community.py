@@ -11,6 +11,7 @@ from bingo.db.models import Conversation, Role, User, UserCompanion
 from bingo.db.models.base import new_id
 from bingo.db.models.community import CharacterInstall, CharacterShare
 from bingo.db.models.groups import ChatGroup, GroupMember
+from bingo.db.seeds.voices import legacy_voice_id
 from bingo.db.time import beijing_now
 from bingo.roles import role_id
 from bingo.roles.community_catalog import (
@@ -148,6 +149,7 @@ def seed_community_characters(connection):
             "traits": character.personality_tags,
             "personality_tags": character.personality_tags,
             "voice_source_id": identifier,
+            "voice_id": legacy_voice_id(character.voice),
             "avatar_asset": character.avatar,
         }
         summary = {

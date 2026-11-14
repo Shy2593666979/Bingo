@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import defer
 from sqlmodel import delete, select, update
 
-from bingo.db.models import Role, RolePreference, User, new_id
+from bingo.db.models import Role, RolePreference, User, Voice, new_id
 from bingo.db.models.community import (
     CharacterComment,
     CharacterFavorite,
@@ -128,6 +128,11 @@ async def publish(session, user: User, payload: ShareCreate):
     public_voice = source if source and source.owner_id is None and not source.deleted else None
     if public_voice is None:
         public_voice = await session.get(Role, role_id("girlfriend"))
+    asset = (
+        await session.get(Voice, role_info.get("voice_id")) if role_info.get("voice_id") else None
+    )
+    if not asset or asset.deleted or asset.owner_id is not None or not asset.provider_voice:
+        asset = await session.get(Voice, public_voice.voice_id) if public_voice else None
     snapshot = {
         "name": role.nickname,
         "prompt": role.prompt,
@@ -141,13 +146,20 @@ async def publish(session, user: User, payload: ShareCreate):
         "categories": json.loads(role.categories_json),
         "traits": json.loads(role.traits_json),
         "voice_source_id": public_voice.id if public_voice else None,
+        "voice_id": asset.id if asset else None,
         "avatar_asset": role.avatar,
     }
     summary = {
         key: snapshot[key]
         for key in (
-            "role_type", "personality", "categories", "traits", "avatar_asset",
-            "relationship", "speaking_style", "personality_tags",
+            "role_type",
+            "personality",
+            "categories",
+            "traits",
+            "avatar_asset",
+            "relationship",
+            "speaking_style",
+            "personality_tags",
         )
     }
     summary["image_count"] = len(payload.images)
@@ -269,6 +281,9 @@ async def install(session, user, identifier):
     source = await session.get(Role, snapshot.get("voice_source_id"))
     if not source or source.owner_id is not None or source.deleted or not source.enabled:
         source = await session.get(Role, role_id("girlfriend"))
+    asset = await session.get(Voice, snapshot.get("voice_id")) if snapshot.get("voice_id") else None
+    if not asset or asset.deleted or asset.owner_id is not None or not asset.provider_voice:
+        asset = await session.get(Voice, source.voice_id) if source else None
     identifier = new_id()
     # Names shown to users may collide; internal names remain unique and editable copies
     # are renamed automatically to satisfy the existing role editor's unique-name rule.
@@ -280,9 +295,9 @@ async def install(session, user, identifier):
         ).all()
     )
     builtin_roles = (
-        await session.exec(select(Role).where(
-            Role.owner_id.is_(None), RoleRepository.scope(user.id)
-        ))
+        await session.exec(
+            select(Role).where(Role.owner_id.is_(None), RoleRepository.scope(user.id))
+        )
     ).all()
     names.update(value for role in builtin_roles for value in (role.name, role.nickname))
     name = snapshot["name"]
@@ -304,8 +319,9 @@ async def install(session, user, identifier):
         prompt=snapshot["prompt"],
         avatar=snapshot.get("avatar_asset", "bingo_logo.png"),
         avatar_data=share.avatar_data,
-        voice=source.voice if source else "",
+        voice=asset.provider_voice if asset else source.voice if source else "",
         voice_source_id=source.id if source else None,
+        voice_id=asset.id if asset else None,
         source_publication_id=share.id,
         categories_json=json.dumps(snapshot["categories"], ensure_ascii=False),
         traits_json=json.dumps(snapshot["traits"], ensure_ascii=False),
@@ -314,7 +330,9 @@ async def install(session, user, identifier):
     session.add(role)
     session.add(
         RolePreference(
-            user_id=user.id, role_id=role.id, personality=snapshot["personality"],
+            user_id=user.id,
+            role_id=role.id,
+            personality=snapshot["personality"],
             speaking_style=snapshot.get("speaking_style"),
         )
     )

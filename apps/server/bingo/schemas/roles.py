@@ -14,6 +14,7 @@ class RolePayload(BaseModel):
     prompt: str | None = Field(default=None, min_length=1, max_length=2000)
     avatar_data: str | None = Field(default=None, max_length=3000000)
     voice_source_id: str | None = Field(default=None, max_length=36)
+    voice_id: str | None = Field(default=None, max_length=36)
     draft: bool = False
     categories: list[str] | None = Field(default=None, min_length=2, max_length=3)
     traits: list[str] | None = Field(

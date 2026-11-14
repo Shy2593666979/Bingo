@@ -16,7 +16,7 @@ import httpx
 from sqlmodel import select
 from websockets.asyncio.client import connect
 
-from bingo.db.models import Role, VoiceJob
+from bingo.db.models import Role, Voice, VoiceJob
 from bingo.db.time import beijing_now
 from bingo.services.realtime_call import _model_url, derive_realtime_url
 
@@ -99,6 +99,10 @@ class VoiceCloningService:
             for job in jobs:
                 if job.kind == "clone" and job.created_at < beijing_now() - timedelta(minutes=10):
                     job.status = "failed"
+                if job.voice_id:
+                    asset = await session.get(Voice, job.voice_id)
+                    if asset and not asset.deleted:
+                        asset.status = "ready" if asset.provider_voice else "failed"
                     job.error = "录音已过期，请重新录制"
                     job.sample = None
                     job.sample_token = None
@@ -300,39 +304,53 @@ class VoiceCloningService:
                     self.stages[job.id] = "verifying"
                     await self.verify(voice)
                     await session.refresh(job)
-                    role = await session.get(Role, job.role_id)
-                    if not role or role.deleted:
-                        cleanup = VoiceJob(
-                            user_id=job.user_id, role_id=job.role_id, kind="delete", voice=voice
-                        )
+                    asset = await session.get(Voice, job.voice_id) if job.voice_id else None
+                    role = await session.get(Role, job.role_id) if job.role_id else None
+                    if asset is None and role and not role.deleted:
+                        # Recover jobs submitted by clients before the standalone asset migration.
+                        asset = Voice(name=f"{role.nickname}的声音", owner_id=job.user_id)
+                        session.add(asset)
+                        await session.flush()
+                        job.voice_id = asset.id
+                    if not asset or asset.deleted or asset.owner_id != job.user_id:
+                        cleanup = VoiceJob(user_id=job.user_id, kind="delete", voice=voice)
                         session.add(cleanup)
                         await session.commit()
                         self.schedule(cleanup.id)
-                        raise ValueError("角色已删除")
-                    previous = role.owned_voice
-                    role.owned_voice = voice
-                    role.voice = voice
-                    role.voice_source_id = role.id
+                        raise ValueError("音色已删除")
+                    previous = asset.provider_voice
+                    asset.provider_voice, asset.status = voice, "ready"
+                    asset.updated_at = beijing_now()
+                    if role and not role.deleted:
+                        role.owned_voice, role.voice, role.voice_id = voice, voice, asset.id
+                        role.voice_source_id = role.id
                     dependents = (
                         await session.exec(
                             select(Role).where(
-                                Role.voice_source_id == role.id, Role.deleted.is_(False)
+                                Role.deleted.is_(False),
+                                (Role.voice_id == asset.id)
+                                | ((Role.voice_source_id == job.role_id) if job.role_id else False),
                             )
                         )
                     ).all()
                     for dependent in dependents:
-                        dependent.voice = voice
+                        dependent.voice, dependent.voice_id = voice, asset.id
                     job.voice = voice
                     if previous and previous != voice:
-                        cleanup = VoiceJob(
-                            user_id=job.user_id,
-                            role_id=role.id,
-                            kind="delete",
-                            voice=previous,
-                        )
-                        session.add(cleanup)
-                        await session.commit()
-                        self.schedule(cleanup.id)
+                        shared = (
+                            await session.exec(
+                                select(Voice.id).where(
+                                    Voice.id != asset.id,
+                                    Voice.deleted.is_(False),
+                                    Voice.provider_voice == previous,
+                                )
+                            )
+                        ).first()
+                        if not shared:
+                            cleanup = VoiceJob(user_id=job.user_id, kind="delete", voice=previous)
+                            session.add(cleanup)
+                            await session.commit()
+                            self.schedule(cleanup.id)
                 job.status = "ready"
                 job.error = None
             except asyncio.CancelledError:
@@ -343,6 +361,10 @@ class VoiceCloningService:
                     "Voice job failed: %s stage=%s error=%s", job.id, stage, type(error).__name__
                 )
                 job.status = "failed"
+                if job.voice_id:
+                    asset = await session.get(Voice, job.voice_id)
+                    if asset and not asset.deleted:
+                        asset.status = "ready" if asset.provider_voice else "failed"
                 job.error = (
                     str(error)
                     if isinstance(error, VoiceProviderError)

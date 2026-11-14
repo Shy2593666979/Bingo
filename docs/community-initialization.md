@@ -31,7 +31,25 @@
 目录控制的内容字段可随代码更新；撤回状态、原始发布时间、收藏、评论、点赞和安装历史保留。
 新增预置帖子时向 `COMMUNITY_CHARACTERS` 添加人物七项资料及帖子标题、介绍、分享标签即可。
 
-当前预置社区人物包括 `chairman`、`executive` 和 `xiaofan`（小范 / 网红人物）。
+当前预置社区人物包括 `chairman`、`executive`、`xiaofan`，以及五位电竞搭子：
+`ig_wei`（Wei）、`ig_meiko`（Meiko）、`ig_shy`（TheShy）、`ig_rookie`（Rookie）、`ig_jiaqi`（Jiaqi）。
+
+### 电竞搭子与社区音色
+
+`bingo/roles/community_voices.py` 登记已复刻并验证的五个独立音色，名称保留
+`Wei`、`Meiko`、`TheShy`、`Rookie`、`Jiaqi` 的指定拼写。
+`community_catalog.py` 中的五个人物直接引用 `COMMUNITY_VOICES[名称]`，
+初始化时发布社区帖子，用户添加后生成个性化欢迎语，不改变默认的 12 位搭子。
+关系统一为“电竞搭子”，分别围绕打野、辅助、上路、中路、下路设置聊天侧重；
+五位电竞搭子使用按参考照片生成的专属透明卡通头像：
+`ig_wei.png`、`ig_meiko.png`、`ig_shy.png`、`ig_rookie.png`、`ig_jiaqi.png`。
+资源位于 `bingo/roles/avatars/`，统一为 768×768 RGBA PNG；社区初始化和用户添加继续复用原有头像链路。
+生成工具、参考图对应关系和完整提示词记录在 `design/avatars/ig-20261107/generation.json`。
+人物背景采用维护者配置的选手履历与赛事场景；社区标题、介绍和标签侧重各自的聊天方向。
+原始录音、参考片段及试听文件不作为运行资源入库；服务端使用已登记的远端音色 ID。
+
+### 已发布人物资源
+
 小范使用已核对试听文案的独立复刻音色，欢迎语仍按当前用户资料重新生成。
 老余使用单独复刻并验证的音色，透明头像随服务端 PNG 资源初始化；客户端保留 WebP 回退资源。
 头像内容使用无前缀的 PNG Base64，与社区图片接口和人物编辑校验保持一致。
