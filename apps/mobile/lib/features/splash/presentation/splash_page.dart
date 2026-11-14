@@ -13,5 +13,5 @@ class SplashPage extends StatelessWidget {
               child: Semantics(
                   label: 'Bingo',
                   image: true,
-                  child: const BingoWordmark(width: 174, height: 68)))));
+                  child: const BingoWordmark(width: 174, height: 174)))));
 }

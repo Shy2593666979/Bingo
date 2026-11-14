@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="launch_background">#FFFFFF</color>
-    <color name="ic_launcher_background">#FBE9EF</color>
+    <color name="ic_launcher_background">#FFF0F5</color>
     <color name="status_bar_background">#FFFFFF</color>
 </resources>

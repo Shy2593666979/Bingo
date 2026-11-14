@@ -22,6 +22,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/bingo_logo.webp
+    - assets/images/bingo_logo_foreground.webp
     - assets/avatars_square/bestie.webp
     - assets/avatars_square/boyfriend.webp
     - assets/avatars_square/bro.webp
@@ -90,7 +91,7 @@ flutter:
 flutter_launcher_icons:
   android: true
   image_path: assets/images/bingo_logo.png
-  adaptive_icon_background: "#EAFBF6"
-  adaptive_icon_foreground: assets/images/bingo_logo.png
-  adaptive_icon_foreground_inset: 0
+  adaptive_icon_background: "#FFF0F5"
+  adaptive_icon_foreground: assets/images/bingo_logo_foreground.png
+  adaptive_icon_foreground_inset: 10
   min_sdk_android: 23

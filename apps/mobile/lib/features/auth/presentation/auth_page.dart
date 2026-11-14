@@ -89,7 +89,7 @@ class _AuthPageState extends State<AuthPage> {
                         const Center(
                           child: SizedBox(
                             height: 76,
-                            child: BingoWordmark(width: 124, height: 48),
+                            child: BingoWordmark(width: 76, height: 76),
                           ),
                         ),
                         const SizedBox(height: 22),

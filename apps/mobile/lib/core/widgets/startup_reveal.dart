@@ -51,7 +51,7 @@ class _StartupRevealState extends State<StartupReveal>
               child: Center(
                   child: AnimatedBuilder(
                 animation: _pulse,
-                child: const BingoWordmark(width: 174, height: 68),
+                child: const BingoWordmark(width: 174, height: 174),
                 builder: (context, child) => Transform.scale(
                     scale: reduceMotion
                         ? 1
