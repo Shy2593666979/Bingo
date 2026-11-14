@@ -54,3 +54,5 @@ Thumbs.db
 /apps/mobile/assets/chat_bubbles/*.png
 /apps/mobile/assets/reference/*.png
 /apps/mobile/assets/stickers/*.png
+/design/
+/artifacts/
