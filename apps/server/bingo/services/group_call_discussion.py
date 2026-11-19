@@ -69,6 +69,7 @@ class DiscussionController:
             history=history,
             targets=self.engine.targets,
             complete=self.engine.complete,
+            decision_model=self.engine.decision_model,
         ), state
 
     async def prepare_turn(self, generation, episode, context):

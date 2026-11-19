@@ -63,6 +63,9 @@ async def group_call(socket: WebSocket, group_id: str):
         history=history,
         voice_fallback=settings.realtime_call.voice,
         max_silent_turns=settings.group_call.max_silent_turns,
+        decision_model=context.group_chat.decision_model,
+        require_audio_evidence=True,
+        sample_rate=settings.asr.realtime.sample_rate,
     )
 
     class AsrBridge:
@@ -75,6 +78,7 @@ async def group_call(socket: WebSocket, group_id: str):
                 if message.get("bytes"):
                     if len(message["bytes"]) > 65536:
                         raise ValueError("音频帧过大")
+                    engine.barge_in.observe(message["bytes"])
                     return message
                 try:
                     command = json.loads(message.get("text") or "{}")

@@ -2,6 +2,7 @@ import 'package:bingo/core/design/approved_art.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:bingo/core/design/bingo_icon.dart';
+import 'package:bingo/core/design/home_artwork_icon.dart';
 import 'package:bingo/core/theme/app_theme.dart';
 
 const refMint = BingoPalette.primary;
@@ -230,11 +231,13 @@ class ReferenceNavigation extends StatelessWidget {
       required this.onCreate,
       this.creating = false,
       this.unread = 0,
+      this.homeStyle = false,
       super.key});
   final int selected, unread;
   final ValueChanged<int> onSelected;
   final VoidCallback onCreate;
   final bool creating;
+  final bool homeStyle;
   @override
   Widget build(BuildContext context) {
     final page =
@@ -248,7 +251,7 @@ class ReferenceNavigation extends StatelessWidget {
             child: SafeArea(
                 top: false,
                 child: SizedBox(
-                    height: 75 + extra,
+                    height: (homeStyle ? 64 : 75) + extra,
                     child: Row(children: [
                       for (var slot = 0; slot < 5; slot++)
                         Expanded(
@@ -264,17 +267,35 @@ class ReferenceNavigation extends StatelessWidget {
                                         : onSelected(
                                             slot > 2 ? slot - 1 : slot),
                                     child: Padding(
-                                        padding: const EdgeInsets.only(top: 9),
+                                        padding: EdgeInsets.only(
+                                            top: homeStyle
+                                                ? (slot == 2 ? 4 : 10)
+                                                : 9),
                                         child: Column(children: [
-                                          ApprovedNavIcon(
-                                              page: page, item: slot),
-                                          if (slot != 2) ...[
+                                          if (homeStyle)
+                                            HomeArtworkIcon(
+                                              const [
+                                                HomeArtwork.home,
+                                                HomeArtwork.chatTab,
+                                                HomeArtwork.create,
+                                                HomeArtwork.compass,
+                                                HomeArtwork.profile
+                                              ][slot],
+                                              size: slot == 2 ? 32 : 22,
+                                              color: slot == 0 || slot == 2
+                                                  ? BingoPalette.primary
+                                                  : const Color(0xFF515151),
+                                            )
+                                          else
+                                            ApprovedNavIcon(
+                                                page: page, item: slot),
+                                          if (slot != 2 || homeStyle) ...[
                                             const SizedBox(height: 3),
                                             Text(
-                                                const [
+                                                [
                                                   '首页',
                                                   '聊天',
-                                                  '',
+                                                  if (homeStyle) '创建' else '',
                                                   '社区',
                                                   '我的'
                                                 ][slot],
@@ -285,9 +306,13 @@ class ReferenceNavigation extends StatelessWidget {
                                                         ? FontWeight.w600
                                                         : FontWeight.w400,
                                                     color: slot == page
-                                                        ? BingoPalette.ink
-                                                        : const Color(
-                                                            0xFF909090)))
+                                                        ? (homeStyle
+                                                            ? BingoPalette
+                                                                .primary
+                                                            : BingoPalette.ink)
+                                                        : Color(homeStyle
+                                                            ? 0xFF545454
+                                                            : 0xFF909090)))
                                           ],
                                         ])))))
                     ])))));

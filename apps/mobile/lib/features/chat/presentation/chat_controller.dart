@@ -1,4 +1,5 @@
 import 'package:bingo/features/stickers/sticker.dart';
+import 'package:bingo/features/chat/data/message_presentation_store.dart';
 import 'dart:async';
 import 'package:bingo/features/chat/presentation/bubble_pacer.dart';
 import 'package:bingo/core/device/device_tool_executor.dart';
@@ -377,6 +378,7 @@ class ChatController extends ChangeNotifier {
   }
 
   void unbindUser() {
+    _sendPreparation = null;
     _welcomePresentation = false;
     deactivateSpeech();
     _readAloudEnabled = true;
@@ -436,6 +438,9 @@ class ChatController extends ChangeNotifier {
   Future<void> sendSpoken(String content) =>
       _sendMessage(content.trim(), spoken: true);
 
+  Future<void> sendVoice(RecordedVoice voice) =>
+      _sendMessage(voice.text.trim(), voice: voice);
+
   MomentGateway? get momentGateway =>
       _gateway is MomentGateway ? _gateway as MomentGateway : null;
 
@@ -456,16 +461,57 @@ class ChatController extends ChangeNotifier {
         momentSessionId: sessionId);
   }
 
+  Future<void>? _sendPreparation;
+
   Future<void> _sendMessage(
     String content, {
     ChatImageUpload? image,
     ChatLocation? location,
     bool spoken = false,
+    RecordedVoice? voice,
     String? momentFeature,
     String? momentSummary,
     String? momentSessionId,
   }) async {
-    if (content.isEmpty && image == null && location == null) return;
+    if (content.isEmpty && image == null && location == null && voice == null) {
+      return;
+    }
+    final previous = _sendPreparation;
+    final prepared = Completer<void>();
+    _sendPreparation = prepared.future;
+    return _performSendMessage(
+      content,
+      previousPreparation: previous,
+      prepared: prepared,
+      image: image,
+      location: location,
+      spoken: spoken,
+      voice: voice,
+      momentFeature: momentFeature,
+      momentSummary: momentSummary,
+      momentSessionId: momentSessionId,
+    ).whenComplete(() {
+      if (!prepared.isCompleted) prepared.complete();
+    });
+  }
+
+  Future<void> _performSendMessage(
+    String content, {
+    required Future<void>? previousPreparation,
+    required Completer<void> prepared,
+    ChatImageUpload? image,
+    ChatLocation? location,
+    bool spoken = false,
+    RecordedVoice? voice,
+    String? momentFeature,
+    String? momentSummary,
+    String? momentSessionId,
+  }) async {
+    if (content.isEmpty && image == null && location == null && voice == null) {
+      return;
+    }
+    final binding = _bindingSequence;
+    final account = _userId ?? 'local';
     _resetBubblePacing();
     await stopSpeech();
     _acceptAudio = (spoken || _readAloudEnabled) && _speechActive;
@@ -495,24 +541,32 @@ class ChatController extends ChangeNotifier {
 
     final createdAt = DateTime.now();
     final timestamp = createdAt.microsecondsSinceEpoch;
+    final localUserId = 'local-user-$timestamp';
+    if (voice != null) {
+      await MessagePresentationStore.forAccount(account)
+          .saveVoice('message:$localUserId', voice);
+      if (binding != _bindingSequence) return;
+    }
     final existingMomentIndex = momentSessionId == null
         ? -1
         : _messages.indexWhere((message) =>
             message.runId == momentSessionId && message.role == ChatRole.user);
     final userMessageIndex =
         existingMomentIndex < 0 ? _messages.length : existingMomentIndex;
-    final displayedContent = location != null
-        ? '[位置] ${location.name}：${location.address}'
-        : content.isEmpty
-            ? '[图片]'
-            : content;
+    final displayedContent = voice != null
+        ? (voice.text.isEmpty ? '[语音]' : voice.text)
+        : location != null
+            ? '[位置] ${location.name}：${location.address}'
+            : content.isEmpty
+                ? '[图片]'
+                : content;
     final titleContent = ChatSticker.preview(displayedContent);
     _title ??=
         titleContent.length > 80 ? titleContent.substring(0, 80) : titleContent;
     if (existingMomentIndex < 0) {
       _addMessage(
         ChatMessage(
-          id: 'local-user-$timestamp',
+          id: localUserId,
           role: ChatRole.user,
           content: displayedContent,
           imageBytes: image?.bytes,
@@ -532,6 +586,20 @@ class ChatController extends ChangeNotifier {
     await _persist();
 
     try {
+      final recognition = voice?.resolve();
+      if (previousPreparation != null) await previousPreparation;
+      if (binding != _bindingSequence) return;
+      if (recognition != null) {
+        voice = await recognition;
+        await MessagePresentationStore.forAccount(account)
+            .finishTranscription('message:$localUserId', voice);
+        if (binding != _bindingSequence) return;
+        _replaceMessageAt(
+            userMessageIndex,
+            _messages[userMessageIndex]
+                .copyWith(content: voice.text.isEmpty ? '[语音]' : voice.text));
+        await _persist();
+      }
       var segmentIndex = 0;
       final events = momentFeature != null
           ? momentGateway!.finishMoment(
@@ -547,13 +615,14 @@ class ChatController extends ChangeNotifier {
                   supersedesRunId: supersededRunId)
               : _gateway.send(
                   conversationId: _conversationId,
-                  content: content,
+                  content: voice?.modelQuery ?? content,
                   runId: runId,
                   supersedesRunId: supersededRunId,
                   images: image == null ? const [] : [image],
                 );
       await for (final event in events) {
-        if (generation != _runSequence) continue;
+        if (binding != _bindingSequence) return;
+        if (generation != _runSequence && event is! ChatStarted) continue;
         switch (event) {
           case ChatAudio():
             lastAudioSeconds += event.bytes.length / 48000;
@@ -579,6 +648,10 @@ class ChatController extends ChangeNotifier {
             await stopSpeech();
           case ChatStarted():
             _conversationId = event.conversationId;
+            if (voice != null && event.userMessageId != null) {
+              await MessagePresentationStore.forAccount(account).alias(
+                  'message:$localUserId', 'message:${event.userMessageId}');
+            }
             if (event.userMessageId != null && event.createdAt != null) {
               _replaceMessageAt(
                 userMessageIndex,
@@ -590,6 +663,7 @@ class ChatController extends ChangeNotifier {
               );
             }
             await _persist();
+            if (!prepared.isCompleted) prepared.complete();
           case ChatSegment():
             final message = ChatMessage(
               id: 'segment-$timestamp-${segmentIndex++}',

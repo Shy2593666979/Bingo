@@ -158,9 +158,11 @@ class _GroupCallPageState extends State<GroupCallPage>
       setState(() {
         discussionPhase = event['phase'] as String? ?? 'idle';
         if (speaker == null) {
-          status = {'discussing', 'winding_down'}.contains(discussionPhase)
-              ? '大家正在聊天'
-              : '正在聆听';
+          status = discussionPhase == 'processing_user'
+              ? '正在准备回应'
+              : {'discussing', 'winding_down'}.contains(discussionPhase)
+                  ? '大家正在聊天'
+                  : '正在聆听';
         }
       });
       return;

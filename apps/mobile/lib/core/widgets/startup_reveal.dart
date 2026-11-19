@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:bingo/core/design/bingo_wordmark.dart';
+import 'package:bingo/core/widgets/startup_brand_scene.dart';
 
 /// Keeps the live, loading homepage mounted underneath the branded cover.
 class StartupReveal extends StatefulWidget {
@@ -9,22 +9,22 @@ class StartupReveal extends StatefulWidget {
   State<StartupReveal> createState() => _StartupRevealState();
 }
 
-class _StartupRevealState extends State<StartupReveal>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulse = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 850))
-    ..repeat(reverse: true);
+class _StartupRevealState extends State<StartupReveal> {
   bool _ready = false, _removed = false;
+  bool _dataReady = false, _introReady = false;
   void _onReady() {
-    if (!mounted || _ready) return;
-    _pulse.stop();
-    setState(() => _ready = true);
+    _dataReady = true;
+    _revealWhenReady();
   }
 
-  @override
-  void dispose() {
-    _pulse.dispose();
-    super.dispose();
+  void _onIntroComplete() {
+    _introReady = true;
+    _revealWhenReady();
+  }
+
+  void _revealWhenReady() {
+    if (!mounted || _ready || !_dataReady || !_introReady) return;
+    setState(() => _ready = true);
   }
 
   @override
@@ -41,26 +41,12 @@ class _StartupRevealState extends State<StartupReveal>
           ignoring: _ready,
           child: AnimatedOpacity(
             opacity: _ready ? 0 : 1,
-            duration: Duration(milliseconds: reduceMotion ? 0 : 280),
+            duration: Duration(milliseconds: reduceMotion ? 0 : 500),
             curve: Curves.easeOutCubic,
             onEnd: () {
               if (_ready && mounted) setState(() => _removed = true);
             },
-            child: ColoredBox(
-              color: Colors.white,
-              child: Center(
-                  child: AnimatedBuilder(
-                animation: _pulse,
-                child: const BingoWordmark(width: 174, height: 174),
-                builder: (context, child) => Transform.scale(
-                    scale: reduceMotion
-                        ? 1
-                        : .98 + .02 * Curves.easeInOut.transform(_pulse.value),
-                    child: Opacity(
-                        opacity: reduceMotion ? 1 : .8 + .2 * _pulse.value,
-                        child: child)),
-              )),
-            ),
+            child: StartupBrandScene(onIntroComplete: _onIntroComplete),
           ),
         )),
     ]);

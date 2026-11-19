@@ -1,4 +1,6 @@
 import 'package:bingo/core/design/bingo_page.dart';
+import 'package:bingo/features/roles/presentation/recent_conversation_preview.dart';
+import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/core/widgets/bingo_confirm_dialog.dart';
 import 'package:bingo/core/theme/app_theme.dart';
 import 'dart:math';
@@ -33,6 +35,7 @@ class CommunityDetailPage extends StatefulWidget {
 
 class _CommunityDetailPageState extends State<CommunityDetailPage> {
   CommunityShare? _share;
+  RoleOption? _recentRole;
   String? _installedId, _commentRequest, _commentDraft;
   bool _failed = false,
       _busy = false,
@@ -65,9 +68,21 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
   Future<void> _load() async {
     try {
       final share = await widget.gateway.getCommunityShare(widget.shareId);
+      RoleOption? recentRole;
+      if (share.installedRoleId != null && widget.gateway is RoleGateway) {
+        try {
+          final roles = await (widget.gateway as RoleGateway).listRoles();
+          recentRole = roles
+              .where((role) => role.id == share.installedRoleId)
+              .firstOrNull;
+        } catch (_) {
+          /* The publication remains usable if private history fails. */
+        }
+      }
       if (mounted) {
         setState(() {
           _share = share;
+          _recentRole = recentRole;
           _installedId = share.installedRoleId;
           _failed = false;
         });
@@ -346,6 +361,16 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
                           fontSize: 14,
                           height: 1.9,
                           color: BingoPalette.muted)),
+                  if (_recentRole != null && widget.gateway is RoleGateway) ...[
+                    const SizedBox(height: 24),
+                    const Text('最近对话',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 12),
+                    RecentConversationPreview(
+                        role: _recentRole!,
+                        gateway: widget.gateway as RoleGateway),
+                  ],
                   const SizedBox(height: 26),
                   Text('认识一下 ${share.name}',
                       style: const TextStyle(

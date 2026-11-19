@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:bingo/core/design/chat_scene.dart';
+import 'package:bingo/features/chat/data/message_presentation_store.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:bingo/core/theme/app_theme.dart';
@@ -202,6 +204,43 @@ class _AudioGateway extends _Gateway implements GroupSpeechGateway {
 }
 
 void main() {
+  test('empty group voice uses model prefix and retry preserves client ID',
+      () async {
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(
+        MessagePresentationStore.channel, (_) async => null);
+    final gateway = _Gateway()..failAckOnce = true;
+    final controller = GroupController(gateway, 'group-one');
+    try {
+      await controller.load();
+      final recognition = Completer<String>();
+      final sending = controller.send('', [],
+          voice: RecordedVoice('', Uint8List(32044), 1000,
+              transcribe: () => recognition.future));
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(controller.messages.where((m) => m.local), hasLength(1));
+      expect(gateway.sentIds, isEmpty);
+      recognition.complete('');
+      final sent = await sending;
+      expect(sent, false);
+      expect(gateway.sentV2?['text'], '用户发送的语音转文字后：（未识别到文字）');
+      final localId = controller.messages.firstWhere((m) => m.local).id;
+      await controller.retry(localId);
+      expect(gateway.sentIds.length, 2);
+      expect(gateway.sentIds.toSet().length, 1);
+      expect(gateway.sentV2?['text'], '用户发送的语音转文字后：（未识别到文字）');
+      final stored = MessagePresentationStore.forAccount('human-one')
+          .item('group:group-one:client:${gateway.sentIds.first}');
+      expect(stored['voice'], true);
+      expect(stored['transcript'], '');
+    } finally {
+      controller.dispose();
+      messenger.setMockMethodCallHandler(
+          MessagePresentationStore.channel, null);
+    }
+  });
+
   testWidgets(
       'human mentions appear in the body with the real name, without badge',
       (tester) async {
@@ -520,30 +559,47 @@ void main() {
     await screen(tester);
     await tester.pumpWidget(MaterialApp(
         theme: buildBingoTheme(),
-        home: const Scaffold(
+        home: Scaffold(
             body: Column(children: [
           MessageBubble(
               message: ChatMessage(
-                  id: 'ai', role: ChatRole.assistant, content: 'AI 正文'),
+                  id: 'ai',
+                  role: ChatRole.assistant,
+                  content: 'AI 正文',
+                  createdAt: DateTime.utc(2026, 11, 16, 10)),
               assistantRole: '女朋友'),
           MessageBubble(
-              message:
-                  ChatMessage(id: 'me', role: ChatRole.user, content: '用户正文'),
+              message: ChatMessage(
+                  id: 'me',
+                  role: ChatRole.user,
+                  content: '用户正文',
+                  createdAt: DateTime.utc(2026, 11, 16, 10)),
               assistantRole: '女朋友'),
         ]))));
     await tester.pumpAndSettle();
     expect(find.byType(UserAvatar), findsNothing);
     expect(find.byType(AssistantAvatar), findsOneWidget);
     expect(find.text('甜甜'), findsNothing);
+    expect(find.byKey(const ValueKey('message-time-ai')), findsNothing);
+    expect(find.byKey(const ValueKey('message-time-me')), findsNothing);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
   testWidgets(
-      'group chat shows avatars for both sides and role names plus time',
+      'group names stay beside avatars and upper tails point to both senders',
       (tester) async {
     await screen(tester);
     final gateway = _Gateway();
+    gateway.rows[0] = GroupChatMessage.fromJson({
+      ..._message('one', 1, 'assistant', '甜甜', 'ai-one'),
+      'content': '这是一段多行群聊消息，用来确认长气泡的小尾巴仍然朝向发送者的头像。' * 3,
+    });
+    gateway.rows[1] = GroupChatMessage.fromJson({
+      ..._message('two', 2, 'user', '我', null),
+      'content': '自己的长消息也应该保持头像和气泡底部对齐。' * 3,
+    });
+
     await tester.pumpWidget(MaterialApp(
         theme: buildBingoTheme(),
         home: GroupChatPage(
@@ -556,7 +612,35 @@ void main() {
     expect(find.text('2 位搭子'), findsOneWidget);
     expect(find.text('甜甜'), findsOneWidget);
     expect(find.text('暖暖'), findsOneWidget);
-    expect(find.text('18:00'), findsNWidgets(3));
+    expect(find.text('18:00'), findsNothing);
+    expect(
+        find.byKey(const ValueKey('group-message-sender-two')), findsNothing);
+    expect(find.text('我'), findsNothing);
+    for (final id in ['one', 'two', 'three']) {
+      final avatar =
+          tester.getRect(find.byKey(ValueKey('group-message-avatar-$id')));
+      final bubble =
+          tester.getRect(find.byKey(ValueKey('group-message-surface-$id')));
+      final surface = find.byKey(ValueKey('group-message-surface-$id'));
+      expect(
+          tester
+              .widget<SageBubble>(find.descendant(
+                  of: surface, matching: find.byType(SageBubble)))
+              .tailAtTop,
+          true);
+      if (id == 'two') {
+        expect(avatar.top, closeTo(bubble.top, .1));
+        expect(avatar.left, greaterThan(bubble.right));
+      } else {
+        expect(avatar.right, lessThan(bubble.left));
+        final sender =
+            tester.getRect(find.byKey(ValueKey('group-message-sender-$id')));
+        expect(sender.top, closeTo(avatar.top, .1));
+        expect(sender.bottom, closeTo(bubble.top, .1));
+        expect(bubble.top + 18, lessThanOrEqualTo(avatar.bottom));
+        expect(sender.left, closeTo(bubble.left, .1));
+      }
+    }
     expect(find.byType(UserAvatar), findsOneWidget);
     expect(find.byTooltip('@ 搭子'), findsNothing);
     expect(find.text('选择要 @ 的搭子'), findsNothing);
@@ -570,6 +654,39 @@ void main() {
         '@甜甜 ');
     expect(find.text('选择要 @ 的搭子'), findsNothing);
     expect(find.byType(InputChip), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('consecutive group replies keep their sender and avatar',
+      (tester) async {
+    await screen(tester);
+    final gateway = _Gateway();
+    gateway.rows.insert(
+        1,
+        GroupChatMessage.fromJson(
+            _message('follow-up', 2, 'assistant', '甜甜', 'ai-one')));
+    await tester.pumpWidget(MaterialApp(
+        theme: buildBingoTheme(),
+        home: GroupChatPage(
+            groupId: 'group-one',
+            gateway: gateway,
+            roles: gateway,
+            speech: gateway)));
+    await tester.pumpAndSettle();
+    expect(find.text('甜甜'), findsNWidgets(2));
+    for (final id in ['one', 'follow-up']) {
+      final avatar = find.byKey(ValueKey('group-message-avatar-$id'));
+      expect(avatar, findsOneWidget);
+      expect(
+          tester.getTopLeft(avatar).dy + 16,
+          closeTo(
+              tester
+                  .getTopLeft(find.byKey(ValueKey('group-message-surface-$id')))
+                  .dy,
+              .1));
+    }
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();

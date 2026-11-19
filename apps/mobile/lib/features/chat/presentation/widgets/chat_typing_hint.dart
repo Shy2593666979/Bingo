@@ -1,4 +1,5 @@
 import 'package:bingo/core/theme/app_theme.dart';
+import 'package:bingo/core/appearance/chat_appearance.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:bingo/shared/widgets/assistant_avatar.dart';
@@ -50,10 +51,16 @@ class _ChatTypingHintState extends State<ChatTypingHint>
                   padding: const EdgeInsets.only(top: 5, bottom: 4),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
                     ChatPortrait(
-                        size: 36,
+                        size: AppearanceScope.of(context).bubble == 'mint'
+                            ? 32
+                            : 36,
                         onTap: widget.onAvatarTap,
                         onLongPress: widget.onAvatarLongPress,
-                        child: AssistantAvatar(role: widget.role, size: 36)),
+                        child: AssistantAvatar(
+                            role: widget.role,
+                            size: AppearanceScope.of(context).bubble == 'mint'
+                                ? 32
+                                : 36)),
                     const SizedBox(width: 6),
                     Flexible(
                         child: Text('正在输入',

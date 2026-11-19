@@ -44,14 +44,16 @@ class SageBubble extends StatelessWidget {
   const SageBubble(
       {required this.isUser,
       required this.child,
+      this.tailAtTop = false,
       this.padding = const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       super.key});
   final bool isUser;
   final Widget child;
   final EdgeInsets padding;
+  final bool tailAtTop;
   @override
   Widget build(BuildContext context) => CustomPaint(
-      painter: _DefaultBubblePainter(isUser),
+      painter: _DefaultBubblePainter(isUser, tailAtTop),
       child: Padding(
           padding: EdgeInsets.fromLTRB(
               padding.left < 14 ? 14 : padding.left,
@@ -63,8 +65,9 @@ class SageBubble extends StatelessWidget {
 
 /// A scalable outline and tail, kept independent of the text's layout.
 class _DefaultBubblePainter extends CustomPainter {
-  const _DefaultBubblePainter(this.isUser);
+  const _DefaultBubblePainter(this.isUser, this.tailAtTop);
   final bool isUser;
+  final bool tailAtTop;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -81,13 +84,26 @@ class _DefaultBubblePainter extends CustomPainter {
       ..quadraticBezierTo(w - .5, .5, w - .5, r)
       ..lineTo(w - .5, h - r)
       ..quadraticBezierTo(w - .5, h - .5, w - r, h - .5)
-      ..lineTo(5 + r, h - .5)
-      ..quadraticBezierTo(11, h - .5, 9, h - 3)
-      ..quadraticBezierTo(5, h, .5, h - 1)
-      ..quadraticBezierTo(6, h - 6, 5.5, h - 10)
-      ..lineTo(5.5, r)
-      ..quadraticBezierTo(5.5, .5, 5 + r, .5)
-      ..close();
+      ..lineTo(5 + r, h - .5);
+    if (tailAtTop) {
+      final tip = h / 2 < 18 ? h / 2 : 18.0;
+      final belowTail = h - r < tip + 7 ? h - r : tip + 7;
+      path
+        ..quadraticBezierTo(5.5, h - .5, 5.5, h - r)
+        ..lineTo(5.5, belowTail)
+        ..quadraticBezierTo(5.5, tip + 3, .5, tip)
+        ..quadraticBezierTo(5.5, tip - 1, 5.5, tip - 6)
+        ..quadraticBezierTo(5.5, .5, 5 + r, .5)
+        ..close();
+    } else {
+      path
+        ..quadraticBezierTo(11, h - .5, 9, h - 3)
+        ..quadraticBezierTo(5, h, .5, h - 1)
+        ..quadraticBezierTo(6, h - 6, 5.5, h - 10)
+        ..lineTo(5.5, r)
+        ..quadraticBezierTo(5.5, .5, 5 + r, .5)
+        ..close();
+    }
     canvas.drawPath(
         path, Paint()..color = isUser ? BingoPalette.userBubble : Colors.white);
     canvas.drawPath(
@@ -102,5 +118,5 @@ class _DefaultBubblePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DefaultBubblePainter oldDelegate) =>
-      oldDelegate.isUser != isUser;
+      oldDelegate.isUser != isUser || oldDelegate.tailAtTop != tailAtTop;
 }

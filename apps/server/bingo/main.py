@@ -89,10 +89,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     chat_runs = ChatRunService(database.session_factory, runtime)
     voice_cloning = VoiceCloningService(database, resolved_settings)
     chat_speech = ChatSpeechService(voice_cloning)
+    from bingo.agent.decision_model_client import DecisionModelClient
+
+    decision = (
+        DecisionModelClient(resolved_settings.decision_model)
+        if resolved_settings.decision_model.enabled
+        else None
+    )
     groups = GroupChatService(
         database,
         create_group_model_client(resolved_settings),
         resolved_settings.social_agent_runtime,
+        decision_model=decision,
     )
     welcomes = CompanionWelcomeService(database, model_client, groups)
 

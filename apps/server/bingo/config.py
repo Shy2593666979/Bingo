@@ -163,12 +163,26 @@ class SocialRuntimeSettings(BaseModel):
     generation_timeout_seconds: float = Field(default=45, ge=1, le=120)
 
 
+class DecisionModelSettings(BaseModel):
+    enabled: bool = False
+    endpoint: str = ""
+    api_key: str = Field(default="", repr=False)
+    model: str = "decision-model-preview"
+    timeout_seconds: float = Field(default=3, gt=0, le=30)
+
+    @field_validator("api_key", mode="before")
+    @classmethod
+    def environment_key(cls, value):
+        return os.getenv("BINGO_DECISION_API_KEY") or value
+
+
 class GroupCallSettings(BaseModel):
     # Developer-owned limit; never a client preference or WebSocket command.
     max_silent_turns: int = Field(default=30, ge=1, le=100, strict=True)
 
 
 class Settings(BaseModel):
+    decision_model: DecisionModelSettings = Field(default_factory=DecisionModelSettings)
     group_call: GroupCallSettings = Field(default_factory=GroupCallSettings)
     social_agent_runtime: SocialRuntimeSettings = Field(default_factory=SocialRuntimeSettings)
     maps: MapsSettings = Field(default_factory=MapsSettings)

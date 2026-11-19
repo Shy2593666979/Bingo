@@ -26,6 +26,92 @@ class GroupParticipation:
     def __init__(self, service):
         self.service = service
 
+    async def serial_decision(self, run_id):
+        """Route once, publish one complete message, then route from fresh history."""
+        waits = failures = 0
+        while True:
+            await self.service.runs.check_run(run_id)
+            async with self.service.database.session_factory() as session:
+                run = await session.get(GroupRun, run_id)
+                group = await session.get(ChatGroup, run.group_id)
+                if run.emitted_ai_messages >= run.max_ai_messages:
+                    return
+                if run.emitted_ai_messages and not group.allow_ai_to_ai:
+                    return
+                roles = (
+                    await session.exec(
+                        select(Role)
+                        .join(GroupMember, GroupMember.role_id == Role.id)
+                        .where(
+                            GroupMember.group_id == group.id,
+                            GroupMember.active.is_(True),
+                            Role.enabled.is_(True),
+                            Role.deleted.is_(False),
+                        )
+                    )
+                ).all()
+                recent = (
+                    await session.exec(
+                        select(GroupMessage)
+                        .where(
+                            GroupMessage.group_id == group.id, GroupMessage.status == "completed"
+                        )
+                        .order_by(GroupMessage.seq.desc())
+                        .limit(16)
+                    )
+                ).all()
+                state = {
+                    "group": group.name,
+                    "required_recipients": json.loads(run.force_targets_json),
+                    "remaining": run.max_ai_messages - run.emitted_ai_messages,
+                    "recent": [
+                        {
+                            "id": m.id,
+                            "role_id": m.sender_role_id,
+                            "sender": m.sender_type,
+                            "text": model_sticker_text(m.content)[:2000],
+                        }
+                        for m in reversed(recent)
+                    ],
+                }
+                candidates = {
+                    r.id: {"name": r.nickname, "persona": r.context_prompt[:500]} for r in roles
+                }
+                answered = {m.sender_role_id for m in recent if m.run_id == run_id}
+                pending = [
+                    identifier
+                    for identifier in state["required_recipients"]
+                    if identifier not in answered and identifier in candidates
+                ]
+                state["required_recipients"] = pending
+                if pending:
+                    candidates = {identifier: candidates[identifier] for identifier in pending}
+                trigger_id = recent[0].id if recent else None
+            if not candidates or not await self.claim_decision(run_id):
+                return
+            try:
+                selected = await self.service.decision_model.choose(
+                    state, candidates, fallback=self.service.model.complete
+                )
+            except ValueError:
+                return
+            await self.service.runs.check_run(run_id)
+            if selected == "finish":
+                return
+            if selected == "wait":
+                waits += 1
+                if waits > 2:
+                    return
+                await asyncio.sleep(0.8)
+                continue
+            waits = 0
+            success = await self.service.speaking.speak(
+                run_id, selected, ReplyIntent(action="speak"), direct=True, trigger_id=trigger_id
+            )
+            failures = 0 if success else failures + 1
+            if failures >= 2:
+                return
+
     async def claim_decision(self, run_id):
         async with self.service.database.session_factory() as session:
             run = await session.get(GroupRun, run_id)

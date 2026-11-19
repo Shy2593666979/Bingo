@@ -167,7 +167,7 @@ void main() {
     final gesture = await tester.startGesture(
       tester.getCenter(find.text('按住说话')),
     );
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('取消'), findsOneWidget);
     expect(find.text('转文字'), findsOneWidget);

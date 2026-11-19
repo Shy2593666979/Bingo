@@ -1,3 +1,5 @@
+import 'package:bingo/features/chat/presentation/widgets/chat_viewport_resize.dart';
+import 'package:bingo/features/chat/presentation/widgets/local_message_view.dart';
 import 'package:bingo/core/appearance/chat_appearance.dart';
 import 'package:bingo/features/chat/presentation/chat_info_page.dart';
 import 'dart:async';
@@ -239,6 +241,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
               colorScheme: baseTheme.colorScheme
                   .copyWith(primary: skin.accent, primaryContainer: skin.user)),
           child: Scaffold(
+            resizeToAvoidBottomInset: false,
             body: ChatWallpaper(
               value: appearance,
               child: SafeArea(
@@ -283,148 +286,174 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                         ]),
                       ),
                     Expanded(
-                      child: Stack(children: [
-                        Positioned.fill(
-                            child: controller.timelineItems.isEmpty &&
-                                    !controller.isWaitingForReply
-                                ? _EmptyChat(
-                                    onAvatarTap: widget.onOpenRoleDetails,
-                                    onAvatarLongPress: _insertPartnerName,
-                                    assistantRole: widget.assistantRole)
-                                : ListView.builder(
-                                    controller: _scrollController,
-                                    padding: const EdgeInsets.fromLTRB(
-                                        12, 8, 12, 14),
-                                    itemCount: controller.timelineItems.length +
-                                        (controller.isWaitingForReply ? 1 : 0),
-                                    itemBuilder: (context, index) {
-                                      if (index ==
-                                          controller.timelineItems.length) {
-                                        return ChatTypingHint(
-                                            onAvatarTap:
-                                                widget.onOpenRoleDetails,
-                                            onAvatarLongPress:
-                                                _insertPartnerName,
-                                            name: widget.assistantName,
-                                            role: widget.assistantRole);
-                                      }
-                                      final item =
-                                          controller.timelineItems[index];
-                                      if (item case final ChatMessage message) {
-                                        final showTime = _shouldShowTime(
-                                          controller.timelineItems,
-                                          index,
-                                        );
-                                        return Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            if (showTime)
-                                              _MessageTimeDivider(
-                                                value: message.createdAt!,
-                                              ),
-                                            if (message.type ==
-                                                ChatMessageType.call)
-                                              CallRecordTile(
+                      child: ChatViewportResize(
+                          key: const ValueKey('chat-message-viewport'),
+                          controller: _scrollController,
+                          child: Stack(children: [
+                            Positioned.fill(
+                                child: controller.timelineItems.isEmpty &&
+                                        !controller.isWaitingForReply
+                                    ? _EmptyChat(
+                                        onAvatarTap: widget.onOpenRoleDetails,
+                                        onAvatarLongPress: _insertPartnerName,
+                                        assistantRole: widget.assistantRole)
+                                    : ListView.builder(
+                                        controller: _scrollController,
+                                        padding: const EdgeInsets.fromLTRB(
+                                            12, 8, 12, 14),
+                                        itemCount:
+                                            controller.timelineItems.length +
+                                                (controller.isWaitingForReply
+                                                    ? 1
+                                                    : 0),
+                                        itemBuilder: (context, index) {
+                                          if (index ==
+                                              controller.timelineItems.length) {
+                                            return ChatTypingHint(
                                                 onAvatarTap:
                                                     widget.onOpenRoleDetails,
                                                 onAvatarLongPress:
                                                     _insertPartnerName,
-                                                message: message,
-                                                assistantRole:
-                                                    widget.assistantRole,
-                                              )
-                                            else if (message.location != null)
-                                              Padding(
-                                                  padding: const EdgeInsets
-                                                      .symmetric(vertical: 8),
-                                                  child: Row(
-                                                      mainAxisAlignment: message
-                                                                  .role ==
-                                                              ChatRole.user
-                                                          ? MainAxisAlignment
-                                                              .end
-                                                          : MainAxisAlignment
-                                                              .start,
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .start,
+                                                name: widget.assistantName,
+                                                role: widget.assistantRole);
+                                          }
+                                          final item =
+                                              controller.timelineItems[index];
+                                          if (item
+                                              case final ChatMessage message) {
+                                            final showTime = _shouldShowTime(
+                                              controller.timelineItems,
+                                              index,
+                                            );
+                                            return LocalMessageView(
+                                                key: ValueKey(
+                                                    'local-view-${message.id}'),
+                                                account: controller.userId ??
+                                                    'local',
+                                                messageKey:
+                                                    'message:${message.id}',
+                                                text: message.content,
+                                                isUser: message.role ==
+                                                    ChatRole.user,
+                                                beforePlayback:
+                                                    controller.stopSpeech,
+                                                builder: (voice) => Column(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
                                                       children: [
-                                                        if (message.role !=
-                                                            ChatRole.user) ...[
-                                                          ChatPortrait(
-                                                              key: ValueKey(
-                                                                  'chat-message-avatar-${message.id}'),
-                                                              size: 34,
-                                                              onTap: widget
-                                                                  .onOpenRoleDetails,
-                                                              onLongPress:
-                                                                  _insertPartnerName,
-                                                              child: AssistantAvatar(
-                                                                  role: widget
-                                                                      .assistantRole,
-                                                                  size: 34)),
-                                                          const SizedBox(
-                                                              width: 9),
-                                                        ],
-                                                        Flexible(
-                                                            child: LocationCard(
-                                                                isUser: message
-                                                                        .role ==
-                                                                    ChatRole
-                                                                        .user,
-                                                                location: message
-                                                                    .location!,
-                                                                mapUrl: message
-                                                                        .location!
-                                                                        .hasCoordinates
-                                                                    ? widget
-                                                                        .locationMapUrlBuilder
-                                                                        ?.call(message
-                                                                            .location!)
-                                                                    : null,
-                                                                accessToken: widget
-                                                                    .imageAccessToken)),
-                                                      ]))
-                                            else
-                                              MessageBubble(
-                                                onAvatarTap:
-                                                    widget.onOpenRoleDetails,
-                                                onAvatarLongPress:
-                                                    _insertPartnerName,
-                                                message: message,
-                                                showAvatar:
-                                                    !_continuesAssistant(
-                                                        controller
-                                                            .timelineItems,
-                                                        index),
-                                                assistantRole:
-                                                    widget.assistantRole,
-                                                imageUrlBuilder:
-                                                    widget.imageUrlBuilder,
-                                                imageAccessToken:
-                                                    widget.imageAccessToken,
-                                              ),
-                                          ],
-                                        );
-                                      }
-                                      if (item case final DeviceAction action) {
-                                        return DeviceActionCard(
-                                          onAvatarTap: widget.onOpenRoleDetails,
-                                          onAvatarLongPress: _insertPartnerName,
-                                          key: ValueKey(
-                                              'device-action-${action.id}'),
-                                          action: action,
-                                          assistantRole: widget.assistantRole,
-                                          onApprove: () => controller
-                                              .approveDeviceAction(action),
-                                          onReject: () => controller
-                                              .rejectDeviceAction(action),
-                                        );
-                                      }
-                                      return const SizedBox.shrink();
-                                    },
-                                  )),
-                      ]),
+                                                        if (showTime)
+                                                          _MessageTimeDivider(
+                                                            value: message
+                                                                .createdAt!,
+                                                          ),
+                                                        if (message.type ==
+                                                            ChatMessageType
+                                                                .call)
+                                                          CallRecordTile(
+                                                            onAvatarTap: widget
+                                                                .onOpenRoleDetails,
+                                                            onAvatarLongPress:
+                                                                _insertPartnerName,
+                                                            message: message,
+                                                            assistantRole: widget
+                                                                .assistantRole,
+                                                          )
+                                                        else if (message
+                                                                .location !=
+                                                            null)
+                                                          Padding(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .symmetric(
+                                                                      vertical:
+                                                                          8),
+                                                              child: Row(
+                                                                  mainAxisAlignment: message
+                                                                              .role ==
+                                                                          ChatRole
+                                                                              .user
+                                                                      ? MainAxisAlignment
+                                                                          .end
+                                                                      : MainAxisAlignment
+                                                                          .start,
+                                                                  crossAxisAlignment:
+                                                                      CrossAxisAlignment
+                                                                          .start,
+                                                                  children: [
+                                                                    if (message
+                                                                            .role !=
+                                                                        ChatRole
+                                                                            .user) ...[
+                                                                      ChatPortrait(
+                                                                          key: ValueKey(
+                                                                              'chat-message-avatar-${message.id}'),
+                                                                          size:
+                                                                              34,
+                                                                          onTap: widget
+                                                                              .onOpenRoleDetails,
+                                                                          onLongPress:
+                                                                              _insertPartnerName,
+                                                                          child: AssistantAvatar(
+                                                                              role: widget.assistantRole,
+                                                                              size: 34)),
+                                                                      const SizedBox(
+                                                                          width:
+                                                                              9),
+                                                                    ],
+                                                                    Flexible(
+                                                                        child: LocationCard(
+                                                                            isUser:
+                                                                                message.role == ChatRole.user,
+                                                                            location: message.location!,
+                                                                            mapUrl: message.location!.hasCoordinates ? widget.locationMapUrlBuilder?.call(message.location!) : null,
+                                                                            accessToken: widget.imageAccessToken)),
+                                                                  ]))
+                                                        else
+                                                          MessageBubble(
+                                                            contentOverride:
+                                                                voice,
+                                                            onAvatarTap: widget
+                                                                .onOpenRoleDetails,
+                                                            onAvatarLongPress:
+                                                                _insertPartnerName,
+                                                            message: message,
+                                                            showAvatar:
+                                                                !_continuesAssistant(
+                                                                    controller
+                                                                        .timelineItems,
+                                                                    index),
+                                                            assistantRole: widget
+                                                                .assistantRole,
+                                                            imageUrlBuilder: widget
+                                                                .imageUrlBuilder,
+                                                            imageAccessToken: widget
+                                                                .imageAccessToken,
+                                                          ),
+                                                      ],
+                                                    ));
+                                          }
+                                          if (item
+                                              case final DeviceAction action) {
+                                            return DeviceActionCard(
+                                              onAvatarTap:
+                                                  widget.onOpenRoleDetails,
+                                              onAvatarLongPress:
+                                                  _insertPartnerName,
+                                              key: ValueKey(
+                                                  'device-action-${action.id}'),
+                                              action: action,
+                                              assistantRole:
+                                                  widget.assistantRole,
+                                              onApprove: () => controller
+                                                  .approveDeviceAction(action),
+                                              onReject: () => controller
+                                                  .rejectDeviceAction(action),
+                                            );
+                                          }
+                                          return const SizedBox.shrink();
+                                        },
+                                      )),
+                          ])),
                     ),
                     if (recommendationItems.isNotEmpty)
                       Padding(
@@ -437,11 +466,13 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                   : controller.send)),
                     MessageInput(
                       key: _inputKey,
+                      reserveKeyboardSpace: true,
                       initialVoiceMode: false,
                       referenceStyle: true,
                       hintText: '和${widget.assistantName}说点什么…',
                       enabled: true,
                       onSend: controller.send,
+                      onVoiceSend: controller.sendVoice,
                       speechGateway: widget.speechGateway,
                       onCall: _startCall,
                       onMoment: _openMoment,
@@ -616,6 +647,7 @@ class _RecommendationRows extends StatelessWidget {
 
   final List<String> items;
   final ValueChanged<String> onSelected;
+  static const _questionRadius = BorderRadius.all(Radius.circular(10));
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -632,10 +664,13 @@ class _RecommendationRows extends StatelessWidget {
                     padding: const EdgeInsets.only(right: 7),
                     child: Material(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
+                        shape: const RoundedRectangleBorder(
+                            borderRadius: _questionRadius,
+                            side: BorderSide(color: Color(0xFF454247))),
+                        clipBehavior: Clip.antiAlias,
                         child: InkWell(
                             onTap: () => onSelected(item),
-                            borderRadius: BorderRadius.circular(18),
+                            borderRadius: _questionRadius,
                             child: Padding(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 12, vertical: 8),
@@ -643,7 +678,11 @@ class _RecommendationRows extends StatelessWidget {
                                     maxLines: 1,
                                     style: const TextStyle(
                                         fontSize: 12,
-                                        color: ChatScene.muted))))))
+                                        color: Color(0xFF211F23))),
+                              ),
+                            ),
+                          ),
+                        ),
             ]))
       ]));
 }

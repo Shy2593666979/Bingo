@@ -12,6 +12,7 @@ import 'package:bingo/features/chat/presentation/chat_page.dart';
 import 'package:bingo/features/roles/presentation/role_detail_page.dart';
 import 'package:bingo/features/community/data/community_gateway.dart';
 import 'package:bingo/features/community/presentation/community_page.dart';
+import 'package:bingo/features/community/presentation/favorites_page.dart';
 import 'package:bingo/features/community/presentation/community_detail_page.dart';
 import 'package:bingo/features/community/presentation/publish_companion_page.dart';
 import 'package:bingo/features/group_chat/data/group_gateway.dart';
@@ -146,14 +147,15 @@ class _ChatGateway implements ChatGateway {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   for (final width in [320.0, 360.0]) {
-    testWidgets(
-        'launch profile menu and statistics fit at $width with larger text',
+    testWidgets('grouped profile menu fits at $width with larger text',
         (tester) async {
       tester.view.physicalSize = Size(width, 850);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       final gateway = _Gateway();
+      var profileEdits = 0;
+      var groupOpens = 0;
       await tester.pumpWidget(MaterialApp(
           theme: buildBingoTheme(),
           builder: (context, child) => MediaQuery(
@@ -166,7 +168,12 @@ void main() {
                   roles: gateway,
                   groups: gateway,
                   community: gateway,
-                  onEdit: () async {},
+                  onEdit: () async {
+                    profileEdits++;
+                  },
+                  onGroups: () {
+                    groupOpens++;
+                  },
                   onSettings: () async {},
                   onShares: () {},
                   onFavorites: () {},
@@ -177,10 +184,15 @@ void main() {
                   onPartners: () {}))));
       await tester.pumpAndSettle();
       expect(find.text('我的搭子'), findsOneWidget);
-      expect(find.text('聊天外观'), findsOneWidget);
-      await tester.tap(find.byTooltip('编辑个人资料'));
+      expect(find.text('我的内容'), findsOneWidget);
+      await tester.tap(find.text('我的AI陪伴空间'));
       await tester.pumpAndSettle();
+      expect(profileEdits, 1);
+      await tester.tap(find.text('我的群聊'));
+      expect(groupOpens, 1);
       expect(find.text('我的收藏'), findsOneWidget);
+      await tester.ensureVisible(find.text('外观设置'));
+      expect(find.text('应用设置'), findsOneWidget);
       expect(find.text('属于你的陪伴空间'), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
@@ -317,6 +329,20 @@ void main() {
             .selected,
         2);
     expect(find.byType(CommunityPage), findsOneWidget);
+    await tester.tap(find.text('我的').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('我的收藏'));
+    await tester.tap(find.text('我的收藏'));
+    await tester.pumpAndSettle();
+    expect(find.byType(FavoritesPage), findsOneWidget);
+    expect(find.byType(ReferenceNavigation), findsNothing);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(
+        tester
+            .widget<ReferenceNavigation>(find.byType(ReferenceNavigation))
+            .selected,
+        3);
     expect(tester.takeException(), isNull);
     await close(tester);
     controller.dispose();
@@ -340,9 +366,7 @@ void main() {
             onProfileSaved: (_) {},
             onLogout: () {})));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('星野').first);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('进入聊天'));
+    await tester.tap(find.text('和星野聊聊'));
     await tester.pumpAndSettle();
     final chat = tester.state(find.byType(ChatPage));
     await tester.tap(find.byKey(const ValueKey('chat-header-title')));
@@ -399,7 +423,14 @@ void main() {
     await tester.tap(find.text('首页').last);
     await tester.pumpAndSettle();
     expect(current(), 0);
-    expect(tester.widget<PageView>(pages).controller!.page, 0);
+    expect(tester.widget<IndexedStack>(pages).index, 0);
+    for (final index in [1, 0, 1, 2, 1, 3, 1]) {
+      await tester.tap(find.text(const ['首页', '聊天', '社区', '我的'][index]).last);
+      await tester.pump();
+      expect(current(), index);
+      expect(tester.widget<IndexedStack>(pages).index, index);
+    }
+    expect(tester.state(find.byType(MessagesPage)), same(messageState));
     await close(tester);
     controller.dispose();
     gateway.close();

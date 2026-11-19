@@ -1,5 +1,6 @@
 import 'package:bingo/app.dart';
 import 'package:bingo/core/design/bingo_wordmark.dart';
+import 'package:bingo/core/widgets/startup_brand_scene.dart';
 import 'package:bingo/features/auth/data/auth_token_store.dart';
 import 'package:bingo/features/auth/presentation/password_recovery_page.dart';
 import 'package:bingo/features/auth/presentation/user_agreement_page.dart';
@@ -23,12 +24,18 @@ void main() {
     await tester.pumpWidget(BingoApp(tokenStore: EmptyTokenStore()));
 
     expect(find.byType(BingoWordmark), findsOneWidget);
+    final startup = tester.state(find.byType(StartupBrandScene));
     expect(find.text('你的个人智能助理'), findsNothing);
 
     await tester.pump();
     await tester.pump();
 
     expect(find.text('欢迎回来'), findsOneWidget);
+    expect(tester.state(find.byType(StartupBrandScene)), same(startup));
+    await tester.pump(const Duration(milliseconds: 2700));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 550));
+    await tester.pump();
     expect(find.text('请输入手机号'), findsOneWidget);
     expect(find.text('忘记密码？'), findsOneWidget);
     expect(find.text('验证码登录'), findsNothing);

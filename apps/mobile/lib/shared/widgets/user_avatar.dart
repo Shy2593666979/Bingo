@@ -12,6 +12,7 @@ class UserAvatar extends StatelessWidget {
       this.backgroundColor,
       this.foregroundColor,
       this.backgroundGradient,
+      this.initialTextStyle,
       super.key});
 
   final String? avatarData;
@@ -19,6 +20,7 @@ class UserAvatar extends StatelessWidget {
   final double size;
   final Color? backgroundColor, foregroundColor;
   final Gradient? backgroundGradient;
+  final TextStyle? initialTextStyle;
 
   static const initialBackground = Color(0xFFF3E3E8);
   static const initialForeground = Color(0xFF88556B);
@@ -64,10 +66,11 @@ class UserAvatar extends StatelessWidget {
             : Text(initial,
                 textScaler: TextScaler.noScaling,
                 style: TextStyle(
-                    fontSize: size * .42,
-                    fontWeight: FontWeight.w600,
-                    height: 1,
-                    color: foregroundColor ?? tone.foreground)));
+                        fontSize: size * .42,
+                        fontWeight: FontWeight.w600,
+                        height: 1,
+                        color: foregroundColor ?? tone.foreground)
+                    .merge(initialTextStyle)));
     return Semantics(
         label: initial.isEmpty ? '未设置头像' : '${username.trim()}的头像',
         excludeSemantics: true,

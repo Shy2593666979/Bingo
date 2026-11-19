@@ -1,3 +1,4 @@
+import 'package:bingo/features/chat/data/message_presentation_store.dart';
 import 'dart:async';
 import 'dart:math';
 import 'dart:convert';
@@ -118,15 +119,23 @@ class GroupController extends ChangeNotifier {
       {bool mentionAll = false,
       List<Map<String, String>> mentionTargets = const [],
       String? replyToMessageId,
+      RecordedVoice? voice,
       Map<String, dynamic>? media}) async {
-    if (sending || text.trim().isEmpty) return false;
+    if (sending || (text.trim().isEmpty && voice == null)) return false;
+    var modelText = voice?.modelQuery ?? text;
     final selected = mentions.toSet().toList()..sort();
-    final fingerprint = jsonEncode(
-        [text, selected, mentionAll, mentionTargets, replyToMessageId, media]);
+    final fingerprint = jsonEncode([
+      modelText,
+      selected,
+      mentionAll,
+      mentionTargets,
+      replyToMessageId,
+      media
+    ]);
     if (_pendingFingerprint != fingerprint) {
       _pendingId =
           '${DateTime.now().microsecondsSinceEpoch}-${Random.secure().nextInt(1 << 32)}';
-      _pendingText = text;
+      _pendingText = modelText;
       _pendingMentions = selected;
       _pendingAll = mentionAll;
       _pendingTargets = List.of(mentionTargets);
@@ -134,12 +143,16 @@ class GroupController extends ChangeNotifier {
       _pendingMedia = media;
       _pendingFingerprint = fingerprint;
     }
+    if (voice != null) {
+      await MessagePresentationStore.forAccount(group?.humanId ?? 'local')
+          .saveVoice('group:$groupId:client:$_pendingId', voice);
+    }
     sending = true;
     error = null;
     final localId = 'local-$_pendingId';
     _outbox[localId] = {
       'id': _pendingId,
-      'text': text,
+      'text': modelText,
       'roles': selected,
       'all': mentionAll,
       'targets': mentionTargets,
@@ -187,17 +200,36 @@ class GroupController extends ChangeNotifier {
     }
     _notify();
     try {
+      if (voice != null) {
+        voice = await voice.resolve();
+        await MessagePresentationStore.forAccount(group?.humanId ?? 'local')
+            .finishTranscription('group:$groupId:client:$_pendingId', voice);
+        if (_disposed) return false;
+        modelText = voice.modelQuery;
+        _pendingText = modelText;
+        _pendingFingerprint = jsonEncode([
+          modelText,
+          selected,
+          mentionAll,
+          mentionTargets,
+          replyToMessageId,
+          media
+        ]);
+        _outbox[localId]!['text'] = modelText;
+        _outbox[localId]!['fingerprint'] = _pendingFingerprint;
+      }
       final api = gateway;
       final run = media != null && api is GroupMediaGateway
           ? await (api as GroupMediaGateway)
-              .sendGroupMedia(groupId, text, _pendingId!, media)
+              .sendGroupMedia(groupId, modelText, _pendingId!, media)
           : api is GroupV2Gateway
               ? await (api as GroupV2Gateway).sendGroupV2(
-                  groupId, text, selected, _pendingId!,
+                  groupId, modelText, selected, _pendingId!,
                   mentionAll: mentionAll,
                   mentionTargets: mentionTargets,
                   replyToMessageId: replyToMessageId)
-              : await gateway.sendGroup(groupId, text, selected, _pendingId!);
+              : await gateway.sendGroup(
+                  groupId, modelText, selected, _pendingId!);
       if (_disposed) return false;
       _epoch++;
       _timer?.cancel();

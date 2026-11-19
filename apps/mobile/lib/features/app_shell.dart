@@ -1,4 +1,5 @@
 import 'package:bingo/features/voices/presentation/voice_library_page.dart';
+import 'package:bingo/features/community/presentation/favorites_page.dart';
 import 'package:bingo/features/roles/presentation/companion_library_page.dart';
 import 'package:bingo/core/appearance/chat_appearance.dart';
 import 'package:bingo/core/design/reference_design.dart';
@@ -119,7 +120,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   }
 
   int _tab = 0;
-  final _pages = PageController();
+  final _visitedTabs = <int>{0, 1};
+  double _tabDrag = 0;
   int _unreadChats = 0;
   bool _showingIncoming = false;
   bool _loadingRoleDetails = false;
@@ -197,7 +199,6 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   @override
   void dispose() {
     _welcomeTimer?.cancel();
-    _pages.dispose();
     _updateCommunityChrome(false);
     _appearance.dispose();
     _locationGeneration++;
@@ -210,123 +211,134 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: BingoPalette.ice,
-        body: PageView(
-            key: const ValueKey('main-pages'),
-            controller: _pages,
-            allowImplicitScrolling: true,
-            onPageChanged: (tab) {
-              if (_tab != tab) _activateTab(tab);
+        body: GestureDetector(
+            onHorizontalDragStart: (_) => _tabDrag = 0,
+            onHorizontalDragUpdate: (details) =>
+                _tabDrag += details.primaryDelta ?? 0,
+            onHorizontalDragEnd: (details) {
+              final velocity = details.primaryVelocity ?? 0;
+              if (_tabDrag.abs() < 60 && velocity.abs() < 250) return;
+              final direction = _tabDrag.abs() >= 60 ? _tabDrag : velocity;
+              _selectTab((_tab + (direction < 0 ? 1 : -1)).clamp(0, 3));
             },
-            children: <Widget>[
-              CompanionSpacePage(
-                  key: _rolesKey,
-                  onReady: widget.onReady,
-                  gateway: gateway,
-                  groups: gateway,
-                  community: gateway,
-                  userId: widget.profile.id,
-                  onChat: _openRole,
-                  onDetail: (role) => _openCopy(role.id),
-                  onOpenGroup: _openGroup,
-                  onCreateGroup: _createGroup,
-                  onCreateRole: _newRole,
-                  onRecommendation: _openCommunityShare,
-                  onInstalled: _refreshPartners,
-                  onCommunity: () => _selectTab(2),
-                  onMessages: () => _onTabReady(
-                      1, () => _conversationsKey.currentState?.showChats()),
-                  onSearchChats: () => _onTabReady(
-                      1,
-                      () => _conversationsKey.currentState
-                          ?.showChats(search: true)),
-                  onAllGroups: () => _onTabReady(
-                      1, () => _conversationsKey.currentState?.onlyGroups())),
-              MessagesPage(
-                  key: _conversationsKey,
-                  showCreateAction: true,
-                  gateway: gateway,
-                  groups: gateway,
-                  onRole: _openRole,
-                  onGroup: _openGroup,
-                  onUnreadChanged: (count) {
-                    if (mounted && _unreadChats != count) {
-                      setState(() => _unreadChats = count);
-                    }
-                  },
-                  onCreate: () => _createGroup('快乐小窝'),
-                  onCreateRole: _newRole,
-                  onCommunity: () => _selectTab(2),
-                  onGroupInfo: (group) async {
-                    await Navigator.of(context).push<bool>(MaterialPageRoute(
-                        builder: (_) => GroupInfoPage(
-                            group: group,
-                            gateway: gateway,
-                            roles: gateway,
-                            userAvatarData: profile.userAvatarData,
-                            appearanceStore: _appearance)));
-                    if (mounted) await _refreshPartners();
-                  },
-                  onPartners: () => _openLibrary()),
-              CommunityPage(
-                  key: _communityKey,
-                  gateway: gateway,
-                  referenceDesign: true,
-                  onPartners: () => _openLibrary(),
-                  onCreateGroup: _createGroup,
-                  onPublish: _publish,
-                  onInstalled: (_) => _refreshPartners(),
-                  onOpenCopy: _openCopy,
-                  onChatCopy: _chatCopy),
-              ReferenceMyPage(
-                  key: _myKey,
-                  onManageRoles: () => _openLibrary(),
-                  onVoices: () => _openLibrary(voices: true),
-                  profile: profile,
-                  roles: gateway,
-                  groups: gateway,
-                  community: gateway,
-                  onEdit: () async {
-                    await _openProfileSetup(context, profile);
-                  },
-                  onSettings: () => _openSettings(context),
-                  onAppearance: () async {
-                    await Navigator.of(context).push<void>(MaterialPageRoute(
-                        builder: (_) => AppearancePage(store: _appearance)));
-                  },
-                  onMessages: () {
-                    _onTabReady(
-                        1, () => _conversationsKey.currentState?.showChats());
-                  },
-                  onGroups: () {
-                    _onTabReady(
-                        1, () => _conversationsKey.currentState?.onlyGroups());
-                  },
-                  onRole: _openCopy,
-                  onGroup: _openGroup,
-                  onShare: _openCommunityShare,
-                  onCreate: _newRole,
-                  onPartners: () => _selectTab(0),
-                  onShares: () {
-                    _onTabReady(
-                        2, () => _communityKey.currentState?.showScope(3));
-                  },
-                  onFavorites: () {
-                    _onTabReady(
-                        2, () => _communityKey.currentState?.showScope(2));
-                  }),
-            ]
-                .indexed
-                .map((entry) => _KeptTab(
-                    key: ValueKey(entry.$1),
-                    active: _tab == entry.$1,
-                    child: entry.$2))
-                .toList()),
+            child: IndexedStack(
+                key: const ValueKey('main-pages'),
+                index: _tab,
+                children: <Widget>[
+                  CompanionSpacePage(
+                      key: _rolesKey,
+                      onReady: widget.onReady,
+                      nickname: profile.username,
+                      active: _tab == 0,
+                      gateway: gateway,
+                      groups: gateway,
+                      userId: widget.profile.id,
+                      onChat: _openRole,
+                      onDetail: (role) => _openCopy(role.id),
+                      onOpenGroup: _openGroup,
+                      onCreateGroup: _createGroup,
+                      onCreateRole: _newRole,
+                      onCommunity: () => _selectTab(2),
+                      onMessages: () => _onTabReady(
+                          1, () => _conversationsKey.currentState?.showChats()),
+                      onSearchChats: () => _onTabReady(
+                          1,
+                          () => _conversationsKey.currentState
+                              ?.showChats(search: true)),
+                      onAllGroups: () => _onTabReady(1,
+                          () => _conversationsKey.currentState?.onlyGroups())),
+                  MessagesPage(
+                      key: _conversationsKey,
+                      showCreateAction: true,
+                      gateway: gateway,
+                      groups: gateway,
+                      onRole: _openRole,
+                      onGroup: _openGroup,
+                      onUnreadChanged: (count) {
+                        if (mounted && _unreadChats != count) {
+                          setState(() => _unreadChats = count);
+                        }
+                      },
+                      onCreate: () => _createGroup('快乐小窝'),
+                      onCreateRole: _newRole,
+                      onCommunity: () => _selectTab(2),
+                      onGroupInfo: (group) async {
+                        await Navigator.of(context).push<bool>(
+                            MaterialPageRoute(
+                                builder: (_) => GroupInfoPage(
+                                    group: group,
+                                    gateway: gateway,
+                                    roles: gateway,
+                                    userAvatarData: profile.userAvatarData,
+                                    appearanceStore: _appearance)));
+                        if (mounted) await _refreshPartners();
+                      },
+                      onPartners: () => _openLibrary()),
+                  CommunityPage(
+                      key: _communityKey,
+                      gateway: gateway,
+                      referenceDesign: true,
+                      onPartners: () => _openLibrary(),
+                      onCreateGroup: _createGroup,
+                      onPublish: _publish,
+                      onInstalled: (_) => _refreshPartners(),
+                      onOpenCopy: _openCopy,
+                      onChatCopy: _chatCopy),
+                  ReferenceMyPage(
+                      key: _myKey,
+                      onManageRoles: () => _openLibrary(),
+                      onVoices: () => _openLibrary(voices: true),
+                      profile: profile,
+                      roles: gateway,
+                      groups: gateway,
+                      community: gateway,
+                      onEdit: () async {
+                        await _openProfileSetup(context, profile);
+                      },
+                      onSettings: () => _openSettings(context),
+                      onAppearance: () async {
+                        await Navigator.of(context).push<void>(
+                            MaterialPageRoute(
+                                builder: (_) =>
+                                    AppearancePage(store: _appearance)));
+                      },
+                      onMessages: () {
+                        _onTabReady(1,
+                            () => _conversationsKey.currentState?.showChats());
+                      },
+                      onGroups: () {
+                        _onTabReady(1,
+                            () => _conversationsKey.currentState?.onlyGroups());
+                      },
+                      onRole: _openCopy,
+                      onGroup: _openGroup,
+                      onShare: _openCommunityShare,
+                      onCreate: _newRole,
+                      onPartners: () => _selectTab(0),
+                      onShares: () {
+                        _onTabReady(
+                            2, () => _communityKey.currentState?.showScope(3));
+                      },
+                      onFavorites: () {
+                        Navigator.of(context).push<void>(MaterialPageRoute(
+                            builder: (_) => FavoritesPage(
+                                gateway: gateway,
+                                onOpen: _openCommunityShare)));
+                      }),
+                ]
+                    .indexed
+                    .map((entry) => _KeptTab(
+                        key: ValueKey(entry.$1),
+                        active: _tab == entry.$1,
+                        child: _visitedTabs.contains(entry.$1)
+                            ? entry.$2
+                            : const SizedBox.shrink()))
+                    .toList())),
         bottomNavigationBar: _navigation(),
       );
 
   void _selectTab(int tab) {
     _activateTab(tab);
-    if (_pages.hasClients) _pages.jumpToPage(tab);
   }
 
   Future<void> _pollWelcomes() async {
@@ -339,7 +351,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     try {
       final status = await gateway.welcomeStatus();
       if (!mounted || !_welcomeForeground) return;
-      await _rolesKey.currentState?.refresh(recommendations: false);
+      await _rolesKey.currentState?.refresh();
       await _conversationsKey.currentState?.refresh();
       if (!mounted || !_welcomeForeground) return;
       _welcomeTimer?.cancel();
@@ -388,8 +400,12 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   }
 
   void _activateTab(int tab) {
-    if (_tab != tab) FocusScope.of(context).unfocus();
-    setState(() => _tab = tab);
+    if (_tab == tab) return;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _tab = tab;
+      _visitedTabs.add(tab);
+    });
     _updateCommunityChrome(tab != 0);
     if (tab == 0) unawaited(_rolesKey.currentState?.refresh());
     if (tab == 1) unawaited(_conversationsKey.currentState?.refresh());
@@ -399,6 +415,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
 
   Widget _navigation() => ReferenceNavigation(
       selected: _tab,
+      homeStyle: _tab == 0,
       onSelected: _selectTab,
       onCreate: _create,
       unread: _unreadChats);
@@ -514,7 +531,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
             onOpenRoleDetails: _openCopy,
             userAvatarData: profile.userAvatarData,
             appearanceStore: _appearance)));
-    if (mounted) await _refreshPartners();
+    if (mounted) unawaited(_refreshPartners().catchError((Object _) {}));
   }
 
   Future<void> _create() async {
@@ -552,9 +569,14 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     await Navigator.of(context).push<void>(MaterialPageRoute(
       builder: (chatContext) => _chatPage(chatContext, role),
     ));
-    await gateway.markConversationRead(conversation.id);
+    unawaited(_syncAfterChat(conversation.id).catchError((Object _) {}));
+  }
+
+  Future<void> _syncAfterChat(String conversationId) async {
+    await gateway.markConversationRead(conversationId);
     final updated = await gateway.getProfile();
-    if (mounted) onProfileSaved(updated);
+    if (!mounted) return;
+    onProfileSaved(updated);
     await _refreshPartners();
   }
 

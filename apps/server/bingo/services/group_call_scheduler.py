@@ -29,6 +29,23 @@ class TurnScheduler:
         roles = list(engine.roles)
         if not roles:
             return TurnDecision("finish")
+        decision = getattr(engine, "decision_model", None)
+        if decision is not None:
+            selected = await decision.choose(
+                {
+                    "topic": state.topic,
+                    "summary": state.topic_summary,
+                    "recent": engine.history[-12:],
+                    "recent_speakers": state.recent_speakers[-6:],
+                    "winding_down": state.phase == "winding_down",
+                },
+                {r.id: {"name": r.nickname, "persona": r.context_prompt[:500]} for r in roles},
+                fallback=engine.complete,
+            )
+            return TurnDecision(
+                "yield" if selected == "wait" else "finish" if selected == "finish" else "speak",
+                selected if selected not in {"wait", "finish"} else "",
+            )
         latest = engine.history[-1] if engine.history else {}
         # Only genuine invitations count; mentioning someone's view is not an invitation.
         if latest.get("role_id"):

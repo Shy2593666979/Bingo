@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bingo/core/design/companion_launch_ui.dart';
 import 'package:bingo/core/widgets/bingo_confirm_dialog.dart';
 import 'package:bingo/core/widgets/unread_badge.dart';
@@ -95,7 +97,12 @@ class MessagesPageState extends State<MessagesPage> {
     setState(() => _filter = 2);
   }
 
-  Future<void> refresh() async {
+  Future<void>? _refreshTask;
+
+  Future<void> refresh() =>
+      _refreshTask ??= _loadChats().whenComplete(() => _refreshTask = null);
+
+  Future<void> _loadChats() async {
     final version = ++_loadVersion;
     try {
       final results = await Future.wait<Object>(
@@ -126,20 +133,30 @@ class MessagesPageState extends State<MessagesPage> {
 
   Future<void> _open(_Chat item) async {
     if (_opening) return;
-    _opening = true;
+    setState(() {
+      _opening = true;
+      _openingId = item.role?.id ?? item.group!.id;
+    });
     try {
       if (item.role != null) {
         await widget.onRole(item.role!);
       } else {
         await widget.onGroup(item.group!);
       }
-      await refresh();
     } catch (_) {
       if (mounted) showCenterToast(context, '聊天暂时无法打开，请重试');
     } finally {
-      _opening = false;
+      if (mounted) {
+        setState(() {
+          _opening = false;
+          _openingId = null;
+        });
+        unawaited(refresh());
+      }
     }
   }
+
+  String? _openingId;
 
   Future<void> _apply(Future<void> Function() action) async {
     if (_busy) return;
@@ -667,12 +684,19 @@ class MessagesPageState extends State<MessagesPage> {
                                             color: Color(0xFF262626)))),
                               ])),
                               const SizedBox(width: 10),
-                              Text(_time(item.date),
-                                  style: const TextStyle(
-                                      fontSize: 12,
-                                      height: 1.35,
-                                      fontWeight: FontWeight.w400,
-                                      color: Color(0xFF999999))),
+                              if (_openingId == (role?.id ?? group!.id))
+                                const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 1.5))
+                              else
+                                Text(_time(item.date),
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        height: 1.35,
+                                        fontWeight: FontWeight.w400,
+                                        color: Color(0xFF999999))),
                             ]),
                         const SizedBox(height: 5),
                         Row(children: [

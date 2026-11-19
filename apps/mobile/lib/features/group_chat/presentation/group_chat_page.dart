@@ -1,3 +1,5 @@
+import 'package:bingo/features/chat/presentation/widgets/chat_viewport_resize.dart';
+import 'package:bingo/features/chat/presentation/widgets/local_message_view.dart';
 import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/core/appearance/chat_appearance.dart';
 import 'package:bingo/core/design/chat_scene.dart';
@@ -264,30 +266,6 @@ class _GroupChatPageState extends State<GroupChatPage>
     }
   }
 
-  Future<void> _messageActions(GroupChatMessage message) async {
-    final action = await showModalBottomSheet<String>(
-        context: context,
-        showDragHandle: true,
-        builder: (context) => SafeArea(
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-              if (message.status == 'completed' && message.content.isNotEmpty)
-                ListTile(
-                    leading: const Icon(Icons.reply_rounded),
-                    title: const Text('引用回复'),
-                    onTap: () => Navigator.pop(context, 'reply')),
-              ListTile(
-                  leading: const Icon(Icons.copy_rounded),
-                  title: const Text('复制'),
-                  onTap: () => Navigator.pop(context, 'copy')),
-            ])));
-    if (!mounted) return;
-    if (action == 'reply') setState(() => _replyDraft = message);
-    if (action == 'copy') {
-      await Clipboard.setData(ClipboardData(text: _preview(message.content)));
-      if (mounted) showCenterToast(context, '已复制');
-    }
-  }
-
   String _preview(String text) {
     final sticker = ChatSticker.parse(text);
     return sticker == null ? text : '[表情：${sticker.label}]';
@@ -526,6 +504,7 @@ class _GroupChatPageState extends State<GroupChatPage>
     return AppearanceScope(
         value: appearance,
         child: Scaffold(
+            resizeToAvoidBottomInset: false,
             backgroundColor: ChatScene.ivory,
             body: ChatWallpaper(
                 value: appearance,
@@ -604,107 +583,122 @@ class _GroupChatPageState extends State<GroupChatPage>
                                   child: const Text('重试'))
                             ])),
                       Expanded(
-                        child: Stack(
-                          key: const ValueKey('group-message-viewport'),
-                          fit: StackFit.expand,
-                          children: [
-                            ClipRRect(
-                                borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(24)),
-                                child: ColoredBox(
-                                    color: Colors.transparent,
-                                    child: _chat.loading
-                                        ? const Center(
-                                            child: CircularProgressIndicator())
-                                        : _replies.messages.isEmpty
-                                            ? Center(
-                                                child: Column(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    children: [
-                                                    const BingoIcon(
-                                                        BingoSymbol.chat,
-                                                        size: 36,
-                                                        color: ChatScene.accent,
-                                                        selected: true),
-                                                    const SizedBox(height: 12),
-                                                    Text(
-                                                        '${group?.name ?? '搭子们'}已经准备好啦',
-                                                        style: const TextStyle(
-                                                            fontSize: 16,
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .w700)),
-                                                    const SizedBox(height: 8),
-                                                    const Text(
-                                                        '聊聊今天的生活，或用 @ 指定搭子回应',
-                                                        style: TextStyle(
-                                                            fontSize: 12,
+                        child: ChatViewportResize(
+                            controller: _scroll,
+                            child: Stack(
+                              key: const ValueKey('group-message-viewport'),
+                              fit: StackFit.expand,
+                              children: [
+                                ClipRRect(
+                                    borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(24)),
+                                    child: ColoredBox(
+                                        color: Colors.transparent,
+                                        child: _chat.loading
+                                            ? const Center(
+                                                child:
+                                                    CircularProgressIndicator())
+                                            : _replies.messages.isEmpty
+                                                ? Center(
+                                                    child: Column(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                        const BingoIcon(
+                                                            BingoSymbol.chat,
+                                                            size: 36,
                                                             color: ChatScene
-                                                                .muted))
-                                                  ]))
-                                            : SingleChildScrollView(
-                                                controller: _scroll,
-                                                padding:
-                                                    const EdgeInsets.fromLTRB(
+                                                                .accent,
+                                                            selected: true),
+                                                        const SizedBox(
+                                                            height: 12),
+                                                        Text(
+                                                            '${group?.name ?? '搭子们'}已经准备好啦',
+                                                            style: const TextStyle(
+                                                                fontSize: 16,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w700)),
+                                                        const SizedBox(
+                                                            height: 8),
+                                                        const Text(
+                                                            '聊聊今天的生活，或用 @ 指定搭子回应',
+                                                            style: TextStyle(
+                                                                fontSize: 12,
+                                                                color: ChatScene
+                                                                    .muted))
+                                                      ]))
+                                                : SingleChildScrollView(
+                                                    controller: _scroll,
+                                                    padding: const EdgeInsets
+                                                        .fromLTRB(
                                                         12, 10, 12, 14),
-                                                child: Column(children: [
-                                                  if (_chat.more)
-                                                    TextButton(
-                                                        onPressed: () async {
-                                                          try {
-                                                            await _chat.older();
-                                                          } catch (_) {
-                                                            if (mounted) {
-                                                              showCenterToast(
-                                                                  this.context,
-                                                                  '历史消息加载失败');
-                                                            }
-                                                          }
-                                                        },
-                                                        child: const Text(
-                                                            '查看更早消息')),
-                                                  for (final (index, message)
-                                                      in _replies
-                                                          .messages.indexed)
-                                                    KeyedSubtree(
-                                                        key: _messageKeys
-                                                            .putIfAbsent(
-                                                                message.id,
-                                                                GlobalKey.new),
-                                                        child: _message(message,
-                                                            previous: index == 0
-                                                                ? null
-                                                                : _replies
-                                                                        .messages[
-                                                                    index -
-                                                                        1])),
-                                                ])))),
-                            if (_newMessageCount > 0)
-                              Positioned(
-                                right: 12,
-                                bottom: 8,
-                                child: TextButton.icon(
-                                  key: const ValueKey('group-new-messages'),
-                                  onPressed: () {
-                                    setState(() {
-                                      _newMessageCount = 0;
-                                      _forceBottom = true;
-                                    });
-                                    _changed();
-                                  },
-                                  style: TextButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: BingoPalette.primaryText,
+                                                    child: Column(children: [
+                                                      if (_chat.more)
+                                                        TextButton(
+                                                            onPressed:
+                                                                () async {
+                                                              try {
+                                                                await _chat
+                                                                    .older();
+                                                              } catch (_) {
+                                                                if (mounted) {
+                                                                  showCenterToast(
+                                                                      this.context,
+                                                                      '历史消息加载失败');
+                                                                }
+                                                              }
+                                                            },
+                                                            child: const Text(
+                                                                '查看更早消息')),
+                                                      for (final (
+                                                            index,
+                                                            message
+                                                          ) in _replies
+                                                              .messages.indexed)
+                                                        KeyedSubtree(
+                                                            key: _messageKeys
+                                                                .putIfAbsent(
+                                                                    message.id,
+                                                                    GlobalKey
+                                                                        .new),
+                                                            child: _message(
+                                                                message,
+                                                                previous: index ==
+                                                                        0
+                                                                    ? null
+                                                                    : _replies
+                                                                            .messages[
+                                                                        index -
+                                                                            1])),
+                                                    ])))),
+                                if (_newMessageCount > 0)
+                                  Positioned(
+                                    right: 12,
+                                    bottom: 8,
+                                    child: TextButton.icon(
+                                      key: const ValueKey('group-new-messages'),
+                                      onPressed: () {
+                                        setState(() {
+                                          _newMessageCount = 0;
+                                          _forceBottom = true;
+                                        });
+                                        _changed();
+                                      },
+                                      style: TextButton.styleFrom(
+                                        backgroundColor: Colors.white,
+                                        foregroundColor:
+                                            BingoPalette.primaryText,
+                                      ),
+                                      icon: const Icon(
+                                          Icons.arrow_downward_rounded,
+                                          size: 14),
+                                      label: Text('$_newMessageCount条新消息',
+                                          style: const TextStyle(fontSize: 11)),
+                                    ),
                                   ),
-                                  icon: const Icon(Icons.arrow_downward_rounded,
-                                      size: 14),
-                                  label: Text('$_newMessageCount条新消息',
-                                      style: const TextStyle(fontSize: 11)),
-                                ),
-                              ),
-                          ],
-                        ),
+                              ],
+                            )),
                       ),
                       if (_replyDraft != null)
                         Container(
@@ -809,8 +803,19 @@ class _GroupChatPageState extends State<GroupChatPage>
                                 control: true): _input.redo,
                           },
                           child: MessageInput(
+                              reserveKeyboardSpace: true,
                               enabled: !_chat.sending && group != null,
                               onSend: _send,
+                              onVoiceSend: (voice) async {
+                                _replies.interrupt(runId: _chat.runId);
+                                _forceBottom = true;
+                                final sent = await _chat.send(voice.text, [],
+                                    voice: voice,
+                                    replyToMessageId: _replyDraft?.id);
+                                if (sent && mounted) {
+                                  setState(() => _replyDraft = null);
+                                }
+                              },
                               speechGateway: widget.speech,
                               onCall: _call,
                               onGallery: () => _image('pickImage'),
@@ -835,37 +840,10 @@ class _GroupChatPageState extends State<GroupChatPage>
                       const TextStyle(fontSize: 11, color: ChatScene.muted))));
     }
     final user = message.type == 'user';
-    final gap = previous == null
-        ? null
-        : message.createdAt.difference(previous.createdAt);
-    final continuation = !user &&
-        message.type == 'assistant' &&
-        previous?.type == 'assistant' &&
-        previous?.roleId == message.roleId &&
-        previous?.name == message.name &&
-        gap != null &&
-        !gap.isNegative &&
-        gap <= const Duration(minutes: 2);
     final sticker = ChatSticker.parse(message.content);
     final member = _chat.group?.members
         .where((person) => person.id == message.roleId)
         .firstOrNull;
-    final colors = [
-      ChatScene.muted,
-      ChatScene.muted,
-      ChatScene.muted,
-      ChatScene.muted
-    ];
-    final index = switch (member?.roleName) {
-      '女朋友' => 0,
-      '男朋友' => 1,
-      '同事' || '朋友' => 2,
-      '老师' || '导师' => 3,
-      _ => (_chat.group?.members
-                  .indexWhere((person) => person.id == message.roleId) ??
-              0)
-          .clamp(0, colors.length - 1),
-    };
     final avatar = ChatPortrait(
         key: ValueKey('group-message-avatar-${message.id}'),
         onTap:
@@ -880,69 +858,57 @@ class _GroupChatPageState extends State<GroupChatPage>
                 username: _chat.group?.humanName ?? '',
                 size: 36)
             : AssistantAvatar(role: member?.roleName, size: 36));
-    final time = message.createdAt.toUtc().add(const Duration(hours: 8));
-    final label =
-        '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-    return GestureDetector(
-        onLongPress: () => _messageActions(message),
-        child: AnimatedContainer(
+    return LocalMessageView(
+        key: ValueKey('local-group-view-${message.id}'),
+        account: _chat.group?.humanId ?? 'local',
+        messageKey: message.type == 'user' && message.clientMessageId != null
+            ? 'group:${widget.groupId}:client:${message.clientMessageId}'
+            : 'group:${widget.groupId}:message:${message.id}',
+        text: _preview(message.content),
+        isUser: user,
+        onReply: message.status == 'completed' && message.content.isNotEmpty
+            ? () => setState(() => _replyDraft = message)
+            : null,
+        beforePlayback: () async {
+          _replies.interrupt(runId: _chat.runId);
+        },
+        builder: (voice) => AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
                 color: _spotlight == message.id
                     ? const Color(0x3371CEB0)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(14)),
-            padding: EdgeInsets.only(top: continuation ? 1 : 6, bottom: 6),
+            padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment:
                     user ? MainAxisAlignment.end : MainAxisAlignment.start,
                 children: [
-                  if (!user) ...[
-                    continuation
-                        ? const SizedBox.square(dimension: 36)
-                        : avatar,
-                    const SizedBox(width: 6)
-                  ],
+                  if (!user) ...[avatar, const SizedBox(width: 6)],
                   Flexible(
                       child: Column(
                           crossAxisAlignment: user
                               ? CrossAxisAlignment.end
                               : CrossAxisAlignment.start,
                           children: [
-                        if (!continuation || _replies.speakingId == message.id)
-                          Padding(
-                              padding: const EdgeInsets.only(bottom: 3),
+                        if (!user)
+                          SizedBox(
+                              height: 16,
+                              key: ValueKey(
+                                  'group-message-sender-${message.id}'),
                               child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    if (user) ...[
-                                      Text(label,
-                                          style: const TextStyle(
-                                              fontSize: 10,
-                                              color: ChatScene.muted)),
-                                      const SizedBox(width: 8)
-                                    ],
                                     Flexible(
-                                        child: Text(
-                                            user ? '我' : _senderName(message),
+                                        child: Text(_senderName(message),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
                                                 fontSize: 11,
                                                 fontWeight: FontWeight.w700,
-                                                color: user
-                                                    ? ChatScene.accent
-                                                    : colors[index < 0
-                                                        ? 0
-                                                        : index %
-                                                            colors.length]))),
+                                                color: ChatScene.muted))),
                                     if (!user) ...[
-                                      const SizedBox(width: 8),
-                                      Text(label,
-                                          style: const TextStyle(
-                                              fontSize: 10,
-                                              color: ChatScene.muted)),
                                       if (_replies.speakingId ==
                                           message.id) ...[
                                         const SizedBox(width: 6),
@@ -961,7 +927,10 @@ class _GroupChatPageState extends State<GroupChatPage>
                                   maxWidth: MediaQuery.sizeOf(context).width *
                                       (message.replyToId == null ? .72 : .78)),
                               child: _GroupMessageSurface(
+                                  key: ValueKey(
+                                      'group-message-surface-${message.id}'),
                                   isUser: user,
+                                  isMedia: message.attachment != null,
                                   child: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
@@ -972,6 +941,8 @@ class _GroupChatPageState extends State<GroupChatPage>
                                           _attachment(message)
                                         else if (sticker != null)
                                           StickerMessageView(sticker)
+                                        else if (voice != null)
+                                          voice
                                         else
                                           Text.rich(_contentSpan(message),
                                               style: const TextStyle(
@@ -1007,14 +978,20 @@ class _GroupChatPageState extends State<GroupChatPage>
 }
 
 class _GroupMessageSurface extends StatelessWidget {
-  const _GroupMessageSurface({required this.isUser, required this.child});
+  const _GroupMessageSurface(
+      {required this.isUser,
+      required this.child,
+      this.isMedia = false,
+      super.key});
   final bool isUser;
+  final bool isMedia;
   final Widget child;
   @override
   Widget build(BuildContext context) {
+    if (isMedia) return child;
     if (AppearanceScope.skin(context).id != 'mint') {
       return BubbleSurface(isUser: isUser, child: child);
     }
-    return SageBubble(isUser: isUser, child: child);
+    return SageBubble(isUser: isUser, tailAtTop: true, child: child);
   }
 }

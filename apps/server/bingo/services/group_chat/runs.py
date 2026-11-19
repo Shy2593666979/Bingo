@@ -133,7 +133,10 @@ class GroupRunCoordinator:
                     request = json.loads(run.request_json)
                     await session.commit()
                 if run.runtime_mode == "independent_agents":
-                    await self.service.scheduling.independent(run_id)
+                    if self.service.decision_model is not None:
+                        await self.service.scheduling.serial_decision(run_id)
+                    else:
+                        await self.service.scheduling.independent(run_id)
                     await self.finish(run_id, "completed")
                     await self.service.memory.remember(group_id)
                     return

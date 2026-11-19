@@ -55,9 +55,10 @@ from .speaking import GroupSpeaker
 
 
 class GroupChatService:
-    def __init__(self, database, model, settings=None):
+    def __init__(self, database, model, settings=None, decision_model=None):
         self.database = database
         self.model = model
+        self.decision_model = decision_model
         self.settings = settings or SocialRuntimeSettings()
         self.tasks = {}
         self.locks = {}
@@ -168,6 +169,8 @@ class GroupChatService:
         close_model = getattr(self.model, "aclose", None)
         if close_model:
             await close_model()
+        if self.decision_model:
+            await self.decision_model.aclose()
 
     async def cancel_user(self, user_id):
         async with self.database.session_factory() as session:

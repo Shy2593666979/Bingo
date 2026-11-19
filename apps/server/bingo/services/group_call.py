@@ -11,6 +11,7 @@ from enum import StrEnum
 from bingo.agent.handoffs import agent_broadcast_targets, normalize_agent_addresses
 from bingo.agent.model_client import ModelMessage
 from bingo.prompts.group_call import DISCUSSION_SPEECH, ENDING, ROLE_SPEECH
+from bingo.services.group_call_barge_in import BargeInEvidence
 from bingo.services.group_call_discussion import DiscussionController
 from bingo.services.group_call_prefetch import PreparedSpeech
 
@@ -34,8 +35,12 @@ class GroupCallSession:
         voice_fallback="",
         role_contexts=None,
         max_silent_turns=30,
+        decision_model=None,
+        require_audio_evidence=False,
+        sample_rate=16000,
     ):
         self.roles = roles
+        self.decision_model = decision_model
         self.model, self.speech, self.emit = model, speech, emit
         self.voice_fallback = voice_fallback
         self.role_contexts = role_contexts or {}
@@ -57,6 +62,9 @@ class GroupCallSession:
         self.awaiting_ack = False
         self.strict_playback = False
         self.metrics = {
+            "barge_in_rejected": 0,
+            "barge_in_confirmed": 0,
+            "barge_in_echo_rejected": 0,
             "model_requests": 0,
             "tts_requests": 0,
             "audio_bytes": 0,
@@ -69,7 +77,12 @@ class GroupCallSession:
         self.max_call_seconds = 3600
         self.max_model_requests = 400
         self.recovery = None
-        self.partial_quiet_seconds = 8
+        self.partial_quiet_seconds = 1.2
+        self.require_audio_evidence = require_audio_evidence
+        self.barge_in = BargeInEvidence(sample_rate)
+        self.partial_candidate = None
+        self.last_partial_text = ""
+        self.last_partial_at = 0.0
         self.playback_timeout = 90
         self.discussion = DiscussionController(self)
         self.discussion.state.max_silent_turns = max_silent_turns
@@ -183,7 +196,50 @@ class GroupCallSession:
     async def partial(self, text):
         if self.closed or not text.strip():
             return
-        if text.strip() and not self.user_speaking:
+        normalized = "".join(c for c in text if c.isalnum())
+        if self._playback_echo(normalized):
+            self.retire(self.partial_candidate)
+            self.partial_candidate = None
+            self.last_partial_text = ""
+            self.metrics["barge_in_echo_rejected"] += 1
+            return
+        if not normalized or normalized == self.last_partial_text:
+            return
+        if self.require_audio_evidence and self.user_speaking and not self.barge_in.recent_voice():
+            return
+        self.last_partial_text = normalized
+        self.last_partial_at = time.monotonic()
+        if self.require_audio_evidence and not self.user_speaking:
+            if self.partial_candidate is None or self.partial_candidate.done():
+                self.partial_candidate = asyncio.create_task(self._confirm_partial(self.generation))
+            return
+        await self._begin_user_speech()
+
+    async def _confirm_partial(self, generation):
+        # A single unstable ASR fragment/short impact must not kill playback.
+        await asyncio.sleep(0.18)
+        if self.closed or generation != self.generation:
+            return
+        if not self.barge_in.supports_speech():
+            self.metrics["barge_in_rejected"] += 1
+            self.last_partial_text = ""
+            return
+        await self._begin_user_speech()
+
+    def _playback_echo(self, text):
+        if not self.require_audio_evidence or len(text) < 6 or self.user_speaking:
+            return False
+        row = self.playback_record
+        if not row or row.get("status") != "speaking":
+            return False
+        playing = "".join(c for c in row.get("text", "") if c.isalnum())
+        return text in playing
+
+    async def _begin_user_speech(self):
+        if self.closed:
+            return
+        if not self.user_speaking:
+            self.metrics["barge_in_confirmed"] += 1
             self.user_speaking = True
             state = self.discussion.state
             if state.enabled and state.phase != "paused":
@@ -196,14 +252,24 @@ class GroupCallSession:
         self.retire(self.recovery)
         self.recovery = asyncio.create_task(self._recover_partial(self.generation))
 
-    async def _recover_partial(self, generation):
-        await asyncio.sleep(self.partial_quiet_seconds)
+    async def _recover_partial(self, generation, delay=None):
+        await asyncio.sleep(self.partial_quiet_seconds if delay is None else delay)
         if generation != self.generation or self.closed:
             return
+        while (
+            self.require_audio_evidence
+            and self.barge_in.recent_voice()
+            and time.monotonic() - self.last_partial_at < 4
+            and delay is None
+        ):
+            await asyncio.sleep(0.35)
+            if generation != self.generation or self.closed:
+                return
         if self.pending:
             self.debounce = asyncio.create_task(self._commit(self.generation))
             return
         self.user_speaking = False
+        self.last_partial_text = ""
         state = self.discussion.state
         if state.enabled and state.phase == "user_interrupting":
             self.task = asyncio.create_task(self.discussion.run(generation, state.episode_id))
@@ -211,10 +277,32 @@ class GroupCallSession:
             await self.emit({"type": "listening", "generation": generation})
 
     async def sentence(self, text):
-        if self.closed or not any(c.isalnum() for c in text):
+        if self.closed:
             return
         if not self.user_speaking:
-            await self.partial(text)
+            self.retire(self.partial_candidate)
+            self.partial_candidate = None
+        normalized = "".join(c for c in text if c.isalnum())
+        if self._playback_echo(normalized):
+            self.metrics["barge_in_echo_rejected"] += 1
+            self.last_partial_text = ""
+            return
+        if not any(c.isalnum() for c in text):
+            if self.user_speaking:
+                self.retire(self.recovery)
+                self.recovery = asyncio.create_task(self._recover_partial(self.generation, 0.25))
+            self.last_partial_text = ""
+            return
+        if (
+            self.require_audio_evidence
+            and not self.user_speaking
+            and not self.barge_in.supports_speech(final=True)
+        ):
+            self.metrics["barge_in_rejected"] += 1
+            self.last_partial_text = ""
+            return
+        if not self.user_speaking:
+            await self._begin_user_speech()
         self.pending.append(text.strip())
         self.retire(self.recovery)
         if self.debounce:
@@ -229,11 +317,15 @@ class GroupCallSession:
             return
         self.pending.clear()
         self.user_speaking = False
+        self.last_partial_text = ""
+        self.barge_in.reset()
         self.history.append({"name": "用户", "text": text, "role_id": None})
         self.call_log.append(self.history[-1])
         self.discussion.user_committed()
+        self.discussion.state.phase = "processing_user"
         episode = self.discussion.state.episode_id
         await self.emit({"type": "user_transcript", "text": text})
+        await self.discussion.notify()
         if self.discussion.valid(generation, episode):
             self.task = asyncio.create_task(self.discussion.handle_user(text, generation, episode))
 
@@ -475,6 +567,7 @@ class GroupCallSession:
         self.played.set()
         self.discussion.state.phase = "closed"
         self.retire(self.recovery)
+        self.retire(self.partial_candidate)
         if self.debounce:
             self.debounce.cancel()
             await asyncio.gather(self.debounce, return_exceptions=True)

@@ -79,6 +79,38 @@ def rows(client, headers, group):
     return api_payload(client.get(P + f"/groups/{group['id']}/messages", headers=headers))
 
 
+def test_system_one_serial_turns_use_fresh_completed_history(v2):
+    client, ((headers, _), _), roles, model = v2
+
+    class Router:
+        def __init__(self):
+            self.states = []
+
+        async def choose(self, state, candidates, **kwargs):
+            self.states.append(state)
+            count = len(self.states)
+            if count == 3:
+                return "finish"
+            if count == 2:
+                assert state["recent"][-1]["sender"] == "assistant"
+                assert "第一段" in state["recent"][-1]["text"]
+            return list(candidates)[count - 1]
+
+        async def aclose(self):
+            pass
+
+    router = Router()
+    client.app.state.services.group_chat.decision_model = router
+    group = create(client, headers, roles)
+    send(client, headers, group)
+    wait(client)
+    messages = rows(client, headers, group)
+    ai = [m for m in messages if m["sender_type"] == "assistant"]
+    assert len(ai) == 2
+    assert ai[0]["sender_role_id"] != ai[1]["sender_role_id"]
+    assert len(router.states) == 3
+
+
 def test_all_eight_strong_first_then_followups_budget_and_full_snapshot(v2):
     client, ((headers, _), _), roles, model = v2
     group = create(client, headers, roles)

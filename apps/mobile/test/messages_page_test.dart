@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bingo/core/config/app_config.dart';
 import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
@@ -85,7 +87,88 @@ class _Gateway extends HttpApiGateway {
   }
 }
 
+class _ReturnRefreshGateway extends _Gateway {
+  int loads = 0;
+  final refreshPending = Completer<List<RoleOption>>();
+  @override
+  Future<List<RoleOption>> listRoles() =>
+      ++loads == 1 ? super.listRoles() : refreshPending.future;
+}
+
+class _PendingGateway extends _Gateway {
+  int requests = 0;
+  final pending = Completer<List<RoleOption>>();
+  @override
+  Future<List<RoleOption>> listRoles() {
+    requests++;
+    return pending.future;
+  }
+}
+
 void main() {
+  testWidgets(
+      'returning from chat accepts another tap while refresh is pending',
+      (tester) async {
+    final gateway = _ReturnRefreshGateway();
+    var opens = 0;
+    Completer<void>? route;
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: MessagesPage(
+      gateway: gateway,
+      groups: gateway,
+      onRole: (_) {
+        opens++;
+        route = Completer<void>();
+        return route!.future;
+      },
+      onGroup: (_) async {},
+      onCreate: () {},
+      onPartners: () {},
+    ))));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('甜甜'));
+    await tester.pump();
+    expect(opens, 1);
+    await tester.tap(find.text('甜甜'));
+    expect(opens, 1);
+    route!.complete();
+    await tester.pump();
+    await tester.tap(find.text('暖暖'));
+    await tester.pump();
+    expect(opens, 2);
+    route!.complete();
+    gateway.refreshPending
+        .complete(gateway.roles.map(RoleOption.fromJson).toList());
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(const SizedBox.shrink());
+    gateway.close();
+  });
+  testWidgets('rapid tab refreshes share the pending chat request',
+      (tester) async {
+    final gateway = _PendingGateway();
+    final key = GlobalKey<MessagesPageState>();
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: MessagesPage(
+      key: key,
+      gateway: gateway,
+      groups: gateway,
+      onRole: (_) async {},
+      onGroup: (_) async {},
+      onCreate: () {},
+      onPartners: () {},
+    ))));
+    final requests = List.generate(12, (_) => key.currentState!.refresh());
+    await tester.pump();
+    expect(gateway.requests, 1);
+    gateway.pending.complete(gateway.roles.map(RoleOption.fromJson).toList());
+    await tester.pumpAndSettle();
+    await Future.wait(requests);
+    expect(find.text('甜甜'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+    gateway.close();
+  });
   Future<void> size(WidgetTester tester, {double scale = 1}) async {
     tester.view.physicalSize = const Size(320, 850);
     tester.view.devicePixelRatio = 1;

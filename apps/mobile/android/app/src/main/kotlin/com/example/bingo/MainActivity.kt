@@ -56,6 +56,10 @@ import java.util.UUID
 import java.util.concurrent.LinkedBlockingQueue
 
 class MainActivity : FlutterActivity() {
+    // Keep Flutter in the window compositor during the native splash hand-off.
+    // A separate SurfaceView can briefly expose the window background on ROMs.
+    override fun getRenderMode(): io.flutter.embedding.android.RenderMode =
+        io.flutter.embedding.android.RenderMode.texture
     private val replyAudio by lazy { ReplyAudioPlayer(this) }
     private var regionLocation: RegionLocationController? = null
     private lateinit var localChatDatabase: LocalChatDatabase
@@ -268,6 +272,7 @@ class MainActivity : FlutterActivity() {
         localChatDatabase = LocalChatDatabase(this)
 
         ChatAppearanceStorage(this).register(flutterEngine.dartExecutor.binaryMessenger)
+        MessagePresentationStorage(this).register(flutterEngine.dartExecutor.binaryMessenger)
 
         val masterKey = MasterKey.Builder(this)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
@@ -541,6 +546,7 @@ class MainActivity : FlutterActivity() {
                         "deleteAccountData" -> {
                             localChatDatabase.deleteAccountData(requireNotNull(userId))
                             ChatAppearanceStorage(this).deleteAccount(userId)
+                            MessagePresentationStorage(this).deleteAccount(userId)
                             result.success(null)
                         }
                         "loadRoleOrder" -> result.success(
@@ -604,35 +610,24 @@ class MainActivity : FlutterActivity() {
             }
     }
 
-    private fun pickImage(result: MethodChannel.Result) {
+    private fun pickImage(result: MethodChannel.Result, requestCode: Int = IMAGE_PICK_REQUEST) {
         if (!beginImageRequest(result)) return
         val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            Intent(MediaStore.ACTION_PICK_IMAGES)
+            Intent(MediaStore.ACTION_PICK_IMAGES).setType("image/*")
         } else {
-            Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-        }.apply {
-            type = "image/*"
+            Intent(Intent.ACTION_PICK)
+                .setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/*")
         }
         try {
-            startActivityForResult(intent, IMAGE_PICK_REQUEST)
+            startActivityForResult(intent, requestCode)
         } catch (error: ActivityNotFoundException) {
             pendingImageResult = null
             result.error("image_picker_unavailable", "未找到可用的相册应用", null)
         }
     }
 
-    private fun pickStickerImage(result: MethodChannel.Result) {
-        if (!beginImageRequest(result)) return
-        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-            type = "image/*"
-            addCategory(Intent.CATEGORY_OPENABLE)
-        }
-        try { startActivityForResult(intent, IMAGE_STICKER_REQUEST) }
-        catch (error: ActivityNotFoundException) {
-            pendingImageResult = null
-            result.error("image_picker_unavailable", "未找到可用的图片选择器", null)
-        }
-    }
+    private fun pickStickerImage(result: MethodChannel.Result) =
+        pickImage(result, IMAGE_STICKER_REQUEST)
 
     private fun readStickerImage(uri: android.net.Uri): ByteArray {
         val output = ByteArrayOutputStream()

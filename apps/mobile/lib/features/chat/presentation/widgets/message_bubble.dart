@@ -21,6 +21,7 @@ class MessageBubble extends StatelessWidget {
     this.imageAccessToken,
     this.onAvatarTap,
     this.onAvatarLongPress,
+    this.contentOverride,
     super.key,
   });
 
@@ -30,6 +31,7 @@ class MessageBubble extends StatelessWidget {
   final String Function(String imageId)? imageUrlBuilder;
   final String? imageAccessToken;
   final VoidCallback? onAvatarTap, onAvatarLongPress;
+  final Widget? contentOverride;
 
   @override
   Widget build(BuildContext context) {
@@ -64,74 +66,59 @@ class MessageBubble extends StatelessWidget {
         constraints: BoxConstraints(
             maxWidth: math.min(defaultStyle ? 480 : 560,
                 MediaQuery.sizeOf(context).width * (defaultStyle ? .72 : .8))),
-        child: BubbleSurface(
+        child: _MessageSurface(
           isUser: isUser,
+          isMedia: message.imageBytes != null || message.imageId != null,
           padding: EdgeInsets.symmetric(
               horizontal: 12, vertical: defaultStyle ? 8 : 10),
-          child: message.content.isEmpty
-              ? const _TypingDots()
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (message.imageBytes != null)
-                      _MemoryChatImage(bytes: message.imageBytes!)
-                    else if (message.imageId != null && imageUrlBuilder != null)
-                      _ChatImage(
-                        url: imageUrlBuilder!(message.imageId!),
-                        accessToken: imageAccessToken,
-                      ),
-                    if (isUser && CompanionMomentCard.matches(message.content))
-                      CompanionMomentCard(content: message.content)
-                    else if (message.imageId == null ||
-                        message.content != '[图片]')
-                      SelectableText(
-                        message.content,
-                        style: TextStyle(
-                          color: defaultStyle
-                              ? const Color(0xFF222222)
-                              : ChatScene.ink,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
-                          height: defaultStyle ? 1.35 : 1.4,
-                          letterSpacing: 0,
-                        ),
-                      ),
-                    if (message.status == ChatMessageStatus.interrupted) ...[
-                      const SizedBox(height: 5),
-                      Text(
-                        '已中断',
-                        style: TextStyle(
-                          color: BingoPalette.ink.withValues(alpha: 0.48),
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
+          child: contentOverride ??
+              (message.content.isEmpty
+                  ? const _TypingDots()
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (message.imageBytes != null)
+                          _MemoryChatImage(bytes: message.imageBytes!)
+                        else if (message.imageId != null &&
+                            imageUrlBuilder != null)
+                          _ChatImage(
+                            url: imageUrlBuilder!(message.imageId!),
+                            accessToken: imageAccessToken,
+                          ),
+                        if (isUser &&
+                            CompanionMomentCard.matches(message.content))
+                          CompanionMomentCard(content: message.content)
+                        else if (message.imageId == null ||
+                            message.content != '[图片]')
+                          Text(
+                            message.content,
+                            style: TextStyle(
+                              color: defaultStyle
+                                  ? const Color(0xFF222222)
+                                  : ChatScene.ink,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w400,
+                              height: defaultStyle ? 1.35 : 1.4,
+                              letterSpacing: 0,
+                            ),
+                          ),
+                        if (message.status ==
+                            ChatMessageStatus.interrupted) ...[
+                          const SizedBox(height: 5),
+                          Text(
+                            '已中断',
+                            style: TextStyle(
+                              color: BingoPalette.ink.withValues(alpha: 0.48),
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ],
+                    )),
         ));
 
-    final createdAt = message.createdAt?.toLocal();
-    final hasTime = defaultStyle && createdAt != null;
-    final content = hasTime
-        ? Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment:
-                isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-            children: [
-                bubble,
-                const SizedBox(height: 3),
-                Text(
-                    '${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}',
-                    key: ValueKey('message-time-${message.id}'),
-                    style: const TextStyle(
-                        fontSize: 11,
-                        height: 1.3,
-                        fontWeight: FontWeight.w400,
-                        letterSpacing: 0,
-                        color: Color(0xFFA0A6A8))),
-              ])
-        : bubble;
+    final content = bubble;
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Padding(
@@ -151,8 +138,7 @@ class MessageBubble extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Padding(
-                    padding: EdgeInsets.only(
-                        right: defaultStyle ? 8 : 6, bottom: hasTime ? 17 : 0),
+                    padding: EdgeInsets.only(right: defaultStyle ? 8 : 6),
                     child: showAvatar || defaultStyle
                         ? ChatPortrait(
                             key: ValueKey('chat-message-avatar-${message.id}'),
@@ -170,6 +156,24 @@ class MessageBubble extends StatelessWidget {
       ),
     );
   }
+}
+
+class _MessageSurface extends StatelessWidget {
+  const _MessageSurface({
+    required this.isUser,
+    required this.isMedia,
+    required this.padding,
+    required this.child,
+  });
+
+  final bool isUser, isMedia;
+  final EdgeInsets padding;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => isMedia
+      ? child
+      : BubbleSurface(isUser: isUser, padding: padding, child: child);
 }
 
 class CallRecordTile extends StatelessWidget {
@@ -287,7 +291,7 @@ class _ChatImage extends StatelessWidget {
       headers: _headers,
       width: 190,
       height: 190,
-      fit: BoxFit.cover,
+      fit: BoxFit.contain,
       errorBuilder: (_, __, ___) => const SizedBox(
         width: 190,
         height: 90,
@@ -336,7 +340,7 @@ class _MemoryChatImage extends StatelessWidget {
           bytes,
           width: 190,
           height: 190,
-          fit: BoxFit.cover,
+          fit: BoxFit.contain,
         ),
       ),
     );

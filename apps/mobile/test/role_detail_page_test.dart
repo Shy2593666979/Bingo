@@ -101,7 +101,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('你好'));
       expect(find.text('最近对话'), findsOneWidget);
-      expect(find.text('20:09'), findsOneWidget);
+      expect(find.text('20:09'), findsNothing);
       expect(find.text('你们的最近对话'), findsNothing);
       expect(find.byType(UserAvatar), findsOneWidget);
       if (custom) {
@@ -115,13 +115,10 @@ void main() {
             findsOneWidget);
       }
       expect(find.byType(AssistantAvatar), findsNWidgets(2));
-      final userRow = tester.widget<Row>(
-          find.ancestor(of: find.text('你好'), matching: find.byType(Row)).first);
-      expect(userRow.mainAxisAlignment, MainAxisAlignment.start);
       expect(tester.getTopLeft(find.byType(UserAvatar)).dx,
-          lessThan(tester.getTopLeft(find.text('你好')).dx));
+          greaterThan(tester.getTopLeft(find.text('你好')).dx));
       for (final text in ['你好', '你好呀，今天过得怎么样？无论有什么开心的事情或者烦恼，都可以慢慢和我说。']) {
-        expect(tester.widget<Text>(find.text(text)).maxLines, 1);
+        expect(tester.widget<Text>(find.text(text)).maxLines, isNull);
       }
       expect(tester.takeException(), isNull);
     });

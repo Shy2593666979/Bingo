@@ -1,13 +1,10 @@
+import 'package:bingo/features/roles/presentation/recent_conversation_preview.dart';
 import 'package:bingo/core/design/bingo_page.dart';
 import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/core/design/bingo_surface.dart';
-import 'package:bingo/core/design/reference_design.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
-import 'package:bingo/features/chat/models/chat_message.dart';
-import 'package:bingo/features/stickers/sticker.dart';
 import 'package:bingo/shared/widgets/assistant_avatar.dart';
-import 'package:bingo/shared/widgets/user_avatar.dart';
 import 'package:bingo/shared/widgets/partner_action_icon.dart';
 import 'package:flutter/material.dart';
 
@@ -33,34 +30,13 @@ class RoleDetailPage extends StatefulWidget {
 }
 
 class _RoleDetailPageState extends State<RoleDetailPage> {
-  List<ChatMessage>? _messages;
   bool _busy = false;
   bool _backgroundExpanded = false;
-  String? _error;
   late RoleOption _role;
   @override
   void initState() {
     super.initState();
     _role = widget.role;
-    _load();
-  }
-
-  Future<void> _load() async {
-    final gateway = widget.gateway;
-    if (_role.conversationId == null || gateway is! ConversationGateway) {
-      _messages = [];
-      return;
-    }
-    try {
-      final messages = await (gateway as ConversationGateway)
-          .listMessages(_role.conversationId!);
-      if (mounted) {
-        setState(() =>
-            _messages = messages.reversed.take(4).toList().reversed.toList());
-      }
-    } on Exception {
-      if (mounted) setState(() => _error = '历史消息加载失败，请稍后重试');
-    }
   }
 
   Future<void> _chat() async {
@@ -73,7 +49,6 @@ class _RoleDetailPageState extends State<RoleDetailPage> {
         setState(() => _role =
             roles.where((role) => role.id == _role.id).firstOrNull ?? _role);
       }
-      await _load();
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -98,11 +73,6 @@ class _RoleDetailPageState extends State<RoleDetailPage> {
                   style: const TextStyle(
                       fontSize: 12, height: 1.35, color: Color(0xFF666666))))
       ]);
-
-  String _messageTime(DateTime value) {
-    final local = value.toUtc().add(const Duration(hours: 8));
-    return '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -243,60 +213,11 @@ class _RoleDetailPageState extends State<RoleDetailPage> {
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const BingoSectionTitle('最近对话'),
               const SizedBox(height: 12),
-              if (_error != null) Text(_error!),
-              if (_messages == null && _error == null)
-                const Center(child: CircularProgressIndicator()),
-              if (_messages?.isEmpty ?? false)
-                const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 25),
-                    child: Text('还没有聊天记录，和 TA 打个招呼吧。',
-                        style: TextStyle(color: BingoPalette.muted))),
-              ...?_messages?.map((message) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (message.role == ChatRole.user)
-                          UserAvatar(
-                              avatarData: widget.userAvatarData,
-                              username: widget.userName,
-                              size: 40)
-                        else
-                          AssistantAvatar(role: role.name, size: 40),
-                        const SizedBox(width: 10),
-                        Expanded(
-                            child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                              Row(children: [
-                                Expanded(
-                                    child: Text(
-                                        message.role == ChatRole.user
-                                            ? '我'
-                                            : role.displayName,
-                                        maxLines: 1,
-                                        style: const TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w500))),
-                                if (message.createdAt != null)
-                                  Text(_messageTime(message.createdAt!),
-                                      style: const TextStyle(
-                                          fontSize: 10, color: refMuted))
-                              ]),
-                              const SizedBox(height: 6),
-                              Text(
-                                  message.location != null
-                                      ? '[位置] ${message.location!.name}'
-                                      : ChatSticker.preview(
-                                          message.content.isEmpty
-                                              ? '[图片或通话消息]'
-                                              : message.content),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                      fontSize: 12, color: refMuted))
-                            ]))
-                      ]))),
+              RecentConversationPreview(
+                  role: role,
+                  gateway: widget.gateway,
+                  userAvatarData: widget.userAvatarData,
+                  userName: widget.userName),
             ])),
           ]),
       bottomNavigationBar: BingoActionBar(

@@ -1,13 +1,12 @@
-import 'package:bingo/core/design/approved_art.dart';
-import 'package:bingo/core/design/pearl_icon.dart';
 import 'package:bingo/core/theme/app_theme.dart';
-import 'package:bingo/core/design/companion_launch_ui.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/community/data/community_gateway.dart';
 import 'package:bingo/features/group_chat/data/group_gateway.dart';
 import 'package:bingo/shared/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
+
+import 'package:bingo/features/settings/presentation/profile_menu_icon.dart';
 
 class ReferenceMyPage extends StatefulWidget {
   const ReferenceMyPage(
@@ -47,7 +46,6 @@ class ReferenceMyPage extends StatefulWidget {
 }
 
 class ReferenceMyPageState extends State<ReferenceMyPage> {
-  List<RoleOption> _roles = [];
   List<ChatGroup> _groups = [];
   bool _failed = false;
   @override
@@ -58,11 +56,9 @@ class ReferenceMyPageState extends State<ReferenceMyPage> {
 
   Future<void> refresh() async {
     try {
-      final roles = await widget.roles.listRoles();
       final groups = await widget.groups.listGroups();
       if (mounted) {
         setState(() {
-          _roles = roles;
           _groups = groups;
           _failed = false;
         });
@@ -72,164 +68,172 @@ class ReferenceMyPageState extends State<ReferenceMyPage> {
     }
   }
 
-  Widget _menu(IconData icon, String title, VoidCallback onTap,
-          {String? subtitle, String? value, bool last = false}) =>
-      InkWell(
-          onTap: onTap,
-          child: Column(children: [
-            ConstrainedBox(
-                constraints:
-                    BoxConstraints(minHeight: subtitle == null ? 54 : 78),
-                child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 18, vertical: 12),
-                    child: Row(children: [
-                      ApprovedMenuIcon(switch (icon) {
-                        Icons.person_outline_rounded => 0,
-                        Icons.mic_none_rounded => 1,
-                        Icons.share_outlined => 2,
-                        Icons.favorite_border_rounded => 3,
-                        Icons.palette_outlined => 4,
-                        _ => 5
-                      }),
-                      const SizedBox(width: 16),
-                      Expanded(
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                            Text(title,
-                                style: BingoTypography.menuTitle.copyWith(
-                                    fontSize: 18, fontWeight: FontWeight.w600)),
-                            if (subtitle != null) ...[
-                              const SizedBox(height: 4),
-                              Text(subtitle,
-                                  style: CompanionLaunch.text(14,
-                                      color: const Color(0xFF666666))),
-                            ],
-                          ])),
-                      if (value != null) ...[
-                        const SizedBox(width: 8),
-                        Text(value,
-                            style: CompanionLaunch.text(12,
-                                color: CompanionLaunch.muted)),
-                      ],
-                      const SizedBox(width: 12),
-                      const Icon(Icons.chevron_right_rounded,
-                          size: 18, color: BingoPalette.muted),
-                    ]))),
-            if (!last)
-              const Divider(height: 1, indent: 48, color: BingoPalette.line),
-          ]));
+  static const _pageColor = Color(0xFFFBFBFD);
+  static const _sectionLine = Color(0xFFDCE0E8);
+  static const _rowLine = Color(0xFFEDEDF0);
 
-  Widget _welcome() => InkWell(
-      onTap: widget.onManageRoles ?? widget.onPartners,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-          decoration: BoxDecoration(
-              color: const Color(0xFFF7F6F5),
-              borderRadius: BorderRadius.circular(16)),
+  Widget _menu(ProfileMenuSymbol symbol, String title, VoidCallback onTap) =>
+      InkWell(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 55),
           child: Row(children: [
-            const PearlIcon(PearlSymbol.group, size: 25),
-            const SizedBox(width: 18),
+            SizedBox(
+              width: 48,
+              child: Center(
+                child: ProfileMenuIcon(symbol),
+              ),
+            ),
+            const SizedBox(width: 12),
             Expanded(
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 55),
+                decoration: const BoxDecoration(
+                    border: Border(bottom: BorderSide(color: _rowLine))),
+                child: Row(children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 9),
+                      child: Text(title,
+                          style: BingoTypography.menuTitle.copyWith(
+                              fontSize: 20,
+                              height: 1.4,
+                              fontWeight: FontWeight.w500)),
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right_rounded,
+                      size: 22, color: Color(0xFF8B8F96)),
+                ]),
+              ),
+            ),
+          ]),
+        ),
+      );
+
+  Widget _section(String title, List<Widget> rows, {bool settings = false}) =>
+      Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 14),
+            child: Divider(height: 2, thickness: 2, color: _sectionLine)),
+        Container(
+          constraints: BoxConstraints(minHeight: settings ? 61 : 55),
+          padding: EdgeInsets.fromLTRB(16, settings ? 0 : 4, 14, 0),
+          alignment: Alignment.centerLeft,
+          decoration: const BoxDecoration(
+              gradient: LinearGradient(colors: [
+            Color(0xFFF8F9FB),
+            Color(0xFFF5F6F8),
+            Color(0xFFFAFBFC),
+          ], stops: [
+            0,
+            .68,
+            1
+          ])),
+          child: Text(title,
+              style: BingoTypography.sectionTitle.copyWith(
+                  fontSize: 24,
+                  height: 1.3,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF152033))),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Column(children: rows),
+        ),
+      ]);
+
+  Widget _profile() {
+    final username = widget.profile.username?.trim();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: InkWell(
+        onTap: widget.onEdit,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 121),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(1, 17, 1, 26),
+            child: Row(children: [
+              UserAvatar(
+                  avatarData: widget.profile.userAvatarData,
+                  username: username?.isNotEmpty == true ? username! : '',
+                  size: 70,
+                  initialTextStyle: const TextStyle(
+                      fontSize: 38, fontWeight: FontWeight.w400),
+                  foregroundColor: Colors.white,
+                  backgroundGradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFFF58FB0), BingoPalette.primary],
+                      stops: [0, .75])),
+              const SizedBox(width: 25),
+              Expanded(
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                  const Text('我的陪伴',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 4),
-                  Text('${_roles.length} 位搭子，随时都在',
-                      style: const TextStyle(
-                          fontSize: 13, color: BingoPalette.muted))
-                ]))
-          ])));
+                      Text(
+                          username?.isNotEmpty == true ? username! : 'Bingo 用户',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: BingoTypography.profileName.copyWith(
+                              fontSize: 24,
+                              height: 1.3,
+                              fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 5),
+                      Text('我的AI陪伴空间',
+                          style: BingoTypography.secondary.copyWith(
+                              fontSize: 16,
+                              height: 1.4,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF515A68))),
+                    ]),
+              ),
+              const Icon(Icons.chevron_right_rounded,
+                  size: 21, color: Color(0xFF7B8189)),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => ColoredBox(
-      color: BingoPalette.pageBottom,
+      color: _pageColor,
       child: SafeArea(
           bottom: false,
           child: RefreshIndicator(
               onRefresh: refresh,
               child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
+                  padding: const EdgeInsets.only(bottom: 26),
                   children: [
-                    Padding(
-                        padding: const EdgeInsets.only(top: 40, bottom: 26),
-                        child: Row(children: [
-                          InkWell(
-                              onTap: widget.onEdit,
-                              child: ClipOval(
-                                  child: UserAvatar(
-                                      avatarData: widget.profile.userAvatarData,
-                                      username: widget.profile.username ?? '',
-                                      size: 76))),
-                          const SizedBox(width: 14),
-                          Flexible(
-                              child: InkWell(
-                                  onTap: widget.onEdit,
-                                  child: Text(
-                                      widget.profile.username ?? 'Bingo 用户',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: CompanionLaunch.text(20,
-                                          weight: FontWeight.w600)))),
-                          const SizedBox(width: 6),
-                          PopupMenuButton<int>(
-                              tooltip: '编辑个人资料',
-                              icon: const Icon(Icons.edit_rounded,
-                                  size: 17, color: BingoPalette.muted),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(
-                                  minWidth: 32, minHeight: 36),
-                              onSelected: (v) {
-                                if (v == 0) {
-                                  widget.onEdit();
-                                } else if (v == 1) {
-                                  widget.onFavorites();
-                                } else {
-                                  (widget.onGroups ??
-                                      () => _showGroups(context))();
-                                }
-                              },
-                              itemBuilder: (_) => [
-                                    const PopupMenuItem(
-                                        value: 0, child: Text('编辑个人资料')),
-                                    const PopupMenuItem(
-                                        value: 2, child: Text('我的群聊'))
-                                  ]),
-                        ])),
-                    _welcome(),
-                    const SizedBox(height: 20),
+                    _profile(),
                     if (_failed)
                       TextButton(
                           onPressed: refresh,
                           child: const Text('部分信息加载失败，点击重试')),
-                    Container(
-                        decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: Colors.transparent)),
-                        clipBehavior: Clip.antiAlias,
-                        child: Column(children: [
-                          _menu(Icons.person_outline_rounded, '我的搭子',
-                              widget.onManageRoles ?? widget.onPartners,
-                              value: null),
-                          if (widget.onVoices != null)
-                            _menu(Icons.mic_none_rounded, '我的音色',
-                                widget.onVoices!),
-                          _menu(Icons.share_outlined, '我的分享', widget.onShares,
-                              value: null),
-                          _menu(Icons.favorite_border_rounded, '我的收藏',
-                              widget.onFavorites),
-                          _menu(Icons.palette_outlined, '聊天外观',
+                    _section('我的内容', [
+                      _menu(ProfileMenuSymbol.me, '我的搭子',
+                          widget.onManageRoles ?? widget.onPartners),
+                      _menu(ProfileMenuSymbol.group, '我的群聊',
+                          widget.onGroups ?? () => _showGroups(context)),
+                      if (widget.onVoices != null)
+                        _menu(ProfileMenuSymbol.waveform, '我的音色',
+                            widget.onVoices!),
+                      _menu(ProfileMenuSymbol.share, '我的分享', widget.onShares),
+                      _menu(ProfileMenuSymbol.star, '我的收藏', widget.onFavorites),
+                    ]),
+                    const SizedBox(height: 20),
+                    _section(
+                        '应用设置',
+                        [
+                          _menu(ProfileMenuSymbol.shirt, '外观设置',
                               widget.onAppearance ?? widget.onSettings),
-                          _menu(
-                              Icons.settings_outlined, '设置', widget.onSettings,
-                              last: true),
-                        ])),
+                          _menu(ProfileMenuSymbol.settings, '设置',
+                              widget.onSettings),
+                        ],
+                        settings: true),
                   ]))));
 
   void _showGroups(BuildContext context) => showModalBottomSheet<void>(
