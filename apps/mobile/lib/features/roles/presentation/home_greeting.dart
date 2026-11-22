@@ -1,5 +1,6 @@
 import 'package:bingo/core/design/home_artwork_icon.dart';
 import 'package:bingo/core/theme/app_theme.dart';
+import 'package:bingo/core/theme/home_palette.dart';
 import 'package:flutter/material.dart';
 
 class HomeGreeting extends StatelessWidget {
@@ -40,7 +41,7 @@ class HomeGreeting extends StatelessWidget {
               ),
               const SizedBox(width: 5),
               const HomeArtworkIcon(HomeArtwork.wave,
-                  size: 27, color: BingoPalette.primary),
+                  size: 27, color: HomePalette.accent),
             ]),
           ],
         ),
@@ -66,11 +67,7 @@ class _GreetingStroke extends CustomPainter {
         stroke,
         Paint()
           ..shader = const LinearGradient(
-            colors: [
-              Color(0xFFF887AC),
-              BingoPalette.primary,
-              Color(0xFFFBA4BF)
-            ],
+            colors: [Color(0xFFE89DB4), HomePalette.accent, Color(0xFFEAB3C5)],
           ).createShader(Rect.fromLTWH(0, y - 6, w, 7)));
   }
 

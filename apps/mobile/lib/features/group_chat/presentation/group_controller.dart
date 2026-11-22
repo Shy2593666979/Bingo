@@ -7,7 +7,18 @@ import 'package:bingo/features/group_chat/data/group_gateway.dart';
 import 'package:flutter/foundation.dart';
 
 class GroupController extends ChangeNotifier {
-  GroupController(this.gateway, this.groupId);
+  GroupController(this.gateway, this.groupId) {
+    final cached = _cache[gateway]?[_cacheKey];
+    if (cached != null) {
+      group = cached.$1;
+      messages.addAll(cached.$2);
+      loading = false;
+    }
+  }
+  static final _cache =
+      Expando<Map<String, (ChatGroup, List<GroupChatMessage>)>>();
+  String get _cacheKey =>
+      '${gateway is HttpApiGateway ? (gateway as HttpApiGateway).accessToken : ''}:$groupId';
   final GroupGateway gateway;
   final String groupId;
   ChatGroup? group;
@@ -48,15 +59,34 @@ class GroupController extends ChangeNotifier {
   bool get busy => runId != null;
   bool get canRetry => _pendingId != null;
   void _notify() {
-    if (!_disposed) notifyListeners();
+    if (!_disposed) {
+      if (group != null) {
+        final entries = _cache[gateway] ??= {};
+        entries[_cacheKey] = (
+          group!,
+          messages
+              .where((m) => !m.local && m.status == 'completed')
+              .toList()
+              .reversed
+              .take(100)
+              .toList()
+              .reversed
+              .toList()
+        );
+        if (entries.length > 32) entries.remove(entries.keys.first);
+      }
+      notifyListeners();
+    }
   }
 
   Future<void> load() async {
     final epoch = ++_epoch;
     _timer?.cancel();
     try {
-      final info = await gateway.getGroup(groupId);
-      final rows = await gateway.groupMessages(groupId);
+      final results = await Future.wait<Object>(
+          [gateway.getGroup(groupId), gateway.groupMessages(groupId)]);
+      final info = results[0] as ChatGroup;
+      final rows = results[1] as List<GroupChatMessage>;
       if (_disposed || epoch != _epoch) return;
       group = info;
       messages.removeWhere((m) => !m.local);

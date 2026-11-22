@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:bingo/core/theme/home_palette.dart';
 
 class HomePostcardBackground extends CustomPainter {
   const HomePostcardBackground();
@@ -14,7 +15,12 @@ class HomePostcardBackground extends CustomPainter {
         ..shader = const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFFBD6E4), Color(0xFFFFF5FA), Color(0xFFF9D7E6)],
+          colors: [
+            HomePalette.heroTop,
+            HomePalette.heroMiddle,
+            HomePalette.heroBottom
+          ],
+          stops: [0, .58, 1],
         ).createShader(bounds),
     );
 
@@ -45,7 +51,7 @@ class HomePostcardBackground extends CustomPainter {
       ..lineTo(360, 196)
       ..lineTo(0, 196)
       ..close();
-    canvas.drawPath(ribbon, Paint()..color = const Color(0x28EF9ABD));
+    canvas.drawPath(ribbon, Paint()..color = const Color(0x2BEEC7D5));
 
     final glint = Path()
       ..moveTo(335, 18)
@@ -56,7 +62,7 @@ class HomePostcardBackground extends CustomPainter {
       ..close();
     canvas.drawPath(glint, Paint()..color = Colors.white);
 
-    final leaf = Paint()..color = const Color(0xFFB6B681);
+    final leaf = Paint()..color = const Color(0xFFC8C6B2);
     canvas.drawPath(
       Path()
         ..moveTo(326, 165)
@@ -96,13 +102,13 @@ class HomePostcardBackground extends CustomPainter {
           ..shader = const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFFFF1F8), Color(0xFFF39ABF)],
+            colors: [Color(0xFFF8E8EE), Color(0xFFEEC7D5)],
           ).createShader(petal.getBounds()),
       );
       canvas.rotate(2 * math.pi / 5);
     }
     canvas.drawCircle(
-        Offset.zero, 2.7, Paint()..color = const Color(0xFFF6C58C));
+        Offset.zero, 2.7, Paint()..color = const Color(0xFFE6CDA0));
     canvas.restore();
   }
 

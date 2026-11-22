@@ -30,6 +30,7 @@ class EnvelopeRoute(APIRoute):
             "/community/characters/{identifier}/images/{index}",
             "/groups/{identifier}/messages/{message_id}/speech",
             "/groups/{identifier}/messages/{message_id}/image",
+            "/voices/{identifier}/preview/stream",
         }
         plain = kwargs.get("status_code") == 204 or any(
             path.endswith(item) for item in binary_paths

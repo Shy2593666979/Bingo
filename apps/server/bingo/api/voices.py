@@ -1,6 +1,10 @@
+import base64
+import json
+from contextlib import aclosing
 from typing import Literal
 
 from fastapi import APIRouter, Request, Response
+from fastapi.responses import StreamingResponse
 
 from bingo.api.dependencies import CurrentUserDependency, SessionDependency, get_service_context
 from bingo.api.response import EnvelopeRoute
@@ -70,6 +74,33 @@ async def preview_voice(
     request: Request,
 ):
     return await service.preview_voice(identifier, user, session, get_service_context(request))
+
+
+@router.post("/voices/{identifier}/preview/stream")
+async def stream_preview_voice(
+    identifier: str, user: CurrentUserDependency, session: SessionDependency, request: Request
+) -> StreamingResponse:
+    voice = await service.get_voice(session, user.id, identifier, ready=True)
+    provider = voice.provider_voice
+    await session.rollback()
+    cloning = get_service_context(request).voice_cloning
+
+    async def stream():
+        try:
+            async with aclosing(cloning.stream_preview(provider)) as chunks:
+                async for chunk in chunks:
+                    event = {"type": "audio", "data": base64.b64encode(chunk).decode()}
+                    yield json.dumps(event) + "\n"
+        except Exception:
+            yield '{"type":"audio_error"}\n'
+        else:
+            yield '{"type":"audio_done"}\n'
+
+    return StreamingResponse(
+        stream(),
+        media_type="application/x-ndjson",
+        headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.put("/roles/{identifier}/voice")

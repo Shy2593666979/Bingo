@@ -40,6 +40,36 @@ class CommunityShare {
   int get popularityScore => likeCount + favoriteCount + commentCount;
   final List<String> traits, categories;
   final Map<String, dynamic>? persona;
+
+  CommunityShare withInstalledRole(String roleId) => CommunityShare(
+      id: id,
+      name: name,
+      introduction: introduction,
+      authorName: authorName,
+      createdAt: createdAt,
+      avatarAsset: avatarAsset,
+      hasAvatar: hasAvatar,
+      hasImages: hasImages,
+      mine: mine,
+      favorite: favorite,
+      liked: liked,
+      status: status,
+      installedRoleId: roleId,
+      parentShareId: parentShareId,
+      installCount: installedRoleId == null ? installCount + 1 : installCount,
+      favoriteCount: favoriteCount,
+      likeCount: likeCount,
+      commentCount: commentCount,
+      imageCount: imageCount,
+      traits: traits,
+      categories: categories,
+      roleType: roleType,
+      personality: personality,
+      speakingStyle: speakingStyle,
+      title: title,
+      shareTags: shareTags,
+      persona: persona);
+
   factory CommunityShare.fromJson(Map<String, dynamic> json) => CommunityShare(
       id: json['id'] as String,
       name: json['name'] as String,

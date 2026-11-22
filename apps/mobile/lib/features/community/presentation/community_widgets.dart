@@ -9,6 +9,12 @@ const communityMuted = BingoPalette.muted;
 const communityAccent = BingoPalette.primary;
 const communityBackground = BingoPalette.ice;
 
+String communityListAvatarUrl(CommunityGateway gateway, String id) {
+  final uri = Uri.parse(gateway.communityAvatarUrl(id));
+  return uri.replace(
+      queryParameters: {...uri.queryParameters, 'size': '320'}).toString();
+}
+
 String companionShareDescription(CommunityShare share) {
   final description = share.persona?['description'];
   if (description is String && description.trim().isNotEmpty) {
@@ -42,11 +48,11 @@ class SharedCompanionAvatar extends StatelessWidget {
                     scale: allowed.contains(share.avatarAsset) ? 1.38 : 1,
                     alignment: Alignment.topCenter,
                     child: share.hasAvatar
-                        ? Image.network(gateway.communityAvatarUrl(share.id),
+                        ? Image.network(
+                            communityListAvatarUrl(gateway, share.id),
+                            gaplessPlayback: true,
                             fit: BoxFit.cover,
-                            cacheWidth:
-                                (size * MediaQuery.devicePixelRatioOf(context))
-                                    .round(),
+                            cacheWidth: 320,
                             headers: {
                               if (gateway.communityAccessToken != null)
                                 'Authorization':

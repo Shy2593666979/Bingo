@@ -2,9 +2,11 @@ import asyncio
 import base64
 import json
 from dataclasses import replace
+from io import BytesIO
 
 import pytest
 from fastapi.testclient import TestClient
+from PIL import Image
 from sqlmodel import select
 
 from bingo.config import Settings
@@ -29,6 +31,25 @@ from tests.test_added_companion_welcome import WelcomeModel, drain, register
 
 P = "/api/v1"
 CHARACTER = COMMUNITY_CHARACTERS[0].character
+
+
+def test_avatar_thumbnail_preserves_original_and_authentication(client):
+    register(client, "19900117899", "小林", "女")
+    route = P + f"/community/characters/{community_share_id('chairman')}/avatar"
+    original = client.get(route)
+    thumb = client.get(route, params={"size": 320})
+    assert original.status_code == thumb.status_code == 200
+    assert original.headers["content-type"] == "image/png"
+    assert thumb.headers["content-type"] == "image/webp"
+    assert thumb.headers["cache-control"].startswith("private")
+    assert len(thumb.content) < len(original.content) / 2
+    with Image.open(BytesIO(thumb.content)) as image:
+        assert max(image.size) <= 320
+    assert client.get(route, params={"size": 4096}).status_code == 422
+    assert client.get(route).content == original.content
+    client.headers.pop("Authorization", None)
+    client.cookies.clear()
+    assert client.get(route, params={"size": 320}).status_code == 401
 
 
 @pytest.fixture
@@ -86,8 +107,14 @@ def test_seed_install_uses_the_copy_voice_and_personalized_welcome(client, entry
     editor_payload = {
         key: copied[key]
         for key in (
-            "character_name", "relationship", "speaking_style", "personality_tags",
-            "background", "avatar_data", "voice_source_id", "categories",
+            "character_name",
+            "relationship",
+            "speaking_style",
+            "personality_tags",
+            "background",
+            "avatar_data",
+            "voice_source_id",
+            "categories",
         )
     }
     RolePayload.model_validate(editor_payload)

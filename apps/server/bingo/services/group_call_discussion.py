@@ -26,6 +26,8 @@ class DiscussionState:
     topic_summary: str = ""
     no_content_streak: int = 0
     stop_reason: str = ""
+    user_pending: bool = False
+    interrupted_turn: dict | None = None
 
 
 class DiscussionController:
@@ -57,6 +59,8 @@ class DiscussionController:
         history = list(self.engine.history)
         if current:
             role, text = current
+            state.user_pending = False
+            state.interrupted_turn = None
             history.append({"name": role.nickname, "role_id": role.id, "text": text})
             state.ai_silent_turns += 1
             state.call_total_ai_turns += 1
@@ -103,12 +107,16 @@ class DiscussionController:
         )
 
     async def notify(self):
+        public_state = asdict(self.state)
+        public_state.pop("interrupted_turn")
+        public_state.pop("user_pending")
         await self.engine.emit(
-            {"type": "discussion_state", **asdict(self.state), "generation": self.engine.generation}
+            {"type": "discussion_state", **public_state, "generation": self.engine.generation}
         )
 
     def user_committed(self):
         self.state.episode_id += 1
+        self.state.user_pending = True
         self.state.ai_silent_turns = 0
         self.state.no_content_streak = 0
         self.state.stop_reason = ""
@@ -117,6 +125,8 @@ class DiscussionController:
     def on_played(self, row):
         self.state.call_total_ai_turns += 1
         if row.get("episode_id") == self.state.episode_id and row.get("autonomous"):
+            self.state.user_pending = False
+            self.state.interrupted_turn = None
             self.state.ai_silent_turns += 1
             self.state.last_speaker_id = row["role_id"]
             self.state.recent_speakers = (self.state.recent_speakers + [row["role_id"]])[-12:]
@@ -141,6 +151,11 @@ class DiscussionController:
             return
         # Natural conversation is the call's default behavior, never a user-enabled mode.
         state.enabled = True
+        if self.engine.decision_model is not None:
+            # One routing decision handles intent and speaker together.
+            state.topic = text[:800]
+            await self.run(generation, episode)
+            return
         if re.search(r"^(?:你们|大家)?(?:先)?(?:停一下|暂停|别说了|别聊了|不要说话|别说)", text):
             action, topic = "pause", ""
         else:
@@ -228,6 +243,10 @@ class DiscussionController:
                                 )
                         if not self.valid(generation, episode):
                             return
+                        if ready.action == "pause":
+                            state.phase, state.stop_reason = "paused", "user_paused"
+                            await self.notify()
+                            break
                         if ready.action == "finish":
                             state.stop_reason = "natural_finish"
                             break
@@ -308,7 +327,7 @@ class DiscussionController:
             self.cancel_prefetch(generation, episode)
             if ready:
                 ready.cancel()
-            if self.valid(generation, episode) or (
+            if (self.valid(generation, episode) and state.phase != "paused") or (
                 episode == state.episode_id
                 and not engine.closed
                 and not engine.user_speaking

@@ -28,6 +28,7 @@ class GroupPerson {
         avatarAsset = json['avatar_asset'] as String? ?? 'bingo_logo.png',
         avatarData = json['avatar_data'] as String? {
     RoleAvatarStore.set(roleName, avatarData,
+        roleId: id,
         fallback: true,
         asset: roleAvatarFiles.contains(avatarAsset)
             ? 'assets/images/$avatarAsset'

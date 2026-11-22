@@ -34,6 +34,56 @@ class Scheduler:
         return TurnDecision(action, engine.roles[len(self.seen) % 2].id)
 
 
+@pytest.mark.asyncio
+async def test_decision_pause_skips_general_intent_and_stays_paused():
+    from bingo.services.group_call_scheduler import TurnScheduler
+
+    class Router:
+        async def choose(self, state, candidates, **kwargs):
+            assert state["user_pending"]
+            assert state["recent"][-1]["text"] == "大家先停一下"
+            return "pause"
+
+    engine, events = session(scheduler=TurnScheduler())
+    engine.decision_model = Router()
+    engine.history.append({"name": "用户", "text": "大家先停一下"})
+    engine.discussion.user_committed()
+    await engine.discussion.handle_user("大家先停一下", 0, 1)
+    assert engine.model.requests == []
+    assert engine.discussion.state.phase == "paused"
+    assert events[-1]["phase"] == "paused"
+    await engine.close()
+
+
+@pytest.mark.asyncio
+async def test_interrupted_draft_reaches_fresh_selection_and_rewritten_reply():
+    from bingo.services.group_call_scheduler import TurnScheduler
+
+    class Router:
+        async def choose(self, state, candidates, **kwargs):
+            assert state["interrupted_turn"]["draft"] == "旧的发言草稿"
+            assert state["recent"][-1]["text"] == "换个话题聊工作"
+            return "乙"
+
+    engine, _ = session(ack=False)
+    old = asyncio.create_task(engine.say(engine.roles[0], "旧的发言草稿", 0, autonomous=True))
+    await asyncio.wait_for(engine.audio_ended_for_test.wait(), 0.5)
+    await engine.interrupt()
+    assert await old == PlaybackResult.INTERRUPTED
+    assert not engine.history
+    engine.history.append({"name": "用户", "text": "换个话题聊工作"})
+    engine.discussion.user_committed()
+    engine.decision_model = Router()
+    view, state = engine.discussion.turn_context()
+    selected = await TurnScheduler().next_turn(view, state)
+    assert selected.speaker_id == "乙"
+    await engine.generate_one(engine.roles[1], autonomous=True, state=state)
+    assert "不续读旧草稿" in engine.model.requests[-1][0].content
+    assert "换个话题聊工作" in engine.model.requests[-1][1].content
+    assert "旧的发言草稿" not in engine.model.requests[-1][1].content
+    await engine.close()
+
+
 @pytest.fixture
 def fast_sleep(monkeypatch):
     import bingo.services.group_call as module

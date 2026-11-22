@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import json
 
 import pytest
 from fastapi.testclient import TestClient
@@ -10,7 +11,7 @@ from bingo.config import Settings
 from bingo.db.models import Role, RolePreference, User, Voice, VoiceJob
 from bingo.db.session import Database
 from bingo.main import create_app
-from bingo.services.voice_cloning import VoiceCloningService
+from bingo.services.voice_cloning import VoiceCloningService, pcm_wav
 from bingo.services.voices import effective_role
 from tests.api_support import api_payload
 
@@ -23,7 +24,7 @@ def assets_app(tmp_path, monkeypatch):
         return None
 
     async def preview(self, voice):
-        return b"wav-preview"
+        return pcm_wav(b"\x01\x00\x02\x00", 24000)
 
     async def provider(self, action, **values):
         if action == "create_voice":
@@ -91,7 +92,13 @@ def test_standalone_create_clone_rename_and_delete_without_any_custom_role(asset
     clone_asset(client, voice)
     assert api_payload(client.get(P + "/roles")) == before
     response = client.post(P + f"/voices/{voice['id']}/preview")
-    assert base64.b64decode(api_payload(response)["audio"]) == b"wav-preview"
+    assert base64.b64decode(api_payload(response)["audio"]) == pcm_wav(b"\x01\x00\x02\x00", 24000)
+    streamed = client.post(P + f"/voices/{voice['id']}/preview/stream")
+    assert streamed.status_code == 200
+    assert streamed.headers["cache-control"] == "no-store"
+    audio, done = (json.loads(line) for line in streamed.text.splitlines())
+    assert base64.b64decode(audio["data"]) == b"\x01\x00\x02\x00"
+    assert done == {"type": "audio_done"}
     response = client.put(P + f"/voices/{voice['id']}", json={"name": "独立保存的声音"})
     assert api_payload(response)["name"] == "独立保存的声音"
     assert client.delete(P + f"/voices/{voice['id']}").status_code == 204
@@ -144,6 +151,7 @@ def test_private_assets_are_not_visible_or_assignable_to_another_user(assets_app
     }
     for method, suffix, body in [
         ("post", "/preview", None),
+        ("post", "/preview/stream", None),
         ("put", "", {"name": "窃取"}),
         ("delete", "", None),
     ]:

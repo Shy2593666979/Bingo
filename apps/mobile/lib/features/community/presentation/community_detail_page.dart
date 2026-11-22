@@ -4,6 +4,7 @@ import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/core/widgets/bingo_confirm_dialog.dart';
 import 'package:bingo/core/theme/app_theme.dart';
 import 'dart:math';
+import 'dart:async';
 import 'package:bingo/core/design/reference_design.dart';
 import 'package:bingo/core/design/bingo_icon.dart';
 import 'package:bingo/core/widgets/center_toast.dart';
@@ -67,9 +68,14 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
 
   Future<void> _load() async {
     try {
-      final share = await widget.gateway.getCommunityShare(widget.shareId);
-      RoleOption? recentRole;
-      if (share.installedRoleId != null && widget.gateway is RoleGateway) {
+      final loaded = await widget.gateway.getCommunityShare(widget.shareId);
+      final share = _installedId == null
+          ? loaded
+          : loaded.withInstalledRole(_installedId!);
+      RoleOption? recentRole = _recentRole;
+      if (share.installedRoleId != null &&
+          recentRole?.id != share.installedRoleId &&
+          widget.gateway is RoleGateway) {
         try {
           final roles = await (widget.gateway as RoleGateway).listRoles();
           recentRole = roles
@@ -88,7 +94,7 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _failed = true);
+      if (mounted && _share == null) setState(() => _failed = true);
     }
   }
 
@@ -121,10 +127,19 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
     setState(() => _busy = true);
     try {
       final role = await widget.gateway.installCompanion(widget.shareId);
-      if (mounted) setState(() => _installedId = role.id);
-      await widget.onInstalled(role);
-      await _load();
-      if (mounted) showCenterToast(context, '已加入我的搭子，可以开始聊天了');
+      if (mounted) {
+        setState(() {
+          _installedId = role.id;
+          _recentRole = role;
+          _share = _share?.withInstalledRole(role.id);
+        });
+        showCenterToast(context, '已加入我的搭子，可以开始聊天了');
+      }
+      unawaited(Future<void>.sync(() => widget.onInstalled(role))
+          .catchError((Object error) {
+        debugPrint('Could not refresh companions after adding: $error');
+      }));
+      if (mounted) unawaited(_load());
     } catch (_) {
       if (mounted) showCenterToast(context, '暂时无法加入，请重试');
     } finally {

@@ -143,6 +143,13 @@ def test_group_call_auth_membership_and_record(group_app, monkeypatch):  # noqa:
     client.portal.call(saved)
     rows = api_payload(client.get(P + f"/groups/{group['id']}/messages", headers=headers))
     assert rows[-1]["sender_type"] == "system" and "群聊电话未接通" in rows[-1]["content"]
+    receipt = rows[-1]["attachment"]
+    assert receipt["type"] == "group_call"
+    assert receipt["initiator_id"] == user
+    assert receipt["status"] == "not_connected"
+    assert receipt["duration_seconds"] == receipt["participant_count"] == 0
+    assert receipt["invited_count"] == 1
+    assert receipt["participants"][0]["id"] == roles[0]["id"]
 
 
 def test_group_media_persist_access_and_model_context(group_app):  # noqa: F811

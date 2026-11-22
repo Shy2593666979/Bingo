@@ -1,10 +1,38 @@
 import 'dart:ui' as ui;
 import 'package:bingo/core/design/approved_art.dart';
+import 'package:bingo/core/design/reference_design.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('navigation keeps home height across tabs and the create page',
+      (tester) async {
+    for (final scale in [1.0, 1.4, 2.0]) {
+      double? homeHeight;
+      for (final selected in [0, 1, 2, 3, 4]) {
+        await tester.pumpWidget(MaterialApp(
+            builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(context).copyWith(
+                    padding: const EdgeInsets.only(bottom: 24),
+                    textScaler: TextScaler.linear(scale)),
+                child: child!),
+            home: Scaffold(
+                bottomNavigationBar: ReferenceNavigation(
+                    selected: selected == 4 ? 0 : selected,
+                    homeStyle: selected == 0,
+                    creating: selected == 4,
+                    onSelected: (_) {},
+                    onCreate: () {}))));
+        final height = tester.getSize(find.byType(ReferenceNavigation)).height;
+        homeHeight ??= height;
+        expect(height, homeHeight, reason: 'tab $selected, text scale $scale');
+        expect(height, closeTo(64 + (13 * scale - 13) * 1.4 + 24, .01));
+        expect(tester.takeException(), isNull);
+      }
+    }
+  });
+
   testWidgets('home states have identical outer bounds and door opening',
       (tester) async {
     List<int>? bounds;

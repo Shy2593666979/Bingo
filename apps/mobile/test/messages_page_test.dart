@@ -2,11 +2,13 @@ import 'dart:async';
 
 import 'package:bingo/core/config/app_config.dart';
 import 'package:bingo/core/theme/app_theme.dart';
+import 'package:bingo/core/widgets/unread_badge.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/conversations/presentation/messages_page.dart';
 import 'package:bingo/features/group_chat/data/group_gateway.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _Gateway extends HttpApiGateway {
@@ -106,6 +108,44 @@ class _PendingGateway extends _Gateway {
 }
 
 void main() {
+  testWidgets('read badge clears locally and stale refresh cannot restore it',
+      (tester) async {
+    final gateway = _Gateway();
+    final key = GlobalKey<MessagesPageState>();
+    var unread = 0;
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: MessagesPage(
+                key: key,
+                gateway: gateway,
+                groups: gateway,
+                onRole: (_) async {},
+                onGroup: (_) async {},
+                onCreate: () {},
+                onPartners: () {},
+                onUnreadChanged: (value) => unread = value))));
+    await tester.pumpAndSettle();
+    final before = unread;
+    final role = RoleOption.fromJson(gateway.roles.first);
+    key.currentState!.markRoleRead(role);
+    await tester.pump();
+    expect(unread, before - 3);
+    final badge = find.descendant(
+        of: find.byKey(const ValueKey('chat-one')),
+        matching: find.byType(UnreadBadge));
+    expect(badge, findsNothing);
+    await key.currentState!.refresh();
+    await tester.pump();
+    expect(badge, findsNothing);
+    gateway.roles.first['last_message_at'] = '2026-10-30T04:00:00Z';
+    gateway.roles.first['unread_count'] = 1;
+    await key.currentState!.refresh();
+    await tester.pump();
+    expect(tester.widget<UnreadBadge>(badge).count, 1);
+    await tester.pumpWidget(const SizedBox.shrink());
+    gateway.close();
+  });
+
   testWidgets(
       'returning from chat accepts another tap while refresh is pending',
       (tester) async {
@@ -267,11 +307,14 @@ void main() {
     expect(tester.takeException(), isNull);
     gateway.close();
   });
-  testWidgets('large text and long names fit narrow list and both menus',
+  testWidgets(
+      'large text, long names and previews fit the narrow list and menus',
       (tester) async {
     await size(tester);
     final gateway = _Gateway();
     gateway.roles[0]['nickname'] = '这是一个很长很长的搭子名字';
+    const longPreview = '我想跟你分享今天发生的一件小事，我们可以晚一点再慢慢聊下去。';
+    gateway.roles[1]['last_message'] = longPreview;
     await tester.pumpWidget(MaterialApp(
         theme: buildBingoTheme(),
         builder: (_, child) => MediaQuery(
@@ -287,6 +330,10 @@ void main() {
                 onCreate: () {},
                 onPartners: () {}))));
     await tester.pumpAndSettle();
+    final preview = find.text(longPreview);
+    expect(tester.widget<Text>(preview).maxLines, 1);
+    expect(tester.renderObject<RenderParagraph>(preview).didExceedMaxLines,
+        isTrue);
     expect(tester.takeException(), isNull);
     await tester.tap(find.byTooltip('新建'));
     await tester.pumpAndSettle();

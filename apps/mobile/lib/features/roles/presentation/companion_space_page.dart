@@ -3,6 +3,7 @@ import 'package:bingo/core/widgets/recent_chat_feedback.dart';
 import 'package:bingo/core/design/companion_launch_ui.dart';
 import 'dart:async';
 import 'package:bingo/core/theme/app_theme.dart';
+import 'package:bingo/core/theme/home_palette.dart';
 import 'package:bingo/core/design/bingo_icon.dart';
 import 'package:bingo/core/widgets/unread_badge.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
@@ -31,7 +32,6 @@ class CompanionSpacePage extends StatefulWidget {
       required this.onAllGroups,
       required this.onCommunity,
       required this.onMessages,
-      required this.onSearchChats,
       this.onReady,
       this.showHeader = true,
       this.nickname,
@@ -45,7 +45,7 @@ class CompanionSpacePage extends StatefulWidget {
   final Future<void> Function(String) onCreateGroup;
   final Future<void> Function() onCreateRole;
   final VoidCallback? onReady;
-  final VoidCallback onAllGroups, onCommunity, onMessages, onSearchChats;
+  final VoidCallback onAllGroups, onCommunity, onMessages;
   final bool showHeader, active;
   final String? nickname;
   @override
@@ -143,7 +143,8 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
         child: Row(children: [
           Expanded(
             child: Text(text,
-                style: BingoTypography.sectionTitle.copyWith(fontSize: 17)),
+                style: BingoTypography.sectionTitle
+                    .copyWith(fontSize: 17, color: HomePalette.ink)),
           ),
           if (more != null)
             TextButton(
@@ -155,7 +156,7 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
               ),
               child: Text(label,
                   style:
-                      const TextStyle(fontSize: 12, color: BingoPalette.muted)),
+                      const TextStyle(fontSize: 12, color: HomePalette.muted)),
             ),
         ]),
       );
@@ -200,14 +201,14 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
           onPressed: action,
           style: OutlinedButton.styleFrom(
             backgroundColor: background,
-            foregroundColor: BingoPalette.ink,
+            foregroundColor: HomePalette.ink,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            side: const BorderSide(color: BingoPalette.line),
+            side: const BorderSide(color: HomePalette.entryBorder),
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
           ),
           child: Row(children: [
-            HomeArtworkIcon(icon, size: 19, color: BingoPalette.primary),
+            HomeArtworkIcon(icon, size: 19, color: HomePalette.entryIcon),
             const SizedBox(width: 7),
             Expanded(
               child: Column(
@@ -218,11 +219,12 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
                             BingoTypography.itemTitle.copyWith(fontSize: 14)),
                     const SizedBox(height: 2),
                     Text(subtitle,
-                        style: BingoTypography.caption.copyWith(fontSize: 10)),
+                        style: BingoTypography.caption
+                            .copyWith(fontSize: 10, color: HomePalette.muted)),
                   ]),
             ),
             const HomeArtworkIcon(HomeArtwork.next,
-                size: 15, color: BingoPalette.ink),
+                size: 15, color: HomePalette.muted),
           ]),
         ),
       );
@@ -360,32 +362,25 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
                   onAll: _allPartners,
                 ),
               const SizedBox(height: 10),
-              const Divider(height: 1, color: BingoPalette.line),
+              const Divider(height: 1, color: HomePalette.divider),
               _heading('每个人，都可以成为你的搭子', null, top: 14, bottom: 10),
               IntrinsicHeight(
                 child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       _homeShortcut(HomeArtwork.plus, '创建搭子', '创建专属的 AI 搭子',
-                          const Color(0xFFF8F8FA), widget.onCreateRole),
+                          HomePalette.createSurface, widget.onCreateRole),
                       const SizedBox(width: 9),
                       _homeShortcut(HomeArtwork.compass, '社区推荐', '发现更多有趣的搭子',
-                          const Color(0xFFFFF1F6), widget.onCommunity),
+                          HomePalette.communitySurface, widget.onCommunity),
                     ]),
               ),
               const SizedBox(height: 17),
-              const Divider(height: 1, color: BingoPalette.line),
-              Row(children: [
-                Expanded(
-                    child: InkWell(
-                        onTap: widget.onMessages,
-                        child: _heading('最近聊天', widget.onMessages,
-                            top: 12, bottom: 2, label: '全部聊天 ›'))),
-                IconButton(
-                    tooltip: '查找聊天',
-                    onPressed: widget.onSearchChats,
-                    icon: const Icon(Icons.search_rounded, size: 19)),
-              ]),
+              const Divider(height: 1, color: HomePalette.divider),
+              InkWell(
+                  onTap: widget.onMessages,
+                  child: _heading('最近聊天', widget.onMessages,
+                      top: 12, bottom: 2, label: '全部聊天 ›')),
               ...recent,
               if (recent.isEmpty && roles != null)
                 const Padding(

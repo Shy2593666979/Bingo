@@ -49,6 +49,51 @@ class CommunityPageState extends State<CommunityPage> {
   List<CommunityShare> _items = [], _hotItems = [];
   final _engaging = <String>{};
   final _installing = <String>{};
+  final _installedRoles = <String, String>{};
+  DateTime? _lastRefresh;
+  String? _loadedQuery, _requestQuery;
+  bool _fetching = false;
+  String get _queryKey => '$_scope|$_sort|${_search.text.trim()}';
+
+  Future<void> refreshIfStale() async {
+    if (_loadedQuery == _queryKey &&
+        _lastRefresh != null &&
+        DateTime.now().difference(_lastRefresh!) < const Duration(seconds: 60)) {
+      return;
+    }
+    await refresh();
+  }
+
+  Future<void> _warmAvatars(List<CommunityShare> items) async {
+    for (final share in items.where((item) => item.hasAvatar).take(6)) {
+      if (!mounted) return;
+      await precacheImage(
+          ResizeImage.resizeIfNeeded(
+              320,
+              null,
+              NetworkImage(communityListAvatarUrl(widget.gateway, share.id),
+                  headers: {
+                    if (widget.gateway.communityAccessToken != null)
+                      'Authorization':
+                          'Bearer ${widget.gateway.communityAccessToken}',
+                  })),
+          context,
+          onError: (_, __) {});
+    }
+  }
+
+  List<CommunityShare> _orderedShares(List<CommunityShare> items) {
+    final current = items
+        .map((item) => _installedRoles.containsKey(item.id)
+            ? item.withInstalledRole(_installedRoles[item.id]!)
+            : item)
+        .toList();
+    return [
+      ...current.where((item) => item.installedRoleId == null),
+      ...current.where((item) => item.installedRoleId != null),
+    ];
+  }
+
   @override
   void initState() {
     super.initState();
@@ -83,8 +128,14 @@ class CommunityPageState extends State<CommunityPage> {
           : 'all';
   String get _sort => _tab == 1 || _tab == 5 ? 'popular' : 'latest';
   Future<void> refresh() async {
+    final queryKey = _queryKey;
+    if (_fetching && _requestQuery == queryKey) return;
+    _fetching = true;
+    _requestQuery = queryKey;
+    final installedBefore = Map<String, String>.of(_installedRoles);
     final version = ++_version;
     setState(() {
+      if (_loadedQuery != null && _loadedQuery != queryKey) _items = [];
       _loading = true;
       _failed = false;
       _more = false;
@@ -96,14 +147,26 @@ class CommunityPageState extends State<CommunityPage> {
           query: _search.text.trim(), scope: _scope, sort: _sort);
       if (mounted && version == _version) {
         setState(() {
-          _items = result.items;
+          for (final item in result.items) {
+            if (item.installedRoleId == null &&
+                installedBefore[item.id] == _installedRoles[item.id]) {
+              _installedRoles.remove(item.id);
+            }
+          }
+          _items = _orderedShares(result.items);
           _next = result.nextOffset;
+          _lastRefresh = DateTime.now();
+          _loadedQuery = queryKey;
         });
+        unawaited(_warmAvatars(result.items));
       }
     } catch (_) {
       if (mounted && version == _version) setState(() => _failed = true);
     } finally {
-      if (mounted && version == _version) setState(() => _loading = false);
+      if (mounted && version == _version) {
+        _fetching = false;
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -122,6 +185,7 @@ class CommunityPageState extends State<CommunityPage> {
         setState(() {
           final ids = _items.map((item) => item.id).toSet();
           _items.addAll(result.items.where((item) => ids.add(item.id)));
+          _items = _orderedShares(_items);
           _next = result.nextOffset;
         });
       }
@@ -158,23 +222,58 @@ class CommunityPageState extends State<CommunityPage> {
     setState(() => _installing.add(share.id));
     try {
       final role = await widget.gateway.installCompanion(share.id);
-      await widget.onInstalled(role);
-      final updated = await widget.gateway.getCommunityShare(share.id);
       if (mounted) {
         setState(() {
+          _installedRoles[share.id] = role.id;
           _items = _items
-              .map((item) => item.id == share.id ? updated : item)
+              .map((item) =>
+                  item.id == share.id ? item.withInstalledRole(role.id) : item)
               .toList();
           _hotItems = _hotItems
-              .map((item) => item.id == share.id ? updated : item)
+              .map((item) =>
+                  item.id == share.id ? item.withInstalledRole(role.id) : item)
               .toList();
+          _items = _orderedShares([
+            ..._items.where((item) => item.id != share.id),
+            ..._items.where((item) => item.id == share.id),
+          ]);
+          _hotItems = _orderedShares([
+            ..._hotItems.where((item) => item.id != share.id),
+            ..._hotItems.where((item) => item.id == share.id),
+          ]);
         });
         showCenterToast(context, '已加入我的搭子，可以自由编辑');
       }
+      // The install is committed. Refreshes must not delay success or turn a
+      // successful addition into an apparent failure.
+      unawaited(Future<void>.sync(() => widget.onInstalled(role))
+          .catchError((Object error) {
+        debugPrint('Could not refresh companions after adding: $error');
+      }));
+      if (mounted) unawaited(_refreshInstalledShare(share.id, role.id));
     } catch (_) {
       if (mounted) showCenterToast(context, '暂时无法加入，请重试');
     } finally {
       if (mounted) setState(() => _installing.remove(share.id));
+    }
+  }
+
+  Future<void> _refreshInstalledShare(String shareId, String roleId) async {
+    try {
+      final updated = (await widget.gateway.getCommunityShare(shareId))
+          .withInstalledRole(roleId);
+      if (!mounted) return;
+      setState(() {
+        _items =
+            _items.map((item) => item.id == shareId ? updated : item).toList();
+        _hotItems = _hotItems
+            .map((item) => item.id == shareId ? updated : item)
+            .toList();
+        _items = _orderedShares(_items);
+        _hotItems = _orderedShares(_hotItems);
+      });
+    } catch (error) {
+      debugPrint('Could not refresh community details after adding: $error');
     }
   }
 
@@ -396,13 +495,13 @@ class CommunityPageState extends State<CommunityPage> {
                                                   }))
                                       ]),
                                     ]))),
-                        if (_loading)
+                        if (_loading && _items.isEmpty)
                           const SliverToBoxAdapter(
                               child: Padding(
                                   padding: EdgeInsets.all(50),
                                   child: Center(
                                       child: CircularProgressIndicator())))
-                        else if (_failed)
+                        else if (_failed && _items.isEmpty)
                           SliverToBoxAdapter(
                               child: CommunityEmpty(
                                   title: '社区暂时没有连接上',

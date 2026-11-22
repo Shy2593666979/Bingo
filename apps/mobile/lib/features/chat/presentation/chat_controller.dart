@@ -213,9 +213,11 @@ class ChatController extends ChangeNotifier {
       return;
     }
     final binding = _bindingSequence;
+    final runSequence = _runSequence;
     try {
       final messages = await gateway.listMessages(conversationId);
       if (binding != _bindingSequence ||
+          runSequence != _runSequence ||
           (_roleConversation && conversationId != _conversationId)) {
         return;
       }
@@ -279,8 +281,9 @@ class ChatController extends ChangeNotifier {
 
   Future<void> bindConversation(
       String userId, String conversationId, String role,
-      {bool welcomeUnread = false}) async {
+      {bool welcomeUnread = false, bool waitForSync = true}) async {
     unbindUser();
+    final binding = _bindingSequence;
     _welcomePresentation = welcomeUnread;
     _userId = userId;
     _roleConversation = true;
@@ -289,6 +292,7 @@ class ChatController extends ChangeNotifier {
     try {
       final conversation = await _localStore?.loadConversation(
           '$userId:conversation:$conversationId', conversationId);
+      if (binding != _bindingSequence) return;
       if (conversation != null) {
         _title = conversation.title;
         _messages.addAll(_expandAssistantMessages(conversation.messages));
@@ -297,11 +301,22 @@ class ChatController extends ChangeNotifier {
             .addAll(conversation.timelineItems.whereType<DeviceAction>());
       }
     } on Exception {
+      if (binding != _bindingSequence) return;
       _messages.clear();
       _timelineItems.clear();
     }
-    await reloadConversation(conversationId);
-    await refreshEngagement();
+    if (binding != _bindingSequence) return;
+    if (waitForSync) {
+      await reloadConversation(conversationId);
+    } else {
+      unawaited(reloadConversation(conversationId));
+    }
+    if (binding != _bindingSequence) return;
+    if (waitForSync) {
+      await refreshEngagement();
+    } else {
+      unawaited(refreshEngagement());
+    }
     notifyListeners();
   }
 

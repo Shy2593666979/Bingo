@@ -87,8 +87,7 @@ class _StartupBrandSceneState extends State<StartupBrandScene>
           final breath =
               reduced ? 0.0 : Curves.easeInOut.transform(_pulse.value);
           return Stack(fit: StackFit.expand, children: [
-            // Match the native launch drawable's centered 174dp logo. Text
-            // must not participate in its layout or shift it at hand-off.
+            // Keep the mascot still as the tagline appears below it.
             const Center(child: BingoWordmark(width: 174, height: 174)),
             Positioned.fill(
               child: LayoutBuilder(

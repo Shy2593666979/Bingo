@@ -32,8 +32,8 @@ class UserProfile {
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     RoleAvatarStore.selectUser(json['id'] as String);
-    RoleAvatarStore.set(
-        json['role'] as String?, json['avatar_data'] as String?);
+    RoleAvatarStore.set(json['role'] as String?, json['avatar_data'] as String?,
+        roleId: json['role_id'] as String?);
     return UserProfile(
       id: json['id'] as String,
       phone: json['phone'] as String,
@@ -195,7 +195,8 @@ class RoleOption {
           ['善于倾听', '陪伴聊天']),
       messageCount: json['message_count'] as int? ?? 0,
     );
-    RoleAvatarStore.set(role.name, role.avatarData, asset: role.avatarAsset);
+    RoleAvatarStore.set(role.name, role.avatarData,
+        asset: role.avatarAsset, roleId: role.id);
     return role;
   }
 }

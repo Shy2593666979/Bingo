@@ -22,26 +22,13 @@ class UserAvatar extends StatelessWidget {
   final Gradient? backgroundGradient;
   final TextStyle? initialTextStyle;
 
-  static const initialBackground = Color(0xFFF3E3E8);
-  static const initialForeground = Color(0xFF88556B);
+  static const initialBackground = Color(0xFFF7E8EE);
+  static const initialForeground = Color(0xFF8D5368);
   static const emptyBackground = Color(0xFFF5F3F4);
-  static const tones = [
-    (background: Color(0xFFF0E5ED), foreground: Color(0xFF77576D)),
-    (background: Color(0xFFE5EDF5), foreground: Color(0xFF3F607A)),
-    (background: Color(0xFFECE7F4), foreground: Color(0xFF6C5486)),
-    (background: Color(0xFFF7E6DF), foreground: Color(0xFF885A46)),
-    (background: Color(0xFFF3EBDD), foreground: Color(0xFF7A653E)),
-    (background: Color(0xFFF3E3E8), foreground: Color(0xFF88556B)),
-  ];
 
-  /// Distribute names across a soft palette without changing on rebuilds.
-  static ({Color background, Color foreground}) toneFor(String username) {
-    var hash = 2166136261;
-    for (final rune in username.trim().runes) {
-      hash = ((hash ^ rune) * 16777619) & 0xffffffff;
-    }
-    return tones[hash % tones.length];
-  }
+  /// A single quiet rose palette keeps personal identity consistent on every page.
+  static ({Color background, Color foreground}) toneFor(String username) =>
+      (background: initialBackground, foreground: initialForeground);
 
   static String initialFor(String username) {
     final name = username.trim();

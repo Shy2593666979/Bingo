@@ -5,6 +5,7 @@ import 'package:bingo/core/design/companion_launch_ui.dart';
 import 'package:bingo/core/widgets/bingo_confirm_dialog.dart';
 import 'package:bingo/core/widgets/center_toast.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
+import 'package:bingo/features/chat/data/reply_audio_player.dart';
 import 'package:bingo/features/voices/data/voice_gateway.dart';
 import 'package:bingo/features/voices/models/voice_option.dart';
 import 'package:bingo/features/voices/presentation/voice_cover.dart';
@@ -33,6 +34,7 @@ class VoiceLibraryPage extends StatefulWidget {
 class _VoiceLibraryPageState extends State<VoiceLibraryPage>
     with WidgetsBindingObserver {
   static const _device = MethodChannel('bingo/device_tools');
+  final _streamAudio = ReplyAudioPlayer(channelSuffix: 'PreviewStreamAudio');
   List<VoiceOption>? _voices;
   String? _selected, _playing, _error, _gender;
   int _tab = 0, _generation = 0;
@@ -46,12 +48,22 @@ class _VoiceLibraryPageState extends State<VoiceLibraryPage>
     _load(initial: true);
   }
 
-  Future<void> _stop() =>
-      _device.invokeMethod<void>('stopPreviewAudio').catchError((_) {});
+  Future<void> _stop() async {
+    final gateway = widget.gateway;
+    if (gateway is StreamingVoiceGateway) {
+      (gateway as StreamingVoiceGateway).stopVoicePreview();
+    }
+    await Future.wait([
+      _streamAudio.stop(),
+      _device.invokeMethod<void>('stopPreviewAudio').catchError((_) {}),
+    ]);
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
       _generation++;
+      if (_playing != null) setState(() => _playing = null);
       unawaited(_stop());
     }
   }
@@ -110,12 +122,28 @@ class _VoiceLibraryPageState extends State<VoiceLibraryPage>
     });
     try {
       await _stop();
-      if (stop) return;
+      if (stop || !mounted || generation != _generation) return;
+      final gateway = widget.gateway;
+      if (gateway is StreamingVoiceGateway) {
+        try {
+          await for (final chunk in (gateway as StreamingVoiceGateway)
+              .streamVoicePreview(voice.id)) {
+            if (!mounted || generation != _generation) return;
+            await _streamAudio.add(chunk);
+          }
+          if (mounted && generation == _generation) await _streamAudio.finish();
+          return;
+        } on ApiException catch (error) {
+          if (error.statusCode != 404) rethrow;
+        }
+      }
+      if (!mounted || generation != _generation) return;
       final audio = await widget.gateway.previewVoice(voice.id);
       if (!mounted || generation != _generation) return;
       await _device.invokeMethod<void>('playPreviewAudio', audio);
     } catch (error) {
       if (mounted && generation == _generation) {
+        unawaited(_streamAudio.stop());
         setState(
             () => _error = error is ApiException ? error.message : '试听失败，请重试');
       }
@@ -126,6 +154,7 @@ class _VoiceLibraryPageState extends State<VoiceLibraryPage>
 
   Future<void> _edit([VoiceOption? voice]) async {
     _generation++;
+    if (_playing != null) setState(() => _playing = null);
     await _stop();
     if (!mounted) return;
     final result = await Navigator.of(context).push<VoiceOption>(
@@ -153,6 +182,7 @@ class _VoiceLibraryPageState extends State<VoiceLibraryPage>
     if (confirmed != true || !mounted) return;
     try {
       _generation++;
+      if (_playing != null) setState(() => _playing = null);
       await _stop();
       await widget.gateway.deleteVoice(voice.id);
       await _load();

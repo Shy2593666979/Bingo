@@ -154,17 +154,12 @@ class ReferenceMyPageState extends State<ReferenceMyPage> {
             padding: const EdgeInsets.fromLTRB(1, 17, 1, 26),
             child: Row(children: [
               UserAvatar(
-                  avatarData: widget.profile.userAvatarData,
-                  username: username?.isNotEmpty == true ? username! : '',
-                  size: 70,
-                  initialTextStyle: const TextStyle(
-                      fontSize: 38, fontWeight: FontWeight.w400),
-                  foregroundColor: Colors.white,
-                  backgroundGradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFFF58FB0), BingoPalette.primary],
-                      stops: [0, .75])),
+                avatarData: widget.profile.userAvatarData,
+                username: username?.isNotEmpty == true ? username! : '',
+                size: 70,
+                initialTextStyle:
+                    const TextStyle(fontSize: 38, fontWeight: FontWeight.w400),
+              ),
               const SizedBox(width: 25),
               Expanded(
                 child: Column(

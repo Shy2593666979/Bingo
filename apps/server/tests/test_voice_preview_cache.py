@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import aclosing
 
 import pytest
 
@@ -18,7 +19,8 @@ async def test_preview_reuses_success_and_coalesces_requests(monkeypatch):
 
     monkeypatch.setattr(service, "generate_preview", generate)
     assert await asyncio.gather(service.preview("voice"), service.preview("voice")) == [
-        b"wav", b"wav"
+        b"wav",
+        b"wav",
     ]
     assert await service.preview("voice") == b"wav"
     assert calls == ["voice"]
@@ -85,3 +87,24 @@ async def test_cancelled_caller_does_not_cancel_shared_generation(monkeypatch):
     release.set()
     assert await service.preview("voice") == b"wav"
     await service.close()
+
+
+@pytest.mark.asyncio
+async def test_stream_yields_before_generation_finishes_and_reuses_completed_audio(monkeypatch):
+    service = VoiceCloningService(None, Settings())
+    release = asyncio.Event()
+    first, second = b"\x01\x00", b"\x02\x00"
+
+    async def deltas(voice):
+        yield first
+        await release.wait()
+        yield second
+
+    monkeypatch.setattr(service, "preview_deltas", deltas)
+    async with aclosing(service.stream_preview("voice")) as stream:
+        assert await asyncio.wait_for(anext(stream), 1) == first
+        assert service.cached_preview("voice") is None
+        release.set()
+        assert [chunk async for chunk in stream] == [second]
+
+    assert [chunk async for chunk in service.stream_preview("voice")] == [first + second]

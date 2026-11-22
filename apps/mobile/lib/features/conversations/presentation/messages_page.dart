@@ -58,6 +58,42 @@ class MessagesPageState extends State<MessagesPage> {
   final _searchController = TextEditingController();
   final _searchFocus = FocusNode();
   final _newButtonKey = GlobalKey();
+  final _readSnapshots = <String, ({DateTime date, int count})>{};
+
+  int _unreadCount(String key, DateTime date, int count) {
+    final read = _readSnapshots[key];
+    return read != null &&
+            (date.isBefore(read.date) ||
+                (date.isAtSameMomentAs(read.date) && count <= read.count))
+        ? 0
+        : count;
+  }
+
+  void markRoleRead(RoleOption role, {DateTime? through}) {
+    if (!mounted) return;
+    setState(() {
+      final date = role.lastMessageAt ?? DateTime(2000);
+      _readSnapshots['role:${role.id}'] = (
+        date: through != null && through.isAfter(date) ? through : date,
+        count: role.unreadCount
+      );
+    });
+    _notifyUnread();
+  }
+
+  void _notifyUnread() {
+    widget.onUnreadChanged?.call(_roles.where((r) => !r.muted).fold<int>(
+            0,
+            (sum, r) =>
+                sum +
+                _unreadCount('role:${r.id}', r.lastMessageAt ?? DateTime(2000),
+                    r.unreadCount)) +
+        _groups.where((g) => !g.muted).fold<int>(
+            0,
+            (sum, g) =>
+                sum + _unreadCount('group:${g.id}', g.lastActivity, g.unread)));
+  }
+
   @override
   void initState() {
     super.initState();
@@ -118,12 +154,7 @@ class MessagesPageState extends State<MessagesPage> {
           _failed = false;
         });
       }
-      widget.onUnreadChanged?.call(_roles
-              .where((r) => !r.muted)
-              .fold<int>(0, (sum, r) => sum + r.unreadCount) +
-          _groups
-              .where((g) => !g.muted)
-              .fold<int>(0, (sum, g) => sum + g.unread));
+      if (mounted && version == _loadVersion) _notifyUnread();
     } catch (_) {
       if (mounted && version == _loadVersion) setState(() => _failed = true);
     } finally {
@@ -142,6 +173,14 @@ class MessagesPageState extends State<MessagesPage> {
         await widget.onRole(item.role!);
       } else {
         await widget.onGroup(item.group!);
+        if (mounted) {
+          final group = item.group!;
+          setState(() {
+            _readSnapshots['group:${group.id}'] =
+                (date: group.lastActivity, count: group.unread);
+          });
+          _notifyUnread();
+        }
       }
     } catch (_) {
       if (mounted) showCenterToast(context, '聊天暂时无法打开，请重试');
@@ -639,7 +678,10 @@ class MessagesPageState extends State<MessagesPage> {
       : GroupAvatar(members: item.group!.activeMembers, size: size);
   Widget _tile(_Chat item, {bool divider = true}) {
     final role = item.role, group = item.group;
-    final unread = role?.unreadCount ?? group!.unread;
+    final unread = _unreadCount(
+        role != null ? 'role:${role.id}' : 'group:${group!.id}',
+        item.date,
+        role?.unreadCount ?? group!.unread);
     final muted = role?.muted ?? group!.muted;
     final preview = role != null
         ? role.lastMessage ?? '和搭子打个招呼吧'
@@ -648,13 +690,15 @@ class MessagesPageState extends State<MessagesPage> {
             : '${group.senderNameFor(group.lastMessage!)}：${ChatSticker.preview(group.lastMessage!.content)}';
     return Material(
         key: ValueKey('chat-${role?.id ?? group!.id}'),
-        color: Colors.transparent,
+        color: _openingId == (role?.id ?? group!.id)
+            ? const Color(0xFFF3F3F3)
+            : Colors.transparent,
         child: InkWell(
             onTap: () => _open(item),
             onLongPress: () => _actions(item),
             child: Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
                 decoration: BoxDecoration(
                     border: divider
                         ? const Border(
@@ -677,26 +721,19 @@ class MessagesPageState extends State<MessagesPage> {
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
-                                            fontSize: 17,
+                                            fontSize: 15,
                                             height: 1.25,
-                                            fontWeight: FontWeight.w600,
-                                            letterSpacing: 0,
-                                            color: Color(0xFF262626)))),
+                                            fontWeight: FontWeight.w500,
+                                            letterSpacing: 0.25,
+                                            color: Color(0xFF212121)))),
                               ])),
                               const SizedBox(width: 10),
-                              if (_openingId == (role?.id ?? group!.id))
-                                const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 1.5))
-                              else
-                                Text(_time(item.date),
-                                    style: const TextStyle(
-                                        fontSize: 12,
-                                        height: 1.35,
-                                        fontWeight: FontWeight.w400,
-                                        color: Color(0xFF999999))),
+                              Text(_time(item.date),
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      height: 1.35,
+                                      fontWeight: FontWeight.w400,
+                                      color: Color(0xFFBDBDBD))),
                             ]),
                         const SizedBox(height: 5),
                         Row(children: [
@@ -705,11 +742,11 @@ class MessagesPageState extends State<MessagesPage> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                      fontSize: 14,
+                                      fontSize: 12,
                                       height: 1.35,
                                       fontWeight: FontWeight.w400,
-                                      letterSpacing: 0,
-                                      color: Color(0xFF666666)))),
+                                      letterSpacing: 0.25,
+                                      color: Color(0xFFBDBDBD)))),
                           if (unread > 0) ...[
                             const SizedBox(width: 10),
                             UnreadBadge(count: unread)

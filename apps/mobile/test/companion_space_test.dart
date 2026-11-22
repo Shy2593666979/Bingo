@@ -15,7 +15,12 @@ class _Gateway extends HttpApiGateway {
   @override
   Future<List<RoleOption>> listRoles() async => [
         for (var i = 1; i <= 10; i++)
-          RoleOption(id: '$i', name: '女朋友', nickname: '搭子$i', builtin: true)
+          RoleOption(
+              id: '$i',
+              name: '女朋友',
+              nickname: '搭子$i',
+              builtin: i != 2,
+              openingLine: '测试用的自定义开场白')
       ];
   @override
   Future<List<ChatGroup>> listGroups() async => [];
@@ -61,17 +66,26 @@ void main() {
                   onCreateRole: () async {},
                   onAllGroups: () {},
                   onCommunity: () => communityVisits++,
-                  onMessages: () {},
-                  onSearchChats: () {}))));
+                  onMessages: () {}))));
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('companion-preview')), findsOneWidget);
       expect(find.byKey(const ValueKey('companion-card-3')), findsOneWidget);
       expect(find.byKey(const ValueKey('companion-card-4')), findsOneWidget);
       expect(find.text('和搭子1聊聊').hitTestable(), findsOneWidget);
-      await tester.pump(const Duration(seconds: 4));
+      final greeting = find.textContaining(RegExp(r'^“.+”$')).hitTestable();
+      expect(greeting, findsOneWidget);
+      expect(find.textContaining('测试用的自定义开场白'), findsNothing);
+      final firstGreeting = tester.widget<Text>(greeting).data;
+      await tester.pump(const Duration(seconds: 1));
+      expect(tester.widget<Text>(greeting).data, firstGreeting);
+      await tester.pump(const Duration(seconds: 3));
       await tester.pumpAndSettle();
       expect(find.text('和搭子2聊聊').hitTestable(), findsOneWidget);
-      await tester.tap(find.byTooltip('上一位搭子'));
+      expect(greeting, findsOneWidget);
+      expect(find.textContaining('测试用的自定义开场白'), findsNothing);
+      expect(find.byTooltip('上一位搭子'), findsNothing);
+      expect(find.byTooltip('下一位搭子'), findsNothing);
+      await tester.drag(find.byType(PageView), const Offset(270, 0));
       await tester.pumpAndSettle();
       expect(find.text('和搭子1聊聊').hitTestable(), findsOneWidget);
       await tester.tap(find.text('全部 ›').first);

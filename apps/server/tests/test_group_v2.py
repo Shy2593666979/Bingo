@@ -7,7 +7,7 @@ from sqlmodel import select
 
 from bingo.agent.model_client import ModelTextDelta
 from bingo.agent.social_runtime import parse_intent
-from bingo.db.models.groups import GroupRun
+from bingo.db.models.groups import ChatGroup, GroupRun
 from tests.api_support import api_payload
 from tests.test_group_chat import P, create, group_app, wait  # noqa: F401
 
@@ -109,6 +109,175 @@ def test_system_one_serial_turns_use_fresh_completed_history(v2):
     assert len(ai) == 2
     assert ai[0]["sender_role_id"] != ai[1]["sender_role_id"]
     assert len(router.states) == 3
+
+
+@pytest.mark.parametrize(
+    "mode,allow_followup",
+    [
+        ("together", True),
+        ("together", False),
+        ("handoff", True),
+    ],
+)
+def test_pending_participation_and_handoff_reach_the_other_member(v2, mode, allow_followup):
+    client, ((headers, _), _), roles, model = v2
+    first, second = [r["id"] for r in roles[:2]]
+
+    class Router:
+        classifications = 0
+        states = []
+
+        async def classify_group_user(self, state, candidates, **kwargs):
+            self.classifications += 1
+            assert set(candidates) == {first, second}
+            return {
+                "intent": mode if mode == "together" else "casual",
+                "required_recipients": [first, second] if mode == "together" else [],
+            }
+
+        async def choose(self, state, candidates, **kwargs):
+            self.states.append(state)
+            if len(self.states) == 1:
+                return first
+            if len(self.states) == 2:
+                assert set(candidates) == {second}
+                assert state["pending_participants"] == [second]
+                if mode == "handoff":
+                    assert state["pending_handoffs"][0]["from"] == first
+                return second
+            assert not state["pending_participants"]
+            return "finish"
+
+        async def aclose(self):
+            pass
+
+    router = Router()
+    client.app.state.services.group_chat.decision_model = router
+    original = model.stream
+
+    async def stream(messages, tools=None):
+        if not model.generations and mode == "handoff":
+            model.generations.append(messages)
+            yield ModelTextDelta(
+                json.dumps(
+                    {
+                        "replyToMessageId": None,
+                        "mentionTargets": [{"type": "role", "id": second}],
+                        "mentionAll": False,
+                    }
+                )
+                + "\n这件事也想听听另一位的看法，请接着聊。"
+            )
+        else:
+            async for chunk in original(messages, tools):
+                yield chunk
+
+    model.stream = stream
+    group = create(client, headers, roles[:2])
+    if not allow_followup:
+
+        async def disable_followup():
+            async with client.app.state.database.session_factory() as session:
+                row = await session.get(ChatGroup, group["id"])
+                row.allow_ai_to_ai = False
+                await session.commit()
+
+        client.portal.call(disable_followup)
+    response = api_payload(send(client, headers, group, content="我想听你俩一起说话"))
+    wait(client)
+    ai = [m for m in rows(client, headers, group) if m["sender_type"] == "assistant"]
+    assert [m["sender_role_id"] for m in ai] == [first, second]
+    assert router.classifications == 1
+    assert len(router.states) == (3 if allow_followup else 2)
+    # Internal plan metadata must not break retry idempotency.
+    retry = api_payload(send(client, headers, group, content="我想听你俩一起说话"))
+    assert retry["run_id"] == response["run_id"]
+
+
+def test_repeated_bad_speaker_choice_stops_without_forcing_other_members(v2):
+    client, ((headers, _), _), roles, model = v2
+
+    class Router:
+        def __init__(self):
+            self.states = []
+
+        async def choose(self, state, candidates, **kwargs):
+            self.states.append(state)
+            assert state["latest_user"]["text"] == "哈喽"
+            assert state["replies_since_user"] == len(self.states) - 1
+            return next(iter(candidates))
+
+        async def aclose(self):
+            pass
+
+    router = Router()
+    client.app.state.services.group_chat.decision_model = router
+    group = create(client, headers, roles[:2])
+    send(client, headers, group, content="哈喽")
+    wait(client)
+    ai = [m for m in rows(client, headers, group) if m["sender_type"] == "assistant"]
+    assert len(ai) == len(model.generations) == 2
+    assert len({m["sender_role_id"] for m in ai}) == 1
+    assert len(router.states) == 3
+    assert router.states[-1]["consecutive_speaker_turns"] == 2
+    run_id = ai[0]["run_id"]
+    result = api_payload(
+        client.get(P + f"/groups/{group['id']}/runs/{run_id}/events", headers=headers)
+    )
+    decisions = [e for e in result["events"] if e["type"] == "routing_decision"]
+    assert len(decisions) == 3
+    assert decisions[-1]["stop_reason"] == "consecutive_speaker_guard"
+
+
+def test_decision_pause_produces_no_character_reply(v2):
+    client, ((headers, _), _), roles, model = v2
+
+    class Router:
+        async def choose(self, state, candidates, **kwargs):
+            assert state["user_pending"]
+            return "pause"
+
+        async def aclose(self):
+            pass
+
+    client.app.state.services.group_chat.decision_model = Router()
+    group = create(client, headers, roles)
+    send(client, headers, group)
+    wait(client)
+    assert not [m for m in rows(client, headers, group) if m["sender_type"] == "assistant"]
+    assert not model.generations
+
+
+def test_casual_exchange_cannot_give_same_role_third_turn_after_another_speaker(v2):
+    client, ((headers, _), _), roles, model = v2
+    first, second = [r["id"] for r in roles[:2]]
+
+    class Router:
+        choices = iter([first, second, first, first])
+
+        async def classify_group_user(self, state, candidates, **kwargs):
+            return {"intent": "directed", "required_recipients": []}
+
+        async def choose(self, state, candidates, **kwargs):
+            if state["replies_since_user"] == 3:
+                assert state["consecutive_speaker_turns"] == 1
+                assert state["speaker_reply_counts"][first] == 2
+            return next(self.choices)
+
+        async def aclose(self):
+            pass
+
+    client.app.state.services.group_chat.decision_model = Router()
+    group = create(client, headers, roles[:2])
+    run = api_payload(send(client, headers, group))
+    wait(client)
+    ai = [m for m in rows(client, headers, group) if m["sender_type"] == "assistant"]
+    assert [m["sender_role_id"] for m in ai] == [first, second, first]
+    events = api_payload(
+        client.get(P + f"/groups/{group['id']}/runs/{run['run_id']}/events", headers=headers)
+    )["events"]
+    decisions = [e for e in events if e["type"] == "routing_decision"]
+    assert decisions[-1]["stop_reason"] == "episode_speaker_guard"
 
 
 def test_all_eight_strong_first_then_followups_budget_and_full_snapshot(v2):

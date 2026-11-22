@@ -12,6 +12,7 @@ import 'package:bingo/features/chat/presentation/chat_page.dart';
 import 'package:bingo/features/roles/presentation/role_detail_page.dart';
 import 'package:bingo/features/community/data/community_gateway.dart';
 import 'package:bingo/features/community/presentation/community_page.dart';
+import 'package:bingo/features/community/presentation/community_scene.dart';
 import 'package:bingo/features/community/presentation/favorites_page.dart';
 import 'package:bingo/features/community/presentation/community_detail_page.dart';
 import 'package:bingo/features/community/presentation/publish_companion_page.dart';
@@ -54,6 +55,37 @@ CommunityShare _share(
         traits: ['善于倾听', '陪伴聊天'],
         persona: {'prompt': '喜欢星星，擅长倾听'});
 
+class _OrderingGateway extends _Gateway {
+  @override
+  Future<CommunityPageResult> listCommunity(
+          {String query = '',
+          String scope = 'all',
+          String sort = 'latest',
+          int offset = 0}) async =>
+      CommunityPageResult([
+        _share(id: 'old', name: '已添加', installed: 'old-role'),
+        _share(),
+        _share(id: 'second', name: '未添加'),
+      ], null);
+}
+
+class _RefreshGateway extends _Gateway {
+  int loads = 0;
+  final pendingList = Completer<CommunityPageResult>();
+  @override
+  Future<CommunityPageResult> listCommunity(
+      {String query = '',
+      String scope = 'all',
+      String sort = 'latest',
+      int offset = 0}) {
+    if (++loads == 1) {
+      return super.listCommunity(
+          query: query, scope: scope, sort: sort, offset: offset);
+    }
+    return pendingList.future;
+  }
+}
+
 class _Gateway extends HttpApiGateway {
   _Gateway()
       : super(
@@ -67,6 +99,9 @@ class _Gateway extends HttpApiGateway {
   int installs = 0;
   int itemCount = 1;
   Completer<RoleOption>? pendingInstall;
+  Completer<CommunityShare>? pendingDetail;
+  bool failDetail = false;
+  int roleLoads = 0;
   final searches = <String, Completer<CommunityPageResult>>{};
   bool deferredSearch = false;
   @override
@@ -74,7 +109,11 @@ class _Gateway extends HttpApiGateway {
   @override
   Future<List<ChatGroup>> listGroups() async => [];
   @override
-  Future<List<RoleOption>> listRoles() async => [_role];
+  Future<List<RoleOption>> listRoles() async {
+    roleLoads++;
+    return [_role];
+  }
+
   @override
   Future<UserProfile> getProfile() async => _profile;
   @override
@@ -105,7 +144,11 @@ class _Gateway extends HttpApiGateway {
   }
 
   @override
-  Future<CommunityShare> getCommunityShare(String id) async => share;
+  Future<CommunityShare> getCommunityShare(String id) async {
+    if (failDetail) throw const ApiException('详情刷新失败');
+    return pendingDetail == null ? share : pendingDetail!.future;
+  }
+
   @override
   Future<RoleOption> installCompanion(String id) async {
     installs++;
@@ -145,6 +188,67 @@ class _ChatGateway implements ChatGateway {
 }
 
 void main() {
+  testWidgets(
+      'community reentry reuses fresh data and background failures keep cards',
+      (tester) async {
+    final gateway = _RefreshGateway();
+    final key = GlobalKey<CommunityPageState>();
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: CommunityPage(
+      key: key,
+      gateway: gateway,
+      referenceDesign: true,
+      onPublish: () async {},
+      onInstalled: (_) async {},
+      onOpenCopy: (_) async {},
+    ))));
+    await tester.pumpAndSettle();
+    await key.currentState!.refreshIfStale();
+    await key.currentState!.refreshIfStale();
+    expect(gateway.loads, 1);
+    final refresh = key.currentState!.refresh();
+    await tester.pump();
+    expect(find.byKey(const ValueKey('community-share-share-one')), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    await key.currentState!.refreshIfStale();
+    expect(gateway.loads, 2);
+    gateway.pendingList.completeError(const ApiException('暂时断网'));
+    await refresh;
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('community-share-share-one')), findsOneWidget);
+    expect(find.text('社区暂时没有连接上'), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+    gateway.close();
+  });
+  testWidgets(
+      'community keeps uninstalled first and moves newly added role to the end',
+      (tester) async {
+    final gateway = _OrderingGateway();
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: CommunityPage(
+      gateway: gateway,
+      referenceDesign: true,
+      onPublish: () async {},
+      onInstalled: (_) async {},
+      onOpenCopy: (_) async {},
+    ))));
+    await tester.pumpAndSettle();
+    CommunityScene scene() =>
+        tester.widget<CommunityScene>(find.byType(CommunityScene));
+    expect(
+        scene().items.map((item) => item.id), ['share-one', 'second', 'old']);
+    scene().onInstall(scene().items.first);
+    await tester.pumpAndSettle();
+    expect(
+        scene().items.map((item) => item.id), ['second', 'old', 'share-one']);
+    expect(scene().items.last.installedRoleId, _role.id);
+    expect(gateway.installs, 1);
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpWidget(const SizedBox.shrink());
+    gateway.close();
+  });
   TestWidgetsFlutterBinding.ensureInitialized();
   for (final width in [320.0, 360.0]) {
     testWidgets('grouped profile menu fits at $width with larger text',
@@ -296,7 +400,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('首页'), findsOneWidget);
     expect(find.text('社区'), findsOneWidget);
-    await tester.tap(find.byTooltip('查找聊天'));
+    expect(find.byTooltip('查找聊天'), findsNothing);
+    await tester.tap(find.text('聊天').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('搜索聊天'));
     await tester.pumpAndSettle();
     expect(find.widgetWithText(TextField, '搜索搭子或聊天记录'), findsOneWidget);
     expect(find.byTooltip('新建'), findsOneWidget);
@@ -465,6 +572,111 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('查看我的副本'), findsOneWidget);
     expect(tester.takeException(), isNull);
+    await close(tester);
+    gateway.close();
+  });
+
+  testWidgets(
+      'list confirms installation while background refreshes are pending',
+      (tester) async {
+    await size(tester);
+    final gateway = _Gateway()
+      ..pendingInstall = Completer<RoleOption>()
+      ..pendingDetail = Completer<CommunityShare>();
+    final refresh = Completer<void>();
+    String? opened;
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: CommunityPage(
+                gateway: gateway,
+                onPublish: () async {},
+                onInstalled: (_) => refresh.future,
+                onOpenCopy: (id) async {
+                  opened = id;
+                }))));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('加入我的搭子'));
+    await tester.tap(find.text('加入我的搭子'));
+    await tester.pump();
+    expect(find.text('正在加入…'), findsOneWidget);
+    gateway.pendingInstall!.complete(_role);
+    await tester.pumpAndSettle();
+    expect(find.text('正在加入…'), findsNothing);
+    expect(find.text('查看我的副本'), findsOneWidget);
+    expect(refresh.isCompleted, isFalse);
+    expect(gateway.pendingDetail!.isCompleted, isFalse);
+    await tester.tap(find.text('查看我的副本'));
+    await tester.pumpAndSettle();
+    expect(opened, _role.id);
+    expect(gateway.installs, 1);
+    await tester.pump(const Duration(seconds: 3));
+    refresh.completeError(const ApiException('列表刷新失败'));
+    gateway.pendingDetail!.completeError(const ApiException('详情刷新失败'));
+    await tester.pumpAndSettle();
+    expect(find.text('暂时无法加入，请重试'), findsNothing);
+    expect(find.text('查看我的副本'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await close(tester);
+    gateway.close();
+  });
+
+  testWidgets('detail enables chat before refresh and survives refresh failure',
+      (tester) async {
+    await size(tester);
+    final gateway = _Gateway()..pendingInstall = Completer<RoleOption>();
+    final refresh = Completer<void>();
+    String? opened;
+    await tester.pumpWidget(MaterialApp(
+        home: CommunityDetailPage(
+            gateway: gateway,
+            shareId: 'share-one',
+            onInstalled: (_) => refresh.future,
+            onOpenCopy: (_) async {},
+            onChatCopy: (id) async {
+              opened = id;
+            })));
+    await tester.pumpAndSettle();
+    gateway.pendingDetail = Completer<CommunityShare>();
+    await tester.tap(find.text('添加为我的搭子'));
+    await tester.pump();
+    expect(find.text('正在添加…'), findsOneWidget);
+    gateway.pendingInstall!.complete(_role);
+    await tester.pumpAndSettle();
+    expect(find.text('正在添加…'), findsNothing);
+    expect(find.text('进入聊天'), findsOneWidget);
+    expect(refresh.isCompleted, isFalse);
+    expect(gateway.pendingDetail!.isCompleted, isFalse);
+    await tester.tap(find.text('进入聊天'));
+    await tester.pumpAndSettle();
+    expect(opened, _role.id);
+    expect(gateway.installs, 1);
+    await tester.pump(const Duration(seconds: 3));
+    refresh.completeError(const ApiException('列表刷新失败'));
+    gateway.pendingDetail!.completeError(const ApiException('详情刷新失败'));
+    await tester.pumpAndSettle();
+    expect(find.text('进入聊天'), findsOneWidget);
+    expect(find.text('暂时无法加入，请重试'), findsNothing);
+    expect(tester.takeException(), isNull);
+    await close(tester);
+    gateway.close();
+  });
+
+  testWidgets(
+      'detail reuses the installed role without loading all roles again',
+      (tester) async {
+    await size(tester);
+    final gateway = _Gateway();
+    await tester.pumpWidget(MaterialApp(
+        home: CommunityDetailPage(
+            gateway: gateway,
+            shareId: 'share-one',
+            onInstalled: (_) async {},
+            onOpenCopy: (_) async {})));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('添加为我的搭子'));
+    await tester.pumpAndSettle();
+    expect(find.text('进入聊天'), findsOneWidget);
+    expect(gateway.roleLoads, 0);
     await close(tester);
     gateway.close();
   });

@@ -27,6 +27,7 @@ import 'package:bingo/features/chat/models/chat_location.dart';
 import 'package:bingo/features/chat/presentation/location_picker_page.dart';
 import 'package:bingo/features/chat/presentation/widgets/location_card.dart';
 import 'package:bingo/features/group_chat/presentation/group_call_page.dart';
+import 'package:bingo/features/group_chat/presentation/widgets/group_call_message_card.dart';
 
 class GroupChatPage extends StatefulWidget {
   const GroupChatPage(
@@ -85,6 +86,12 @@ class _GroupChatPageState extends State<GroupChatPage>
     widget.appearanceStore?.addListener(_changed);
     _input.addListener(_typed);
     _scroll.addListener(_readVisibleMessages);
+    if (!_chat.loading && _chat.group != null) {
+      _replies.update(_chat.messages,
+          sound: false,
+          welcomeReadThrough: _chat.messages.fold<int>(
+              0, (seq, message) => message.seq > seq ? message.seq : seq));
+    }
     unawaited(_chat.load());
   }
 
@@ -596,8 +603,11 @@ class _GroupChatPageState extends State<GroupChatPage>
                                         color: Colors.transparent,
                                         child: _chat.loading
                                             ? const Center(
-                                                child:
-                                                    CircularProgressIndicator())
+                                                child: Text('正在读取对话…',
+                                                    style: TextStyle(
+                                                        fontSize: 13,
+                                                        color: BingoPalette
+                                                            .muted)))
                                             : _replies.messages.isEmpty
                                                 ? Center(
                                                     child: Column(
@@ -831,6 +841,43 @@ class _GroupChatPageState extends State<GroupChatPage>
   }
 
   Widget _message(GroupChatMessage message, {GroupChatMessage? previous}) {
+    var call =
+        message.attachment?['type'] == 'group_call' ? message.attachment : null;
+    // Existing call receipts were plain system text; keep them visible on the same side.
+    if (call == null && message.type == 'system') {
+      final old = RegExp(r'^群聊(?:通话|电话未接通) · (\d+)人 · (\d+):(\d+)$')
+          .firstMatch(message.content);
+      if (old != null) {
+        final connected = !message.content.contains('未接通');
+        final count = int.parse(old[1]!);
+        call = {
+          'status': connected ? 'completed' : 'not_connected',
+          'duration_seconds': int.parse(old[2]!) * 60 + int.parse(old[3]!),
+          'participant_count': connected ? count : 0,
+          'invited_count': count - 1
+        };
+      }
+    }
+    if (call != null) {
+      return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Flexible(
+                    child: GroupCallMessageCard(
+                        record: call,
+                        members: _chat.group?.members ?? [],
+                        userAvatarData: widget.userAvatarData,
+                        username: _chat.group?.humanName ?? '')),
+                const SizedBox(width: 9),
+                UserAvatar(
+                    avatarData: widget.userAvatarData,
+                    username: _chat.group?.humanName ?? '',
+                    size: 36),
+              ]));
+    }
     if (message.type == 'system') {
       return Padding(
           padding: const EdgeInsets.all(12),
@@ -955,7 +1002,8 @@ class _GroupChatPageState extends State<GroupChatPage>
                                               style: TextStyle(
                                                   fontSize: 10,
                                                   color: ChatScene.muted)),
-                                        if (message.status == 'sending')
+                                        if (message.status == 'sending' &&
+                                            voice == null)
                                           const Text('发送中…',
                                               style: TextStyle(
                                                   fontSize: 10,

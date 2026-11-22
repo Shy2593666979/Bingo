@@ -45,6 +45,54 @@ class _KeptTab extends StatefulWidget {
   State<_KeptTab> createState() => _KeptTabState();
 }
 
+class _ConversationEntrance extends StatefulWidget {
+  const _ConversationEntrance(
+      {required this.name, required this.prepare, required this.builder});
+
+  final String name;
+  final Future<void> Function() prepare;
+  final Widget Function() builder;
+
+  @override
+  State<_ConversationEntrance> createState() => _ConversationEntranceState();
+}
+
+class _ConversationEntranceState extends State<_ConversationEntrance> {
+  late Future<void> _ready;
+
+  @override
+  void initState() {
+    super.initState();
+    _ready = widget.prepare();
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<void>(
+      future: _ready,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done &&
+            !snapshot.hasError) {
+          return widget.builder();
+        }
+        return Scaffold(
+            appBar: AppBar(title: Text(widget.name)),
+            body: Center(
+                child: snapshot.hasError
+                    ? TextButton(
+                        onPressed: () =>
+                            setState(() => _ready = widget.prepare()),
+                        child: const Text('聊天加载失败，点击重试'))
+                    : const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Align(
+                            alignment: Alignment.topLeft,
+                            child: Text('正在读取对话…',
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    color: BingoPalette.muted))))));
+      });
+}
+
 class _KeptTabState extends State<_KeptTab> with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
@@ -241,10 +289,6 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                       onCommunity: () => _selectTab(2),
                       onMessages: () => _onTabReady(
                           1, () => _conversationsKey.currentState?.showChats()),
-                      onSearchChats: () => _onTabReady(
-                          1,
-                          () => _conversationsKey.currentState
-                              ?.showChats(search: true)),
                       onAllGroups: () => _onTabReady(1,
                           () => _conversationsKey.currentState?.onlyGroups())),
                   MessagesPage(
@@ -409,13 +453,13 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _updateCommunityChrome(tab != 0);
     if (tab == 0) unawaited(_rolesKey.currentState?.refresh());
     if (tab == 1) unawaited(_conversationsKey.currentState?.refresh());
-    if (tab == 2) unawaited(_communityKey.currentState?.refresh());
+    if (tab == 2) unawaited(_communityKey.currentState?.refreshIfStale());
     if (tab == 3) unawaited(_myKey.currentState?.refresh());
   }
 
   Widget _navigation() => ReferenceNavigation(
       selected: _tab,
-      homeStyle: _tab == 0,
+      homeStyle: false,
       onSelected: _selectTab,
       onCreate: _create,
       unread: _unreadChats);
@@ -553,23 +597,57 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   }
 
   Future<void> _openRole(RoleOption role) async {
-    try {
-      await _appearance.load();
-    } catch (_) {
-      if (mounted) showCenterToast(context, '外观配置读取失败，请重新打开应用重试');
+    String? openedId;
+    var active = true;
+    Future<void> prepare() async {
+      final conversation = role.conversationId == null
+          ? await gateway.openRoleConversation(role.id)
+          : null;
+      final conversationId = role.conversationId ?? conversation!.id;
+      if (!mounted || !active) return;
+      _conversationsKey.currentState?.markRoleRead(role);
+      try {
+        await _appearance.load();
+      } catch (_) {
+        if (mounted && active) {
+          showCenterToast(context, '外观配置读取失败，暂用默认外观');
+        }
+      }
+      if (!mounted || !active) return;
+      await chatController.bindConversation(
+          profile.id, conversationId, role.name,
+          welcomeUnread: conversation?.welcomeUnread ?? false,
+          waitForSync: false);
+      if (!mounted || !active) return;
+      openedId = conversationId;
     }
-    final conversation = await gateway.openRoleConversation(role.id);
-    final selected = await gateway.getProfile();
-    if (!mounted) return;
-    onProfileSaved(selected);
-    await chatController.bindConversation(
-        profile.id, conversation.id, role.name,
-        welcomeUnread: conversation.welcomeUnread);
-    if (!mounted) return;
+
+    if (role.conversationId != null) {
+      await prepare();
+      if (!mounted) return;
+    }
     await Navigator.of(context).push<void>(MaterialPageRoute(
-      builder: (chatContext) => _chatPage(chatContext, role),
+      builder: (chatContext) => openedId != null
+          ? _chatPage(chatContext, role)
+          : _ConversationEntrance(
+              name: role.displayName,
+              prepare: prepare,
+              builder: () => _chatPage(chatContext, role)),
     ));
-    unawaited(_syncAfterChat(conversation.id).catchError((Object _) {}));
+    active = false;
+    if (openedId != null) {
+      DateTime? lastSeen;
+      if (chatController.conversationId == openedId) {
+        for (final message in chatController.messages) {
+          final date = message.createdAt;
+          if (date != null && (lastSeen == null || date.isAfter(lastSeen))) {
+            lastSeen = date;
+          }
+        }
+      }
+      _conversationsKey.currentState?.markRoleRead(role, through: lastSeen);
+      unawaited(_syncAfterChat(openedId!).catchError((Object _) {}));
+    }
   }
 
   Future<void> _syncAfterChat(String conversationId) async {

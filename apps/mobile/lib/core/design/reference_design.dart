@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:bingo/core/design/bingo_icon.dart';
 import 'package:bingo/core/design/home_artwork_icon.dart';
 import 'package:bingo/core/theme/app_theme.dart';
+import 'package:bingo/core/theme/home_palette.dart';
 
 const refMint = BingoPalette.primary;
 const refInk = BingoPalette.ink;
@@ -251,7 +252,7 @@ class ReferenceNavigation extends StatelessWidget {
             child: SafeArea(
                 top: false,
                 child: SizedBox(
-                    height: (homeStyle ? 64 : 75) + extra,
+                    height: 64 + extra,
                     child: Row(children: [
                       for (var slot = 0; slot < 5; slot++)
                         Expanded(
@@ -283,8 +284,8 @@ class ReferenceNavigation extends StatelessWidget {
                                               ][slot],
                                               size: slot == 2 ? 32 : 22,
                                               color: slot == 0 || slot == 2
-                                                  ? BingoPalette.primary
-                                                  : const Color(0xFF515151),
+                                                  ? HomePalette.accent
+                                                  : HomePalette.navMuted,
                                             )
                                           else
                                             ApprovedNavIcon(
@@ -307,11 +308,10 @@ class ReferenceNavigation extends StatelessWidget {
                                                         : FontWeight.w400,
                                                     color: slot == page
                                                         ? (homeStyle
-                                                            ? BingoPalette
-                                                                .primary
+                                                            ? HomePalette.accent
                                                             : BingoPalette.ink)
                                                         : Color(homeStyle
-                                                            ? 0xFF545454
+                                                            ? 0xFF989294
                                                             : 0xFF909090)))
                                           ],
                                         ])))))

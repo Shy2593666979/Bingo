@@ -59,21 +59,35 @@ class AssistantAvatar extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          ValueListenableBuilder(
-              valueListenable: RoleAvatarStore.images,
-              builder: (context, images, _) => AvatarFrame(
-                  size: size,
-                  cornerRadius: cornerRadius,
-                  color: const Color(0xFFEDE7EB),
-                  child: Transform.scale(
-                      scale: closePortrait ? 1.38 : 1,
-                      alignment: Alignment.topCenter,
-                      child: images[role] != null
-                          ? Image.memory(images[role]!,
-                              gaplessPlayback: true,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => _asset())
-                          : _asset()))),
+          ListenableBuilder(
+              listenable: Listenable.merge(
+                  [RoleAvatarStore.images, RoleAvatarStore.backgrounds]),
+              builder: (context, _) {
+                final uploaded = RoleAvatarStore.images.value[role];
+                final inset = uploaded == null ? 0.0 : size * .035;
+                final portrait = Transform.scale(
+                    scale: closePortrait ? 1.38 : 1,
+                    alignment: Alignment.topCenter,
+                    child: uploaded != null
+                        ? Image.memory(uploaded,
+                            gaplessPlayback: true,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _asset())
+                        : _asset());
+                return AvatarFrame(
+                    size: size,
+                    cornerRadius: cornerRadius,
+                    color: Color(RoleAvatarStore.backgroundFor(role)),
+                    child: uploaded == null
+                        ? portrait
+                        : Padding(
+                            padding: EdgeInsets.all(inset),
+                            child: ClipRSuperellipse(
+                                borderRadius: BorderRadius.circular(
+                                    ((cornerRadius ?? size * .24) - inset)
+                                        .clamp(0.0, size)),
+                                child: portrait)));
+              }),
           if (showOnline)
             Positioned(
               right: 0,

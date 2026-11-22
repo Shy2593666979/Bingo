@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('avatar tones vary across names and stay stable between renders', () {
+  test('default avatars share the brand palette across names', () {
     final names = ['小夏', '周小雨', '林间风', '奶油吐司', '一颗柠檬', 'Bingo', '阿宁', '木槿'];
     final colors =
         names.map((name) => UserAvatar.toneFor(name).background).toSet();
-    expect(colors.length, greaterThanOrEqualTo(3));
+    expect(colors, {UserAvatar.initialBackground});
     expect(UserAvatar.toneFor('  小夏  '), UserAvatar.toneFor('小夏'));
     for (final name in names) {
-      expect(UserAvatar.tones, contains(UserAvatar.toneFor(name)));
+      expect(UserAvatar.toneFor(name).foreground, UserAvatar.initialForeground);
     }
   });
   testWidgets('missing and invalid uploads use the last nickname character',

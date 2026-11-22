@@ -80,9 +80,12 @@ async def character_detail(
 
 @router.get("/community/characters/{identifier}/avatar")
 async def character_avatar(
-    identifier: str, user: CurrentUserDependency, session: SessionDependency
+    identifier: str,
+    user: CurrentUserDependency,
+    session: SessionDependency,
+    size: int | None = Query(default=None, ge=64, le=512),
 ) -> Response:
-    asset = await service.avatar(session, user, identifier)
+    asset = await service.avatar(session, user, identifier, size=size)
     return Response(asset.data, media_type=asset.media_type, headers=asset.headers)
 
 

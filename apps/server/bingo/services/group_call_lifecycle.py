@@ -74,7 +74,11 @@ class GroupCallLifecycle:
         group_id = call.group_id
         self.group_chat.calling_groups.discard(group_id)
         self.call.status = "disconnected" if status == "connected" else status
-        self.call.duration_seconds = int(time.monotonic() - self.started) if engine.started else 0
+        self.call.duration_seconds = (
+            max(0, int(time.monotonic() - getattr(engine, "connected_at", self.started)))
+            if engine.started
+            else 0
+        )
         self.call.transcript_json = json.dumps(
             [
                 *engine.call_log,
@@ -110,6 +114,21 @@ class GroupCallLifecycle:
                         seq=seq,
                         sender_type="system",
                         sender_name="群聊电话",
+                        attachment_json=json.dumps(
+                            {
+                                "type": "group_call",
+                                "call_id": call.id,
+                                "initiator_id": call.user_id,
+                                "status": "completed" if engine.started else "not_connected",
+                                "duration_seconds": call.duration_seconds,
+                                "participant_count": len(engine.roles) + 1 if engine.started else 0,
+                                "invited_count": len(engine.roles),
+                                "participants": [
+                                    {"id": role.id, "name": role.nickname} for role in engine.roles
+                                ],
+                            },
+                            ensure_ascii=False,
+                        ),
                         content=(
                             f"{result_label} · {len(json.loads(self.call.role_ids_json)) + 1}人 · "
                             f"{self.call.duration_seconds // 60:02d}:"

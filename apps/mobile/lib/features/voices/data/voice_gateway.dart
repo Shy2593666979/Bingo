@@ -1,6 +1,11 @@
 import 'dart:typed_data';
 import 'package:bingo/features/voices/models/voice_option.dart';
 
+abstract interface class StreamingVoiceGateway {
+  Stream<Uint8List> streamVoicePreview(String id);
+  void stopVoicePreview();
+}
+
 abstract interface class VoiceGateway {
   Future<List<VoiceOption>> listVoices({String? scope, String? gender});
   Future<VoiceOption> createVoice(

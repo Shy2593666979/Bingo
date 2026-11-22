@@ -132,7 +132,10 @@ class GroupRunCoordinator:
                     group_id, allow_followup = group.id, group.allow_ai_to_ai
                     request = json.loads(run.request_json)
                     await session.commit()
-                if run.runtime_mode == "independent_agents":
+                if (
+                    self.service.decision_model is not None
+                    or run.runtime_mode == "independent_agents"
+                ):
                     if self.service.decision_model is not None:
                         await self.service.scheduling.serial_decision(run_id)
                     else:

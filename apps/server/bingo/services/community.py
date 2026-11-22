@@ -500,10 +500,17 @@ async def report(session, user, identifier, reason):
         await session.rollback()
 
 
-async def avatar(session, user, identifier):
+async def avatar(session, user, identifier, *, size=None):
     share = await require_share(session, identifier, user, allow_own=True)
     if not share.avatar_data:
         raise ServiceError(404, "没有设置头像")
+    if size is not None:
+        import asyncio
+
+        from bingo.utils.avatar_thumbnail import avatar_thumbnail
+
+        data = await asyncio.to_thread(avatar_thumbnail, base64.b64decode(share.avatar_data), size)
+        return BinaryAsset(data, "image/webp", {"Cache-Control": "private, max-age=300"})
     return BinaryAsset(
         base64.b64decode(share.avatar_data), "image/png", {"Cache-Control": "private, max-age=300"}
     )

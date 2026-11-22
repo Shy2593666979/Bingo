@@ -315,6 +315,9 @@ class _GroupCallPageState extends State<GroupCallPage>
     super.dispose();
   }
 
+  static const _callAccent = Color(0xFFCF6388);
+  static const _callMuted = Color(0xFFA89AA1);
+
   @override
   Widget build(BuildContext context) => PopScope(
         canPop: allowPop,
@@ -322,164 +325,212 @@ class _GroupCallPageState extends State<GroupCallPage>
           if (!didPop) unawaited(finish());
         },
         child: Scaffold(
-            backgroundColor: BingoPalette.softSurface,
-            body: SafeArea(
-                child: Padding(
-                    padding: const EdgeInsets.fromLTRB(22, 24, 22, 24),
-                    child: Column(children: [
-                      Text(widget.group.name,
+          backgroundColor: Colors.white,
+          body: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(22, 28, 22, 24),
+              child: Column(children: [
+                Text(widget.group.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontSize: 21,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF302B2E))),
+                const SizedBox(height: 12),
+                Text(
+                    '群聊语音 · ${widget.members.length + 1}人  ·  '
+                    '${(seconds ~/ 60).toString().padLeft(2, '0')}:${(seconds % 60).toString().padLeft(2, '0')}',
+                    style: const TextStyle(fontSize: 11, color: _callMuted)),
+                const SizedBox(height: 22),
+                Expanded(child: LayoutBuilder(builder: (context, constraints) {
+                  final total = widget.members.length + 1;
+                  final columns = total <= 4 ? 2 : 3;
+                  final size = (constraints.maxWidth / columns - 30)
+                      .clamp(44.0, total <= 4 ? 84.0 : 65.0);
+                  final scale = MediaQuery.textScalerOf(context);
+                  return Center(
+                      child: SingleChildScrollView(
+                    child: GridView.count(
+                      key: const ValueKey('group-call-members'),
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisCount: columns,
+                      mainAxisSpacing: total <= 4 ? 26 : 16,
+                      crossAxisSpacing: 12,
+                      mainAxisExtent: size +
+                          30 +
+                          scale.scale(14) * 1.4 +
+                          scale.scale(10) * 1.3,
+                      children: [
+                        for (final member in widget.members)
+                          _tile(
+                              member.name,
+                              AssistantAvatar(
+                                  role: member.roleName,
+                                  size: size,
+                                  cornerRadius: size * .2),
+                              speaker == member.id,
+                              compact: total > 4),
+                        _tile(
+                            '${widget.group.humanName}（我）',
+                            UserAvatar(
+                                avatarData: widget.userAvatarData,
+                                username: widget.group.humanName,
+                                size: size),
+                            false,
+                            compact: total > 4,
+                            self: true),
+                      ],
+                    ),
+                  ));
+                })),
+                Padding(
+                  padding: const EdgeInsets.only(top: 10, bottom: 12),
+                  child: Text(status,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          fontSize: 11,
+                          color:
+                              failed ? const Color(0xFFC85867) : _callMuted)),
+                ),
+                Container(
+                  key: const ValueKey('group-call-captions'),
+                  width: double.infinity,
+                  height: 71 +
+                      (MediaQuery.textScalerOf(context).scale(12) - 12) * 4,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFFFCF9FA),
+                      borderRadius: BorderRadius.circular(10)),
+                  child: SingleChildScrollView(
+                      child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(caption.isEmpty ? '通话字幕' : '$speakerName · 实时字幕',
                           style: const TextStyle(
-                              fontSize: 23, fontWeight: FontWeight.w700)),
-                      const SizedBox(height: 8),
-                      Text('群聊语音 · ${widget.members.length + 1}人',
-                          style: const TextStyle(color: Color(0xFF738297))),
-                      const SizedBox(height: 12),
-                      Text(
-                          '${(seconds ~/ 60).toString().padLeft(2, '0')}:${(seconds % 60).toString().padLeft(2, '0')}'),
-                      const SizedBox(height: 26),
-                      Expanded(
-                          child: widget.members.length == 3
-                              ? Center(
-                                  child: SingleChildScrollView(
-                                      child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                      Row(children: [
-                                        for (final member
-                                            in widget.members.take(2))
-                                          Expanded(
-                                              child: _tile(
-                                                  member.name,
-                                                  AssistantAvatar(
-                                                      role: member.roleName,
-                                                      size: 66),
-                                                  speaker == member.id)),
-                                      ]),
-                                      const SizedBox(height: 28),
-                                      Row(children: [
-                                        Expanded(
-                                            child: _tile(
-                                                widget.members[2].name,
-                                                AssistantAvatar(
-                                                    role: widget
-                                                        .members[2].roleName,
-                                                    size: 66),
-                                                speaker ==
-                                                    widget.members[2].id)),
-                                        Expanded(
-                                            child: _tile(
-                                                widget.group.humanName,
-                                                UserAvatar(
-                                                    avatarData:
-                                                        widget.userAvatarData,
-                                                    username:
-                                                        widget.group.humanName,
-                                                    size: 66),
-                                                false)),
-                                      ]),
-                                    ])))
-                              : GridView.count(
-                                  crossAxisCount: 3,
-                                  mainAxisSpacing: 12,
-                                  crossAxisSpacing: 10,
-                                  childAspectRatio: .86,
-                                  children: [
-                                      for (final member in widget.members)
-                                        _tile(
-                                            member.name,
-                                            AssistantAvatar(
-                                                role: member.roleName,
-                                                size: 66),
-                                            speaker == member.id),
-                                      _tile(
-                                          widget.group.humanName,
-                                          UserAvatar(
-                                              avatarData: widget.userAvatarData,
-                                              username: widget.group.humanName,
-                                              size: 66),
-                                          false),
-                                    ])),
-                      Text(status,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: BingoPalette.muted)),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                          height: 100,
-                          child: SingleChildScrollView(
-                              child: caption.isEmpty
-                                  ? const SizedBox.shrink()
-                                  : Text('$speakerName：$caption',
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                          fontSize: 14, height: 1.5)))),
-                      const SizedBox(height: 16),
-                      Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _action(
-                                muted
-                                    ? Icons.mic_off_outlined
-                                    : Icons.mic_none_outlined,
-                                muted ? '取消静音' : '静音',
-                                () => setState(() => muted = !muted),
-                                active: muted),
-                            _action(Icons.call_end_rounded, '挂断',
-                                () => unawaited(finish()),
-                                destructive: true),
-                            _action(
-                                loudspeaker
-                                    ? Icons.volume_up_outlined
-                                    : Icons.hearing_outlined,
-                                '免提', () async {
-                              try {
-                                await device.invokeMethod<void>(
-                                    'setCallSpeaker', !loudspeaker);
-                                if (mounted) {
-                                  setState(() => loudspeaker = !loudspeaker);
-                                }
-                              } catch (_) {
-                                fail('无法切换扬声器');
-                              }
-                            }, active: loudspeaker),
-                          ]),
-                    ])))),
+                              fontSize: 9, color: Color(0xFFB3A0A9))),
+                      const SizedBox(height: 5),
+                      Text(caption.isEmpty ? '说话时，字幕会显示在这里' : caption,
+                          style: const TextStyle(
+                              fontSize: 12,
+                              height: 1.7,
+                              color: Color(0xFF715B67))),
+                    ],
+                  )),
+                ),
+                const SizedBox(height: 27),
+                Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _action(
+                          muted
+                              ? Icons.mic_off_outlined
+                              : Icons.mic_none_outlined,
+                          muted ? '取消静音' : '静音',
+                          () => setState(() => muted = !muted),
+                          active: muted),
+                      _action(Icons.call_end_rounded, '挂断',
+                          () => unawaited(finish()),
+                          destructive: true),
+                      _action(
+                          loudspeaker
+                              ? Icons.volume_up_outlined
+                              : Icons.hearing_outlined,
+                          '免提', () async {
+                        try {
+                          await device.invokeMethod<void>(
+                              'setCallSpeaker', !loudspeaker);
+                          if (mounted) {
+                            setState(() => loudspeaker = !loudspeaker);
+                          }
+                        } catch (_) {
+                          fail('无法切换扬声器');
+                        }
+                      }, active: loudspeaker),
+                    ]),
+              ]),
+            ),
+          ),
+        ),
       );
 
-  Widget _tile(String name, Widget avatar, bool speaking) => Column(children: [
-        AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(23),
-                border: Border.all(
-                    color: speaking ? BingoPalette.primary : Colors.transparent,
-                    width: 2)),
-            child: avatar),
-        const SizedBox(height: 5),
-        Text(name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-                fontSize: 13,
-                color: speaking ? BingoPalette.primary : BingoPalette.ink)),
-      ]);
+  Widget _tile(String name, Widget avatar, bool speaking,
+          {bool compact = false, bool self = false}) =>
+      Semantics(
+          label: speaking ? '$name，正在说话' : name,
+          child: Column(children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(compact ? 17 : 20),
+                  border: Border.all(
+                      color: speaking
+                          ? const Color(0xFFDB94AF)
+                          : Colors.transparent,
+                      width: 1.5)),
+              child: avatar,
+            ),
+            const SizedBox(height: 10),
+            Text(name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontSize: compact ? 11 : 14,
+                    color: const Color(0xFF50474C))),
+            const SizedBox(height: 6),
+            SizedBox(
+                height: MediaQuery.textScalerOf(context).scale(10) * 1.3,
+                child: speaking
+                    ? const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                            Icon(Icons.graphic_eq_rounded,
+                                size: 13, color: _callAccent),
+                            SizedBox(width: 3),
+                            Text('说话中',
+                                style:
+                                    TextStyle(fontSize: 9, color: _callAccent)),
+                          ])
+                    : self && muted
+                        ? const Text('已静音',
+                            style: TextStyle(fontSize: 9, color: _callMuted))
+                        : null),
+          ]));
 
   Widget _action(IconData icon, String label, VoidCallback onTap,
           {bool active = false, bool destructive = false}) =>
-      Column(children: [
-        IconButton.filled(
-            onPressed: onTap,
-            style: IconButton.styleFrom(
-                backgroundColor: destructive
-                    ? const Color(0xFFEF5555)
-                    : active
-                        ? BingoPalette.primary
-                        : Colors.white,
-                foregroundColor:
-                    destructive || active ? Colors.white : BingoPalette.ink,
-                fixedSize: const Size(60, 60)),
-            icon: Icon(icon, size: 27)),
-        const SizedBox(height: 7),
-        Text(label, style: const TextStyle(fontSize: 12))
-      ]);
+      SizedBox(
+          width: 74,
+          child: Column(children: [
+            IconButton.filled(
+              tooltip: label,
+              onPressed: onTap,
+              style: IconButton.styleFrom(
+                  backgroundColor: destructive
+                      ? const Color(0xFFED636B)
+                      : active
+                          ? const Color(0xFFF8EEF2)
+                          : const Color(0xFFF5F3F4),
+                  foregroundColor: destructive
+                      ? Colors.white
+                      : active
+                          ? const Color(0xFFBD7693)
+                          : const Color(0xFF71626B),
+                  side: destructive
+                      ? BorderSide.none
+                      : BorderSide(
+                          color: active
+                              ? const Color(0xFFEEDBE4)
+                              : const Color(0xFFEFEBED)),
+                  fixedSize: const Size(62, 62)),
+              icon: Icon(icon, size: 26),
+            ),
+            const SizedBox(height: 11),
+            Text(label,
+                style: const TextStyle(fontSize: 11, color: Color(0xFF92868C))),
+          ]));
 }

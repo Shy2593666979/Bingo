@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:bingo/core/design/home_artwork_icon.dart';
 import 'package:bingo/core/theme/app_theme.dart';
+import 'package:bingo/core/theme/home_palette.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/roles/presentation/home_postcard_background.dart';
 import 'package:bingo/shared/widgets/assistant_avatar.dart';
@@ -29,6 +30,30 @@ class HomeCompanionCarousel extends StatefulWidget {
 
 class _HomeCompanionCarouselState extends State<HomeCompanionCarousel>
     with WidgetsBindingObserver {
+  static const _greetings = [
+    '今天想聊点什么？',
+    '今天过得怎么样呀？',
+    '今天有什么事让你笑了？',
+    '最近有什么想跟我分享的？',
+    '有什么想说的？我听着呢。',
+    '今天有啥想吐槽的吗？',
+    '最近在期待什么呀？',
+    '有什么纠结的事？我们一起想想。',
+    '最近听到什么好听的歌了吗？',
+    '今天吃到什么好吃的了？',
+    '要是现在能出去走走，你想去哪儿？',
+    '最近遇到什么新鲜事了吗？',
+    '今天有什么值得记住的小事？',
+    '有什么好消息想跟我说吗？',
+    '明天有什么打算呀？',
+    '今天有没有哪一刻，觉得还挺不错的？',
+    '最近有没有什么想试试的？',
+    '现在心情怎么样呀？',
+    '来啦，陪你说会儿话。',
+    '要不要随便聊两句？',
+  ];
+  final _random = math.Random();
+  final _slideGreetings = <int, String>{};
   late final _pages = PageController(
       initialPage: widget.roles.length == 1 ? 0 : widget.roles.length * 1024);
   late int _page = _pages.initialPage;
@@ -103,7 +128,10 @@ class _HomeCompanionCarouselState extends State<HomeCompanionCarousel>
   }
 
   void _pageChanged(int page) {
-    setState(() => _page = page);
+    if (page == _page) return;
+    setState(() {
+      _page = page;
+    });
     if (!_strip.hasClients) return;
     final position = _strip.position;
     final cell = position.viewportDimension / 5;
@@ -127,6 +155,18 @@ class _HomeCompanionCarouselState extends State<HomeCompanionCarousel>
     }
   }
 
+  String _greetingFor(int page) => _slideGreetings.putIfAbsent(
+      page, () => _greetings[_random.nextInt(_greetings.length)]);
+
+  bool _onCarouselSettled(ScrollEndNotification notification) {
+    if (notification.depth == 0) {
+      // A neighboring page is prepared before it enters the viewport. Keep
+      // that text intact during reverse drags and the page-changed rebuild.
+      _slideGreetings.removeWhere((page, _) => (page - _page).abs() > 1);
+    }
+    return false;
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -139,6 +179,9 @@ class _HomeCompanionCarouselState extends State<HomeCompanionCarousel>
   @override
   Widget build(BuildContext context) {
     final scale = MediaQuery.textScalerOf(context);
+    final dotCount = math.min(widget.roles.length, 5);
+    final firstDot =
+        (_index - dotCount ~/ 2).clamp(0, widget.roles.length - dotCount);
     final height =
         (MediaQuery.sizeOf(context).width - 28).clamp(260.0, 440.0) * .54 +
             math.max(0, scale.scale(21) - 21) * 2.4 +
@@ -147,7 +190,7 @@ class _HomeCompanionCarouselState extends State<HomeCompanionCarousel>
       minimumSize: const Size(42, 35),
       padding: const EdgeInsets.symmetric(horizontal: 5),
       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      foregroundColor: BingoPalette.muted,
+      foregroundColor: HomePalette.muted,
     );
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Listener(
@@ -165,7 +208,7 @@ class _HomeCompanionCarouselState extends State<HomeCompanionCarousel>
             borderRadius: BorderRadius.circular(23),
             boxShadow: const [
               BoxShadow(
-                  color: Color(0x20C4517E),
+                  color: Color(0x08A16B7E),
                   blurRadius: 16,
                   offset: Offset(0, 6)),
             ],
@@ -177,26 +220,26 @@ class _HomeCompanionCarouselState extends State<HomeCompanionCarousel>
               child: Stack(alignment: Alignment.center, children: [
                 const Positioned.fill(
                     child: CustomPaint(painter: HomePostcardBackground())),
-                PageView.builder(
-                  controller: _pages,
-                  physics: _multiple
-                      ? const PageScrollPhysics()
-                      : const NeverScrollableScrollPhysics(),
-                  itemCount: _multiple ? null : 1,
-                  onPageChanged: _pageChanged,
-                  itemBuilder: (context, page) =>
-                      _card(widget.roles[page % widget.roles.length]),
+                NotificationListener<ScrollEndNotification>(
+                  onNotification: _onCarouselSettled,
+                  child: PageView.builder(
+                    controller: _pages,
+                    physics: _multiple
+                        ? const PageScrollPhysics()
+                        : const NeverScrollableScrollPhysics(),
+                    itemCount: _multiple ? null : 1,
+                    onPageChanged: _pageChanged,
+                    itemBuilder: (context, page) => _card(
+                        widget.roles[page % widget.roles.length],
+                        _greetingFor(page)),
+                  ),
                 ),
-                if (_multiple) ...[
-                  Positioned(left: -10, child: _arrow(-1, '上一位搭子')),
-                  Positioned(right: -10, child: _arrow(1, '下一位搭子')),
-                ],
                 Positioned.fill(
                     child: IgnorePointer(
                         child: DecoratedBox(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(23),
-                    border: Border.all(color: const Color(0xFFF7BDD3)),
+                    border: Border.all(color: HomePalette.heroBorder),
                   ),
                 ))),
               ]),
@@ -209,16 +252,28 @@ class _HomeCompanionCarouselState extends State<HomeCompanionCarousel>
           child: Padding(
             padding: const EdgeInsets.only(top: 10, bottom: 2),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              for (var i = 0; i < math.min(widget.roles.length, 5); i++)
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  width: 7,
-                  height: 7,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: i == _index % 5
-                        ? const Color(0xFFE84579)
-                        : const Color(0xFFF9D5E2),
+              for (var i = firstDot; i < firstDot + dotCount; i++)
+                Semantics(
+                  button: true,
+                  selected: i == _index,
+                  label: '切换到${widget.roles[i].displayName}',
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => _move(_page + i - _index),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 3),
+                      child: Container(
+                        key: ValueKey('carousel-dot-${widget.roles[i].id}'),
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: i == _index
+                              ? HomePalette.accent
+                              : HomePalette.accent.withValues(alpha: .17),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
             ]),
@@ -228,7 +283,8 @@ class _HomeCompanionCarouselState extends State<HomeCompanionCarousel>
       Row(children: [
         Expanded(
           child: Text('今天想和谁聊聊？',
-              style: BingoTypography.sectionTitle.copyWith(fontSize: 17)),
+              style: BingoTypography.sectionTitle
+                  .copyWith(fontSize: 17, color: HomePalette.ink)),
         ),
         TextButton(
             style: controlStyle,
@@ -261,7 +317,7 @@ class _HomeCompanionCarouselState extends State<HomeCompanionCarousel>
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
                           color: selected
-                              ? BingoPalette.primary
+                              ? HomePalette.accent
                               : Colors.transparent,
                         ),
                       ),
@@ -276,8 +332,8 @@ class _HomeCompanionCarouselState extends State<HomeCompanionCarousel>
                           overflow: TextOverflow.ellipsis,
                           style: BingoTypography.caption.copyWith(
                               color: selected
-                                  ? BingoPalette.primary
-                                  : BingoPalette.ink,
+                                  ? HomePalette.accent
+                                  : HomePalette.ink,
                               fontWeight: selected
                                   ? FontWeight.w700
                                   : FontWeight.w400)),
@@ -292,26 +348,7 @@ class _HomeCompanionCarouselState extends State<HomeCompanionCarousel>
     ]);
   }
 
-  Widget _arrow(int direction, String tooltip) => IconButton(
-      tooltip: tooltip,
-      onPressed: () => _move(_page + direction),
-      icon: Material(
-        color: Colors.white,
-        shape: const CircleBorder(),
-        child: SizedBox.square(
-          dimension: 24,
-          child: Center(
-            child: HomeArtworkIcon(
-              direction < 0 ? HomeArtwork.back : HomeArtwork.next,
-              size: 17,
-              color: BingoPalette.ink,
-            ),
-          ),
-        ),
-      ));
-
-  Widget _card(RoleOption role) {
-    final preview = role.openingLine.trim();
+  Widget _card(RoleOption role, String greeting) {
     final name = role.displayName;
     final action = name.runes.length > 7 ? '和搭子聊聊' : '和$name聊聊';
     return LayoutBuilder(builder: (context, constraints) {
@@ -350,30 +387,33 @@ class _HomeCompanionCarouselState extends State<HomeCompanionCarousel>
                           style: BingoTypography.sectionTitle.copyWith(
                               fontSize: 21,
                               height: 1.15,
-                              color: const Color(0xFF301824)))),
+                              color: HomePalette.heroInk))),
                   const SizedBox(width: 6),
                   const Icon(Icons.favorite_rounded,
-                      color: BingoPalette.primary, size: 13),
+                      color: HomePalette.accent, size: 13),
                 ]),
                 const SizedBox(height: 5),
-                Text('“${preview.isEmpty ? '今天想聊点什么？' : preview}”',
+                Text('“$greeting”',
+                    key: ValueKey('carousel-greeting-${role.id}'),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontSize: 13, height: 1.35, color: Color(0xFF3A202E))),
+                        fontSize: 13,
+                        height: 1.35,
+                        color: HomePalette.heroInk)),
                 const SizedBox(height: 5),
                 Container(
                     width: 68,
                     height: 2,
                     margin: const EdgeInsets.only(left: 12),
                     decoration: BoxDecoration(
-                        color: const Color(0x64E8799F),
+                        color: HomePalette.accent.withValues(alpha: .22),
                         borderRadius: BorderRadius.circular(4))),
                 const SizedBox(height: 6),
                 FilledButton(
                   onPressed: () => _open(widget.onChat, role),
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFD83D6D),
+                    backgroundColor: HomePalette.action,
                     foregroundColor: Colors.white,
                     minimumSize: const Size(0, 38),
                     padding:

@@ -79,6 +79,16 @@ class _Assets implements VoiceGateway, RoleGateway {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+class _StreamingAssets extends _Assets implements StreamingVoiceGateway {
+  final chunks = StreamController<Uint8List>();
+
+  @override
+  Stream<Uint8List> streamVoicePreview(String id) => chunks.stream;
+
+  @override
+  void stopVoicePreview() {}
+}
+
 void main() {
   final played = <String>[];
   setUp(() {
@@ -161,6 +171,27 @@ void main() {
     gateway.preview.complete(Uint8List.fromList([1, 2]));
     await tester.pumpAndSettle();
     expect(played, contains('stopPreviewAudio'));
+    expect(played, isNot(contains('playPreviewAudio')));
+  });
+
+  testWidgets(
+      'streaming preview plays its first chunk before the response ends',
+      (tester) async {
+    final gateway = _StreamingAssets();
+    await mount(tester, gateway);
+    await tester.tap(find.byIcon(Icons.play_arrow_rounded));
+    await tester.pump();
+    gateway.chunks.add(Uint8List.fromList([1, 0]));
+    await tester.pump();
+    expect(
+        played,
+        containsAllInOrder(
+            ['startPreviewStreamAudio', 'playPreviewStreamAudio']));
+    expect(played, isNot(contains('finishPreviewStreamAudio')));
+    expect(gateway.previews, isEmpty);
+    unawaited(gateway.chunks.close());
+    await tester.pumpAndSettle();
+    expect(played, contains('finishPreviewStreamAudio'));
     expect(played, isNot(contains('playPreviewAudio')));
   });
   testWidgets('asset library fits narrow screens with larger text',

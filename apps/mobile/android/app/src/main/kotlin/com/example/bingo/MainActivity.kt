@@ -18,6 +18,7 @@ import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.AudioTrack
 import android.media.MediaPlayer
+import android.media.MediaDataSource
 import android.media.MediaRecorder
 import android.media.Ringtone
 import android.media.RingtoneManager
@@ -61,6 +62,7 @@ class MainActivity : FlutterActivity() {
     override fun getRenderMode(): io.flutter.embedding.android.RenderMode =
         io.flutter.embedding.android.RenderMode.texture
     private val replyAudio by lazy { ReplyAudioPlayer(this) }
+    private val previewStreamAudio by lazy { ReplyAudioPlayer(this) }
     private var regionLocation: RegionLocationController? = null
     private lateinit var localChatDatabase: LocalChatDatabase
     private var audioEventSink: EventChannel.EventSink? = null
@@ -88,7 +90,6 @@ class MainActivity : FlutterActivity() {
     private var incomingCallPlayer: MediaPlayer? = null
     private var previewAudioPlayer: MediaPlayer? = null
     private var previewAudioResult: MethodChannel.Result? = null
-    private var previewAudioFile: File? = null
     private var previewAudioFocusRequest: AudioFocusRequest? = null
     private var hasLegacyPreviewAudioFocus = false
     private val previewAudioFocusListener = AudioManager.OnAudioFocusChangeListener { change ->
@@ -162,6 +163,11 @@ class MainActivity : FlutterActivity() {
         // Flutter configures its window again when the first frame is shown.
         // Reapply the app's light system bars after that final hand-off.
         scheduleSystemBarCorrection()
+    }
+
+    override fun popSystemNavigator(): Boolean {
+        // Keep the root Flutter activity available for the next launcher tap.
+        return isTaskRoot && moveTaskToBack(false)
     }
 
     override fun onPostResume() {
@@ -375,6 +381,17 @@ class MainActivity : FlutterActivity() {
                         replyAudio.finish { runOnUiThread { result.success(null) } }
                     }.onFailure { result.error("reply_audio", it.message, null) }
                     "stopReplyAudio" -> { replyAudio.stop(); result.success(null) }
+                    "startPreviewStreamAudio" -> runCatching {
+                        check(!callPlaybackRunning && !recording)
+                        previewStreamAudio.start()
+                    }.fold({ result.success(null) }, { result.error("preview_audio", it.message, null) })
+                    "playPreviewStreamAudio" -> runCatching {
+                        previewStreamAudio.play(requireNotNull(call.arguments as? ByteArray))
+                    }.fold({ result.success(null) }, { result.error("preview_audio", it.message, null) })
+                    "finishPreviewStreamAudio" -> runCatching {
+                        previewStreamAudio.finish { runOnUiThread { result.success(null) } }
+                    }.onFailure { result.error("preview_audio", it.message, null) }
+                    "stopPreviewStreamAudio" -> { previewStreamAudio.stop(); result.success(null) }
                     "openLocationMap" -> {
                         val longitude = call.argument<Number>("longitude")?.toDouble()
                         val latitude = call.argument<Number>("latitude")?.toDouble()
@@ -751,15 +768,23 @@ class MainActivity : FlutterActivity() {
                 status
             }
             check(granted == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) { "音频正在被其他应用使用" }
-            val file = File.createTempFile("bingo-preview-", ".wav", cacheDir)
-            file.writeBytes(bytes)
-            previewAudioFile = file
             previewAudioResult = result
             val player = MediaPlayer()
             previewAudioPlayer = player
             player.apply {
                 setAudioAttributes(attributes)
-                setDataSource(file.absolutePath)
+                setDataSource(object : MediaDataSource() {
+                    override fun getSize(): Long = bytes.size.toLong()
+                    override fun close() = Unit
+                    override fun readAt(position: Long, buffer: ByteArray, offset: Int, size: Int): Int {
+                        if (size == 0) return 0
+                        if (position < 0 || position >= bytes.size) return -1
+                        val start = position.toInt()
+                        val count = minOf(size, bytes.size - start)
+                        bytes.copyInto(buffer, offset, start, start + count)
+                        return count
+                    }
+                })
                 setOnCompletionListener { stopPreviewAudio() }
                 setOnErrorListener { _, _, _ ->
                     previewAudioResult?.error("audio_play_failed", "音频播放失败，请重试", null)
@@ -767,8 +792,8 @@ class MainActivity : FlutterActivity() {
                     stopPreviewAudio()
                     true
                 }
-                prepare()
-                start()
+                setOnPreparedListener { if (previewAudioPlayer === player) it.start() }
+                prepareAsync()
             }
         } catch (error: Exception) {
             previewAudioResult = null
@@ -783,8 +808,6 @@ class MainActivity : FlutterActivity() {
             player.release()
         }
         previewAudioPlayer = null
-        previewAudioFile?.delete()
-        previewAudioFile = null
         val manager = getSystemService(AudioManager::class.java)
         if (Build.VERSION.SDK_INT >= 26) {
             previewAudioFocusRequest?.let { manager.abandonAudioFocusRequest(it) }
@@ -1229,6 +1252,7 @@ class MainActivity : FlutterActivity() {
 
     override fun onDestroy() {
         replyAudio.stop()
+        previewStreamAudio.stop()
         regionLocation?.close()
         stopPreviewAudio()
         stopIncomingCallRinging()
@@ -1237,6 +1261,7 @@ class MainActivity : FlutterActivity() {
 
     override fun onStop() {
         replyAudio.stop()
+        previewStreamAudio.stop()
         stopPreviewAudio()
         regionLocation?.cancelForBackground()
         super.onStop()

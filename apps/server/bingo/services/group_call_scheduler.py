@@ -33,6 +33,8 @@ class TurnScheduler:
         if decision is not None:
             selected = await decision.choose(
                 {
+                    "user_pending": getattr(state, "user_pending", False),
+                    "interrupted_turn": getattr(state, "interrupted_turn", None),
                     "topic": state.topic,
                     "summary": state.topic_summary,
                     "recent": engine.history[-12:],
@@ -43,8 +45,12 @@ class TurnScheduler:
                 fallback=engine.complete,
             )
             return TurnDecision(
-                "yield" if selected == "wait" else "finish" if selected == "finish" else "speak",
-                selected if selected not in {"wait", "finish"} else "",
+                "yield"
+                if selected == "wait"
+                else selected
+                if selected in {"finish", "pause"}
+                else "speak",
+                selected if selected not in {"wait", "finish", "pause"} else "",
             )
         latest = engine.history[-1] if engine.history else {}
         # Only genuine invitations count; mentioning someone's view is not an invitation.

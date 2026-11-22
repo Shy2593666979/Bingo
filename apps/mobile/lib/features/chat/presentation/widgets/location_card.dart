@@ -106,10 +106,18 @@ class LocationCard extends StatelessWidget {
   Widget build(BuildContext context) => ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 274),
       child: Material(
-          color: Colors.white,
+          color: isUser ? BingoPalette.userBubble : Colors.white,
           clipBehavior: Clip.antiAlias,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(17),
+                  topRight: const Radius.circular(17),
+                  bottomLeft: const Radius.circular(17),
+                  bottomRight: Radius.circular(isUser ? 4 : 17)),
+              side: BorderSide(
+                  color: isUser
+                      ? const Color(0xFFD7E6C8)
+                      : const Color(0xFFE9E7EB))),
           child: InkWell(
               onTap: () => Navigator.of(context).push<void>(MaterialPageRoute(
                   builder: (_) => LocationDetailPage(
@@ -117,7 +125,7 @@ class LocationCard extends StatelessWidget {
                       mapUrl: mapUrl,
                       accessToken: accessToken))),
               child: Padding(
-                  padding: const EdgeInsets.all(15),
+                  padding: const EdgeInsets.fromLTRB(13, 8, 8, 8),
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       mainAxisSize: MainAxisSize.min,
@@ -132,17 +140,19 @@ class LocationCard extends StatelessWidget {
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                         fontSize: 15,
-                                        fontWeight: FontWeight.w600)),
+                                        fontWeight: FontWeight.w500)),
                                 const SizedBox(height: 4),
                                 Text(location.address,
-                                    maxLines: 3,
+                                    maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                         fontSize: 11,
-                                        height: 1.7,
-                                        color: BingoPalette.muted)),
+                                        height: 1.5,
+                                        color: isUser
+                                            ? const Color(0xFF738368)
+                                            : BingoPalette.muted)),
                               ])),
-                          const SizedBox(width: 13),
+                          const SizedBox(width: 10),
                           Container(
                               width: 76,
                               height: 76,
@@ -159,22 +169,21 @@ class LocationCard extends StatelessWidget {
                                       accessToken: accessToken,
                                       compact: true))),
                         ]),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 7),
                         Divider(
                             height: 1,
                             color: isUser
-                                ? BingoPalette.blush
+                                ? const Color(0xFFD2E5BE)
                                 : BingoPalette.line),
                         Padding(
-                            padding: const EdgeInsets.only(top: 10),
+                            padding: const EdgeInsets.only(top: 8, bottom: 2),
                             child: Row(children: [
                               const Icon(Icons.location_on_outlined,
-                                  size: 13, color: BingoPalette.mintPrimary),
+                                  size: 12, color: BingoPalette.muted),
                               const SizedBox(width: 5),
                               Text(isUser ? '我分享的位置' : '位置',
                                   style: const TextStyle(
-                                      fontSize: 10,
-                                      color: BingoPalette.primary)),
+                                      fontSize: 10, color: BingoPalette.muted)),
                             ])),
                       ])))));
 }

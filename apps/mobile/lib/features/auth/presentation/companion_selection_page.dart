@@ -376,7 +376,7 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage>
                                                                 width: 8 * s),
                                                             Text(
                                                                 selected
-                                                                    ? '✓ 已添加，再点取消'
+                                                                    ? '已添加，再点取消'
                                                                     : '添加为我的搭子',
                                                                 style: TextStyle(
                                                                     fontSize:

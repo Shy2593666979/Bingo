@@ -91,6 +91,7 @@ class GroupCallSession:
         if self.started or self.closed:
             return
         self.started = True
+        self.connected_at = time.monotonic()
         self.strict_playback = strict_playback
         self.discussion.state.enabled = strict_playback
         if self.task is None and not self.user_speaking:
@@ -150,6 +151,12 @@ class GroupCallSession:
             participants="、".join(r.nickname for r in self.roles),
             instruction=instruction,
         )
+        if state.interrupted_turn:
+            prompt += (
+                "\n用户刚打断了发言。以下是未完整播放的草稿，实际听到的部分未知："
+                + str(state.interrupted_turn)
+                + "\n优先回应用户最新表达，重新组织语言，不续读旧草稿或重复整段内容。"
+            )
         result = await self.complete(
             [
                 ModelMessage(role="system", content=prompt),
@@ -185,6 +192,11 @@ class GroupCallSession:
         self.utterance = None
         self.awaiting_ack = False
         if self.playback_record and self.playback_record["status"] == "speaking":
+            self.discussion.state.interrupted_turn = {
+                "role_id": self.playback_record["role_id"],
+                "draft": self.playback_record["text"][:800],
+                "playback": "interrupted; heard portion unknown",
+            }
             self.playback_record["status"] = PlaybackResult.INTERRUPTED
         self.played.set()
         task, self.task = self.task, None

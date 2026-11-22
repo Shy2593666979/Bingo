@@ -216,11 +216,11 @@ class _CommunitySceneState extends State<CommunityScene> {
                                   _sort('最热', 5),
                                 ],
                               ]))),
-                      if (widget.loading)
+                      if (widget.loading && widget.items.isEmpty)
                         const Padding(
                             padding: EdgeInsets.all(35),
                             child: Center(child: CircularProgressIndicator()))
-                      else if (widget.failed)
+                      else if (widget.failed && widget.items.isEmpty)
                         CommunityEmpty(
                             title: '社区暂时没有连接上',
                             description: '稍后重试，或者下拉刷新。',

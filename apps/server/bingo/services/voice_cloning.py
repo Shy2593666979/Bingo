@@ -7,6 +7,7 @@ import re
 import struct
 import wave
 from collections import OrderedDict
+from contextlib import aclosing
 from datetime import timedelta
 from ipaddress import ip_address
 from time import monotonic
@@ -423,11 +424,9 @@ class VoiceCloningService:
                     return
 
     async def preview(self, voice: str) -> bytes:
-        cached = self.preview_cache.get(voice)
-        if cached and monotonic() - cached[0] < 600:
-            self.preview_cache.move_to_end(voice)
-            return cached[1]
-        self.preview_cache.pop(voice, None)
+        cached = self.cached_preview(voice)
+        if cached is not None:
+            return cached
         task = self.preview_tasks.get(voice)
         if task is None:
             task = asyncio.create_task(self.cache_preview(voice))
@@ -439,15 +438,27 @@ class VoiceCloningService:
             )
         return await asyncio.shield(task)
 
+    def cached_preview(self, voice: str) -> bytes | None:
+        cached = self.preview_cache.get(voice)
+        if cached and monotonic() - cached[0] < 600:
+            self.preview_cache.move_to_end(voice)
+            return cached[1]
+        self.preview_cache.pop(voice, None)
+        return None
+
+    def store_preview(self, voice: str, audio: bytes) -> None:
+        self.preview_cache[voice] = (monotonic(), audio)
+        self.preview_cache.move_to_end(voice)
+        while (
+            len(self.preview_cache) > 16
+            or sum(len(entry[1]) for entry in self.preview_cache.values()) > 32 * 1024 * 1024
+        ):
+            self.preview_cache.popitem(last=False)
+
     async def cache_preview(self, voice: str) -> bytes:
         try:
             audio = await self.generate_preview(voice)
-            self.preview_cache[voice] = (monotonic(), audio)
-            while (
-                len(self.preview_cache) > 16
-                or sum(len(entry[1]) for entry in self.preview_cache.values()) > 32 * 1024 * 1024
-            ):
-                self.preview_cache.popitem(last=False)
+            self.store_preview(voice, audio)
             return audio
         finally:
             self.preview_tasks.pop(voice, None)
@@ -459,8 +470,28 @@ class VoiceCloningService:
             logger.warning("Voice preview warmup failed: %s", type(error).__name__)
 
     async def generate_preview(self, voice: str) -> bytes:
-        settings = self.settings
         audio = bytearray()
+        async for chunk in self.preview_deltas(voice):
+            audio.extend(chunk)
+        return pcm_wav(bytes(audio), 24000)
+
+    async def stream_preview(self, voice: str):
+        cached = self.cached_preview(voice)
+        if cached is not None:
+            with wave.open(io.BytesIO(cached), "rb") as audio:
+                while chunk := audio.readframes(4000):
+                    yield chunk
+            return
+        audio = bytearray()
+        async with aclosing(self.preview_deltas(voice)) as deltas:
+            async for chunk in deltas:
+                audio.extend(chunk)
+                yield chunk
+        self.store_preview(voice, pcm_wav(bytes(audio), 24000))
+
+    async def preview_deltas(self, voice: str):
+        settings = self.settings
+        received = 0
         async with (
             asyncio.timeout(90),
             connect(
@@ -512,10 +543,15 @@ class VoiceCloningService:
             while True:
                 event = json.loads(await socket.recv())
                 if event.get("type") == "response.audio.delta":
-                    audio.extend(base64.b64decode(event["delta"]))
+                    chunk = base64.b64decode(event["delta"])
+                    received += len(chunk)
+                    if received > 8 * 1024 * 1024 or len(chunk) % 2:
+                        raise ValueError("Invalid preview audio")
+                    for offset in range(0, len(chunk), 8000):
+                        yield chunk[offset : offset + 8000]
                 if event.get("type") == "error":
                     raise ValueError("试听生成失败，请稍后重试")
                 if event.get("type") == "response.done":
-                    if not audio or event.get("response", {}).get("status") == "failed":
+                    if not received or event.get("response", {}).get("status") == "failed":
                         raise ValueError("试听生成失败，请稍后重试")
-                    return pcm_wav(bytes(audio), 24000)
+                    return

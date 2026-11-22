@@ -204,6 +204,22 @@ class _AudioGateway extends _Gateway implements GroupSpeechGateway {
 }
 
 void main() {
+  test('reopening a group immediately restores completed cached messages',
+      () async {
+    final gateway = _Gateway();
+    final first = GroupController(gateway, 'group-one');
+    await first.load();
+    final expected = first.messages
+        .where((m) => !m.local && m.status == 'completed')
+        .map((m) => m.id)
+        .toList();
+    first.dispose();
+    final reopened = GroupController(gateway, 'group-one');
+    expect(reopened.loading, isFalse);
+    expect(reopened.group, isNotNull);
+    expect(reopened.messages.map((m) => m.id), expected);
+    reopened.dispose();
+  });
   test('empty group voice uses model prefix and retry preserves client ID',
       () async {
     final messenger =
@@ -236,6 +252,93 @@ void main() {
       expect(stored['transcript'], '');
     } finally {
       controller.dispose();
+      messenger.setMockMethodCallHandler(
+          MessagePresentationStore.channel, null);
+    }
+  });
+
+  testWidgets('structured and historical call receipts appear on the user side',
+      (tester) async {
+    for (final structured in [true, false]) {
+      final gateway = _Gateway();
+      gateway.rows.add(GroupChatMessage.fromJson({
+        ..._message('call-record', 4, 'system', '群聊电话', null),
+        'content': '群聊通话 · 3人 · 12:08',
+        if (structured)
+          'attachment': {
+            'type': 'group_call',
+            'status': 'completed',
+            'duration_seconds': 728,
+            'participant_count': 3,
+            'participants': [
+              {'id': 'ai-one', 'name': '甜甜'},
+              {'id': 'ai-two', 'name': '暖暖'}
+            ],
+          },
+      }));
+      await tester.pumpWidget(MaterialApp(
+          home: GroupChatPage(
+              groupId: 'group-one',
+              gateway: gateway,
+              roles: gateway,
+              speech: gateway)));
+      await tester.pumpAndSettle();
+      expect(find.text('群聊语音通话'), findsOneWidget);
+      expect(find.text('3 人参与'), findsOneWidget);
+      expect(find.textContaining('含你'), findsNothing);
+      if (structured) {
+        final user = find.byKey(const ValueKey('group-call-participant-user'));
+        final lastRole =
+            find.byKey(const ValueKey('group-call-participant-ai-two'));
+        expect(user, findsOneWidget);
+        expect(tester.getCenter(user).dx,
+            greaterThan(tester.getCenter(lastRole).dx));
+      }
+      expect(find.text('12:08'), findsOneWidget);
+      final title = tester.getCenter(find.text('群聊语音通话'));
+      expect(title.dx, greaterThan(400));
+      await tester.pumpWidget(const SizedBox.shrink());
+    }
+  });
+
+  testWidgets('sending voice bar hides sending label but retains retry',
+      (tester) async {
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(
+        MessagePresentationStore.channel, (_) async => null);
+    final gateway = _Gateway();
+    gateway.rows[1] = GroupChatMessage.fromJson({
+      ..._message('two', 2, 'user', '我', null),
+      'status': 'sending',
+    });
+    await tester.runAsync(() => MessagePresentationStore.forAccount('human-one')
+        .saveVoice('group:group-one:message:two',
+            RecordedVoice('你好', Uint8List(32044), 1000)));
+    try {
+      await tester.pumpWidget(MaterialApp(
+          home: GroupChatPage(
+              groupId: 'group-one',
+              gateway: gateway,
+              roles: gateway,
+              speech: gateway)));
+      await tester.pumpAndSettle();
+      expect(find.text('发送中…'), findsNothing);
+      gateway.rows[1] = GroupChatMessage.fromJson({
+        ..._message('two', 2, 'user', '我', null),
+        'status': 'send_failed',
+      });
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpWidget(MaterialApp(
+          home: GroupChatPage(
+              groupId: 'group-one',
+              gateway: gateway,
+              roles: gateway,
+              speech: gateway)));
+      await tester.pumpAndSettle();
+      expect(find.text('发送未确认，点此重试'), findsOneWidget);
+    } finally {
+      await tester.pumpWidget(const SizedBox.shrink());
       messenger.setMockMethodCallHandler(
           MessagePresentationStore.channel, null);
     }

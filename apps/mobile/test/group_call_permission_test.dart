@@ -40,6 +40,73 @@ class _Gateway implements GroupCallGateway {
 }
 
 void main() {
+  for (final total in [2, 4, 6, 9]) {
+    testWidgets('light call fits $total people and keeps hangup centered',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 700));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final gateway = _Gateway();
+      final methods = <String>[];
+      final messenger = tester.binding.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(
+          const MethodChannel('bingo/device_tools'), (call) async {
+        methods.add(call.method);
+        return null;
+      });
+      addTearDown(() => messenger.setMockMethodCallHandler(
+          const MethodChannel('bingo/device_tools'), null));
+      final group = ChatGroup.fromJson({
+        'id': 'group',
+        'name': '一个比较长的群聊名称也应该正常显示',
+        'cover': 'coffee',
+        'last_activity_at': '2026-11-02T00:00:00Z',
+        'members': [
+          for (var i = 0; i < total - 1; i++)
+            {
+              'id': 'role-$i',
+              'name': '一个很长的搭子名字$i',
+              'role_name': '朋友',
+              'active': true
+            }
+        ],
+      });
+      await tester.pumpWidget(MaterialApp(
+          builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: const TextScaler.linear(1.3)),
+              child: child!),
+          home: GroupCallPage(
+              group: group, members: group.activeMembers, gateway: gateway)));
+      await tester.pumpAndSettle();
+      final left = tester.getCenter(find.byTooltip('静音'));
+      final middle = tester.getCenter(find.byTooltip('挂断'));
+      final right = tester.getCenter(find.byTooltip('免提'));
+      expect(left.dx, lessThan(middle.dx));
+      expect(middle.dx, closeTo(160, 1));
+      expect(right.dx, greaterThan(middle.dx));
+      expect(middle.dy, lessThan(700));
+      await tester.tap(find.byTooltip('静音'));
+      await tester.pump();
+      expect(find.byTooltip('取消静音'), findsOneWidget);
+      await tester.tap(find.byTooltip('免提'));
+      await tester.pump();
+      expect(methods, contains('setCallSpeaker'));
+      gateway.socket.controller.add(jsonEncode({
+        'type': 'user_transcript',
+        'text': '这是一句测试字幕，应在字幕区域完整保留。',
+      }));
+      await tester.pump();
+      expect(find.text('这是一句测试字幕，应在字幕区域完整保留。'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.byTooltip('挂断'));
+      await tester.pump();
+      expect(gateway.socket.commands.where((c) => c['type'] == 'hangup'),
+          hasLength(1));
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    });
+  }
+
   testWidgets(
       'natural call needs no activation or limit controls and acknowledges playback',
       (tester) async {

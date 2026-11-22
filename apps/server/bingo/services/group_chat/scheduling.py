@@ -19,7 +19,9 @@ from bingo.utils.stickers.content import model_sticker_text
 
 from .shared import (
     StaleRun,
+    event,
 )
+from .turn_state import pending_handoffs
 
 
 class GroupParticipation:
@@ -29,14 +31,13 @@ class GroupParticipation:
     async def serial_decision(self, run_id):
         """Route once, publish one complete message, then route from fresh history."""
         waits = failures = 0
+        plan = None
         while True:
             await self.service.runs.check_run(run_id)
             async with self.service.database.session_factory() as session:
                 run = await session.get(GroupRun, run_id)
                 group = await session.get(ChatGroup, run.group_id)
                 if run.emitted_ai_messages >= run.max_ai_messages:
-                    return
-                if run.emitted_ai_messages and not group.allow_ai_to_ai:
                     return
                 roles = (
                     await session.exec(
@@ -60,43 +61,167 @@ class GroupParticipation:
                         .limit(16)
                     )
                 ).all()
+                episode = (
+                    await session.exec(
+                        select(GroupMessage)
+                        .where(GroupMessage.run_id == run_id, GroupMessage.status == "completed")
+                        .order_by(GroupMessage.seq)
+                    )
+                ).all()
+                user_message = next((m for m in episode if m.sender_type == "user"), None)
+                replies = [m for m in episode if m.sender_type == "assistant"]
+                last_speaker = replies[-1].sender_role_id if replies else None
+                consecutive = 0
+                for message in reversed(replies):
+                    if message.sender_role_id != last_speaker:
+                        break
+                    consecutive += 1
                 state = {
+                    "channel": "group_text",
+                    "user_pending": run.emitted_ai_messages == 0,
+                    "latest_user": {
+                        "id": user_message.id,
+                        "text": model_sticker_text(user_message.content)[:2000],
+                    }
+                    if user_message
+                    else None,
+                    "replies_since_user": len(replies),
+                    "last_speaker_id": last_speaker,
+                    "consecutive_speaker_turns": consecutive,
+                    "speaker_reply_counts": {
+                        r.id: sum(m.sender_role_id == r.id for m in replies) for r in roles
+                    },
                     "group": group.name,
                     "required_recipients": json.loads(run.force_targets_json),
                     "remaining": run.max_ai_messages - run.emitted_ai_messages,
+                    "previous_context": [
+                        {
+                            "name": m.sender_name,
+                            "sender": m.sender_type,
+                            "text": model_sticker_text(m.content)[:800],
+                        }
+                        for m in reversed([m for m in recent if m.run_id != run_id][:4])
+                    ],
                     "recent": [
                         {
                             "id": m.id,
                             "role_id": m.sender_role_id,
                             "sender": m.sender_type,
+                            "name": m.sender_name,
                             "text": model_sticker_text(m.content)[:2000],
                         }
-                        for m in reversed(recent)
+                        for m in episode[-16:]
                     ],
                 }
                 candidates = {
                     r.id: {"name": r.nickname, "persona": r.context_prompt[:500]} for r in roles
                 }
-                answered = {m.sender_role_id for m in recent if m.run_id == run_id}
+                all_candidates = dict(candidates)
+                if plan is None:
+                    plan = json.loads(run.request_json).get("_participation_plan")
+                state["participation_intent"] = (plan or {}).get("intent", "unclassified")
+                expected = list(
+                    dict.fromkeys(
+                        [
+                            *state["required_recipients"],
+                            *(plan or {}).get("required_recipients", []),
+                        ]
+                    )
+                )
+                answered = {m.sender_role_id for m in replies}
+                handoffs, waiting_for_user = pending_handoffs(replies, candidates, group.owner_id)
+                if not group.mentions_enabled or not group.allow_ai_to_ai:
+                    handoffs = []
+                state["expected_participants"] = expected
+                state["responded_participants"] = list(answered)
+                state["pending_handoffs"] = handoffs
+                state["waiting_for_user"] = waiting_for_user
                 pending = [
                     identifier
-                    for identifier in state["required_recipients"]
+                    for identifier in expected
                     if identifier not in answered and identifier in candidates
                 ]
+                # An unanswered explicit handoff remains outstanding even if this
+                # role spoke earlier in the episode. A later reply consumes it.
+                pending += [h["to"] for h in handoffs if h["to"] not in pending]
+                if run.emitted_ai_messages and not group.allow_ai_to_ai and not pending:
+                    return
                 state["required_recipients"] = pending
+                state["pending_participants"] = pending
                 if pending:
                     candidates = {identifier: candidates[identifier] for identifier in pending}
                 trigger_id = recent[0].id if recent else None
+            classifier = getattr(self.service.decision_model, "classify_group_user", None)
+            if plan is None and classifier and user_message is not None:
+                if not await self.claim_decision(run_id):
+                    return
+                try:
+                    plan = await classifier(
+                        state, all_candidates, fallback=self.service.model.complete
+                    )
+                except (ValueError, TypeError, KeyError):
+                    return
+                async with self.service.database.session_factory() as session:
+                    run = await session.get(GroupRun, run_id)
+                    await self.service.runs.guard(session, run)
+                    request = json.loads(run.request_json)
+                    request["_participation_plan"] = plan
+                    run.request_json = json.dumps(request, ensure_ascii=False)
+                    await event(session, run, "participation_decision", **plan)
+                    await session.commit()
+                if plan["intent"] == "pause":
+                    return
+                continue
             if not candidates or not await self.claim_decision(run_id):
                 return
+            source = "decision_model"
+            evidence = {}
+
+            async def fallback(messages):
+                nonlocal source
+                source = "general_model_fallback"
+                return await self.service.model.complete(messages)
+
             try:
                 selected = await self.service.decision_model.choose(
-                    state, candidates, fallback=self.service.model.complete
+                    state, candidates, fallback=fallback, observe=evidence.update
                 )
             except ValueError:
                 return
             await self.service.runs.check_run(run_id)
-            if selected == "finish":
+            # A bad model choice must not turn a group into one character's monologue.
+            # Stop instead of forcibly assigning another character to fill the quota.
+            blocked_repeat = selected == last_speaker and consecutive >= 2
+            blocked_total = (
+                state["participation_intent"] in {"casual", "directed", "together"}
+                and state["speaker_reply_counts"].get(selected, 0) >= 2
+            )
+            async with self.service.database.session_factory() as session:
+                run = await session.get(GroupRun, run_id)
+                await self.service.runs.guard(session, run)
+                await event(
+                    session,
+                    run,
+                    "routing_decision",
+                    source=source,
+                    evidence=evidence,
+                    pending_participants=state["pending_participants"],
+                    participation_intent=state["participation_intent"],
+                    choice=selected,
+                    replies_since_user=len(replies),
+                    consecutive_speaker_turns=consecutive,
+                    stop_reason=(
+                        "episode_speaker_guard"
+                        if blocked_total
+                        else "consecutive_speaker_guard"
+                        if blocked_repeat
+                        else None
+                    ),
+                )
+                await session.commit()
+            if blocked_repeat or blocked_total:
+                return
+            if selected in {"finish", "pause"}:
                 return
             if selected == "wait":
                 waits += 1
@@ -105,6 +230,9 @@ class GroupParticipation:
                 await asyncio.sleep(0.8)
                 continue
             waits = 0
+            trigger_id = next(
+                (h["message_id"] for h in handoffs if h["to"] == selected), trigger_id
+            )
             success = await self.service.speaking.speak(
                 run_id, selected, ReplyIntent(action="speak"), direct=True, trigger_id=trigger_id
             )

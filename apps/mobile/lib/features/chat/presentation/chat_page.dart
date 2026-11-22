@@ -653,8 +653,19 @@ class _RecommendationRows extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.only(top: 10, bottom: 4),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('为您推荐',
-            style: TextStyle(fontSize: 10, color: ChatScene.muted)),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: const Color(0xFFD8D6DB)),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: const Text('为您推荐',
+              style: TextStyle(
+                  fontSize: 11,
+                  color: Color(0xFF666068),
+                  fontWeight: FontWeight.w600)),
+        ),
         const SizedBox(height: 6),
         SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -666,7 +677,7 @@ class _RecommendationRows extends StatelessWidget {
                         color: Colors.white,
                         shape: const RoundedRectangleBorder(
                             borderRadius: _questionRadius,
-                            side: BorderSide(color: Color(0xFF454247))),
+                            side: BorderSide(color: Color(0xFFEFEFF1))),
                         clipBehavior: Clip.antiAlias,
                         child: InkWell(
                             onTap: () => onSelected(item),

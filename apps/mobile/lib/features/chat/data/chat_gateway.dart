@@ -478,6 +478,7 @@ class HttpApiGateway
         AccountDeletionGateway,
         RoleGateway,
         VoiceGateway,
+        StreamingVoiceGateway,
         RoleConversationGateway,
         ChatGateway,
         ConversationGateway,
@@ -1710,6 +1711,47 @@ class HttpApiGateway
     return base64Decode(json['audio'] as String);
   }
 
+  HttpClient? _voicePreviewClient;
+
+  @override
+  void stopVoicePreview() {
+    _voicePreviewClient?.close(force: true);
+    _voicePreviewClient = null;
+  }
+
+  @override
+  Stream<Uint8List> streamVoicePreview(String id) async* {
+    stopVoicePreview();
+    final client = HttpClient();
+    _voicePreviewClient = client;
+    try {
+      final uri =
+          config.endpoint('/voices/${Uri.encodeComponent(id)}/preview/stream');
+      final request =
+          await client.postUrl(uri).timeout(const Duration(seconds: 15));
+      _prepareRequest(request);
+      final response =
+          await request.close().timeout(const Duration(seconds: 30));
+      if (response.statusCode != 200) {
+        throw ApiException('试听暂时不可用，请稍后重试', statusCode: response.statusCode);
+      }
+      await for (final line in response
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .timeout(const Duration(seconds: 30))) {
+        if (line.isEmpty) continue;
+        final item = jsonDecode(line) as Map<String, dynamic>;
+        if (item['type'] == 'audio') yield base64Decode(item['data'] as String);
+        if (item['type'] == 'audio_done') return;
+        if (item['type'] == 'audio_error') break;
+      }
+      throw const ApiException('试听生成失败，请稍后重试');
+    } finally {
+      client.close(force: true);
+      if (identical(_voicePreviewClient, client)) _voicePreviewClient = null;
+    }
+  }
+
   @override
   Future<void> assignRoleVoice(String roleId, String voiceId) async {
     await _request('PUT', config.endpoint('/roles/$roleId/voice'),
@@ -1773,6 +1815,7 @@ class HttpApiGateway
 
   void close() {
     _welcomeRefresh.dispose();
+    stopVoicePreview();
     _client.close(force: true);
   }
 }
