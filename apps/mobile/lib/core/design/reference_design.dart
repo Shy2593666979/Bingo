@@ -233,16 +233,21 @@ class ReferenceNavigation extends StatelessWidget {
       this.creating = false,
       this.unread = 0,
       this.homeStyle = false,
+      this.entertainment = false,
       super.key});
   final int selected, unread;
   final ValueChanged<int> onSelected;
   final VoidCallback onCreate;
   final bool creating;
   final bool homeStyle;
+  final bool entertainment;
   @override
   Widget build(BuildContext context) {
-    final page =
-        creating ? 2 : switch (selected) { 0 => 0, 1 => 1, 2 => 3, _ => 4 };
+    final page = entertainment
+        ? selected
+        : creating
+            ? 2
+            : switch (selected) { 0 => 0, 1 => 1, 2 => 3, _ => 4 };
     final extra = (MediaQuery.textScalerOf(context).scale(13) - 13) * 1.4;
     return Material(
         color: Colors.white,
@@ -252,28 +257,52 @@ class ReferenceNavigation extends StatelessWidget {
             child: SafeArea(
                 top: false,
                 child: SizedBox(
-                    height: 64 + extra,
+                    height: (entertainment ? 68 : 64) + extra,
                     child: Row(children: [
                       for (var slot = 0; slot < 5; slot++)
                         Expanded(
                             child: Semantics(
-                                label: slot == 2 ? '创建中心' : null,
+                                label: slot == 2
+                                    ? (entertainment ? '娱乐' : '创建中心')
+                                    : null,
                                 button: true,
-                                selected: slot != 2 && slot == page,
-                                onTap: slot == 2 ? onCreate : null,
+                                selected: (entertainment || slot != 2) &&
+                                    slot == page,
+                                onTap: slot == 2
+                                    ? (entertainment
+                                        ? () => onSelected(2)
+                                        : onCreate)
+                                    : null,
                                 excludeSemantics: slot == 2,
                                 child: InkWell(
-                                    onTap: () => slot == 2
-                                        ? onCreate()
-                                        : onSelected(
-                                            slot > 2 ? slot - 1 : slot),
+                                    onTap: () => entertainment
+                                        ? onSelected(slot)
+                                        : slot == 2
+                                            ? onCreate()
+                                            : onSelected(
+                                                slot > 2 ? slot - 1 : slot),
                                     child: Padding(
                                         padding: EdgeInsets.only(
                                             top: homeStyle
                                                 ? (slot == 2 ? 4 : 10)
                                                 : 9),
                                         child: Column(children: [
-                                          if (homeStyle)
+                                          if (entertainment && slot == 2)
+                                            SizedBox(
+                                                height: 26,
+                                                width: 26,
+                                                child: Icon(
+                                                    page == 2
+                                                        ? Icons
+                                                            .sports_esports_rounded
+                                                        : Icons
+                                                            .sports_esports_outlined,
+                                                    size: 26,
+                                                    color: page == 2
+                                                        ? BingoPalette.primary
+                                                        : const Color(
+                                                            0xFF909090)))
+                                          else if (homeStyle)
                                             HomeArtworkIcon(
                                               const [
                                                 HomeArtwork.home,
@@ -288,28 +317,43 @@ class ReferenceNavigation extends StatelessWidget {
                                                   : HomePalette.navMuted,
                                             )
                                           else
-                                            ApprovedNavIcon(
-                                                page: page, item: slot),
-                                          if (slot != 2 || homeStyle) ...[
+                                            Transform.scale(
+                                                scale: entertainment ? 1.08 : 1,
+                                                child: ApprovedNavIcon(
+                                                    page: page, item: slot)),
+                                          if (entertainment ||
+                                              slot != 2 ||
+                                              homeStyle) ...[
                                             const SizedBox(height: 3),
                                             Text(
                                                 [
                                                   '首页',
                                                   '聊天',
-                                                  if (homeStyle) '创建' else '',
+                                                  if (entertainment)
+                                                    '娱乐'
+                                                  else if (homeStyle)
+                                                    '创建'
+                                                  else
+                                                    '',
                                                   '社区',
                                                   '我的'
                                                 ][slot],
                                                 style: TextStyle(
-                                                    fontSize: 13,
+                                                    fontSize:
+                                                        entertainment ? 14 : 13,
                                                     height: 1.4,
                                                     fontWeight: slot == page
                                                         ? FontWeight.w600
                                                         : FontWeight.w400,
                                                     color: slot == page
-                                                        ? (homeStyle
-                                                            ? HomePalette.accent
-                                                            : BingoPalette.ink)
+                                                        ? (entertainment
+                                                            ? BingoPalette
+                                                                .primary
+                                                            : homeStyle
+                                                                ? HomePalette
+                                                                    .accent
+                                                                : BingoPalette
+                                                                    .ink)
                                                         : Color(homeStyle
                                                             ? 0xFF989294
                                                             : 0xFF909090)))

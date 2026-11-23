@@ -13,6 +13,7 @@ from .community import (
 from .conversations import Conversation, Message
 from .device_actions import DeviceAction
 from .engagement import MorningGreeting, ProactiveMessage
+from .games import PartyGame
 from .groups import (
     MAX_GROUP_AI_MEMBERS,
     ChatGroup,
@@ -47,6 +48,7 @@ __all__ = [
     "Memory",
     "ProactiveMessage",
     "MorningGreeting",
+    "PartyGame",
     "CallInvitation",
     "PushDevice",
     "PushOutbox",

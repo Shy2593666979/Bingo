@@ -14,6 +14,7 @@ from bingo.db.models import (
     MemoryCheckpoint,
     Message,
     MorningGreeting,
+    PartyGame,
     ProactiveMessage,
     PushDevice,
     PushOutbox,
@@ -46,6 +47,8 @@ async def delete_account(user: User, session: AsyncSession, context: ServiceCont
         await context.companion_welcome.cancel_user(user_id)
     if context.group_chat is not None:
         await context.group_chat.cancel_user(user_id)
+    if context.party_games is not None:
+        await context.party_games.cancel_user(user_id)
     if context.chat_speech is not None:
         for owner, run_id in list(context.chat_speech.tasks):
             if owner == user_id:
@@ -116,6 +119,7 @@ async def delete_account(user: User, session: AsyncSession, context: ServiceCont
         UserCompanion,
         VoiceJob,
         WelcomeJob,
+        PartyGame,
     ):
         await session.exec(delete(model).where(model.user_id == user_id))
     await delete_user_community_data(session, user_id)

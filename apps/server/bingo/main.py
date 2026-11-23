@@ -22,6 +22,8 @@ from bingo.api import (
     maps,
     memories,
     moments,
+    party_games,
+    party_voice,
     push,
     realtime_calls,
     roles,
@@ -103,12 +105,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         decision_model=decision,
     )
     welcomes = CompanionWelcomeService(database, model_client, groups)
+    from bingo.services.party_games import PartyGameService
+
+    games = PartyGameService(database, groups.model, decision)
 
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         await database.initialize()
         application.state.database = database
         application.state.runtime = runtime
+        application.state.party_games = games
+        await games.start()
         application.state.chat_runs = chat_runs
         application.state.tools = tool_registry
         application.state.engagement = engagement_service
@@ -128,6 +135,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             chat_speech=chat_speech,
             group_chat=groups,
             companion_welcome=welcomes,
+            party_games=games,
         )
         await groups.start(proactive=resolved_settings.app.environment != "test")
         if resolved_settings.app.environment != "test":
@@ -139,6 +147,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         log_event(logger, logging.INFO, "application.started")
         yield
         await welcomes.close()
+        await games.close()
         await groups.close()
         await chat_runs.close()
         await chat_speech.close()
@@ -186,6 +195,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.include_router(voices.router, prefix=resolved_settings.server.api_prefix)
     application.include_router(community.router, prefix=resolved_settings.server.api_prefix)
     application.include_router(group_chat.router, prefix=resolved_settings.server.api_prefix)
+    application.include_router(party_games.router, prefix=resolved_settings.server.api_prefix)
+    application.include_router(party_voice.router, prefix=resolved_settings.server.api_prefix)
     application.include_router(group_calls.router, prefix=resolved_settings.server.api_prefix)
     application.include_router(stickers.router, prefix=resolved_settings.server.api_prefix)
     application.include_router(location.router, prefix=resolved_settings.server.api_prefix)

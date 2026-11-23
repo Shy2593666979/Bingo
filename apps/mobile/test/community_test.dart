@@ -5,6 +5,7 @@ import 'package:bingo/core/theme/app_theme.dart';
 import 'package:bingo/core/design/reference_design.dart';
 import 'package:bingo/features/conversations/presentation/messages_page.dart';
 import 'package:bingo/features/app_shell.dart';
+import 'package:bingo/features/entertainment/presentation/entertainment_page.dart';
 import 'package:bingo/features/auth/models/auth_models.dart';
 import 'package:bingo/features/chat/data/chat_gateway.dart';
 import 'package:bingo/features/chat/presentation/chat_controller.dart';
@@ -209,14 +210,16 @@ void main() {
     expect(gateway.loads, 1);
     final refresh = key.currentState!.refresh();
     await tester.pump();
-    expect(find.byKey(const ValueKey('community-share-share-one')), findsOneWidget);
+    expect(find.byKey(const ValueKey('community-share-share-one')),
+        findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
     await key.currentState!.refreshIfStale();
     expect(gateway.loads, 2);
     gateway.pendingList.completeError(const ApiException('暂时断网'));
     await refresh;
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('community-share-share-one')), findsOneWidget);
+    expect(find.byKey(const ValueKey('community-share-share-one')),
+        findsOneWidget);
     expect(find.text('社区暂时没有连接上'), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());
     gateway.close();
@@ -382,7 +385,7 @@ void main() {
   });
 
   testWidgets(
-      'four destinations and independent plus menu preserve the current page',
+      'five destinations and independent create menu preserve the current page',
       (tester) async {
     await size(tester, width: 320);
     final gateway = _Gateway();
@@ -425,7 +428,9 @@ void main() {
     expect(find.byTooltip('我的社区'), findsOneWidget);
     expect(find.text('发现更多有趣的 AI 搭子～'), findsNothing);
     expect(find.text('发现搭子'), findsNothing);
-    await tester.tap(find.bySemanticsLabel('创建中心'));
+    await tester.tap(find.text('娱乐').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('创建搭子或群聊'));
     await tester.pumpAndSettle();
     expect(find.byType(CreateCenterPage), findsOneWidget);
     await tester.binding.handlePopRoute();
@@ -435,7 +440,9 @@ void main() {
             .widget<ReferenceNavigation>(find.byType(ReferenceNavigation))
             .selected,
         2);
-    expect(find.byType(CommunityPage), findsOneWidget);
+    expect(find.byType(EntertainmentPage), findsOneWidget);
+    await tester.tap(find.text('社区').last);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('我的').last);
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('我的收藏'));
@@ -449,7 +456,7 @@ void main() {
         tester
             .widget<ReferenceNavigation>(find.byType(ReferenceNavigation))
             .selected,
-        3);
+        4);
     expect(tester.takeException(), isNull);
     await close(tester);
     controller.dispose();
@@ -516,12 +523,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(current(), 1);
     final messageState = tester.state(find.byType(MessagesPage));
-    for (final index in [2, 3]) {
+    for (final index in [2, 3, 4]) {
       await tester.drag(pages, const Offset(-300, 0));
       await tester.pumpAndSettle();
       expect(current(), index);
     }
-    for (final index in [2, 1]) {
+    for (final index in [3, 2, 1]) {
       await tester.drag(pages, const Offset(300, 0));
       await tester.pumpAndSettle();
       expect(current(), index);
@@ -531,8 +538,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(current(), 0);
     expect(tester.widget<IndexedStack>(pages).index, 0);
-    for (final index in [1, 0, 1, 2, 1, 3, 1]) {
-      await tester.tap(find.text(const ['首页', '聊天', '社区', '我的'][index]).last);
+    for (final index in [1, 0, 1, 2, 1, 3, 1, 4, 1]) {
+      await tester.tap(find.text(const ['首页', '聊天', '娱乐', '社区', '我的'][index]).last);
       await tester.pump();
       expect(current(), index);
       expect(tester.widget<IndexedStack>(pages).index, index);

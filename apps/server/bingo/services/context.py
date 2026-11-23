@@ -17,6 +17,7 @@ class ServiceContext:
     chat_speech: Any = None
     group_chat: Any = None
     companion_welcome: Any = None
+    party_games: Any = None
     public_base_url: str = ""
     client_address: str = "unknown"
     password_reset_attempts: dict = field(default_factory=dict)

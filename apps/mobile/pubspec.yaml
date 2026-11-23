@@ -21,6 +21,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/entertainment/
     - assets/images/bingo_logo.webp
     - assets/images/bingo_logo_foreground.webp
     - assets/avatars_square/bestie.webp

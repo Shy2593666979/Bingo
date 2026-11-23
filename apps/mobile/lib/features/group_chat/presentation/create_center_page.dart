@@ -84,10 +84,12 @@ class CreateCenterPage extends StatelessWidget {
       this.onDestination,
       this.onManageRoles,
       this.onVoices,
+      this.entertainmentNavigation = false,
       super.key});
   final Future<void> Function() onCreateRole, onCreateGroup, onPublish;
   final VoidCallback? onManageRoles, onVoices;
   final ValueChanged<int>? onDestination;
+  final bool entertainmentNavigation;
   @override
   Widget build(BuildContext context) => Scaffold(
       backgroundColor: Colors.white,
@@ -98,7 +100,8 @@ class CreateCenterPage extends StatelessWidget {
           ? null
           : ReferenceNavigation(
               selected: -1,
-              creating: true,
+              creating: !entertainmentNavigation,
+              entertainment: entertainmentNavigation,
               onSelected: onDestination!,
               onCreate: () {}),
       body: SafeArea(

@@ -1,4 +1,6 @@
 import 'package:bingo/features/voices/data/voice_gateway.dart';
+import 'package:bingo/features/entertainment/data/party_game_gateway.dart';
+import 'package:bingo/features/entertainment/domain/game_setup.dart';
 import 'package:bingo/features/voices/models/voice_option.dart';
 import 'package:bingo/features/stickers/sticker.dart';
 import 'dart:async';
@@ -471,6 +473,7 @@ abstract interface class WelcomeRefreshGateway {
 
 class HttpApiGateway
     implements
+        PartyGameGateway,
         AuthGateway,
         CompanionSelectionGateway,
         UserDetailsGateway,
@@ -507,6 +510,53 @@ class HttpApiGateway
         MomentGateway,
         StickerGateway {
   HttpApiGateway({required this.config});
+
+  @override
+  Future<Map<String, dynamic>> createPartyGame(GameSetup setup) async =>
+      Map<String, dynamic>.from(
+          await _request('POST', config.endpoint('/games'), body: {
+        'mode': setup.game.name,
+        'role_ids': setup.companions.map((p) => p.id).toList(),
+        'rounds': setup.rounds,
+        'mood': setup.mood,
+        if (setup.identity != null) 'identity': setup.identity,
+      }) as Map);
+
+  @override
+  Future<List<Map<String, dynamic>>> listPartyGames() async =>
+      (await _request('GET', config.endpoint('/games')) as List)
+          .map((v) => Map<String, dynamic>.from(v as Map))
+          .toList();
+
+  @override
+  Future<Map<String, dynamic>> getPartyGame(String id) async =>
+      Map<String, dynamic>.from(
+          await _request('GET', config.endpoint('/games/$id')) as Map);
+
+  @override
+  Future<Map<String, dynamic>> partyGameAction(
+          String id, String type, String value, int revision, String commandId,
+          {String stage = ''}) async =>
+      Map<String, dynamic>.from(
+          await _request('POST', config.endpoint('/games/$id/actions'), body: {
+        'type': type,
+        'value': value,
+        'revision': revision,
+        'command_id': commandId,
+        'stage': stage,
+      }) as Map);
+
+  @override
+  Future<WebSocket> connectPartyVoice(String id) {
+    final token = accessToken;
+    if (token == null || token.isEmpty) throw const ApiException('请先登录');
+    final uri = config.endpoint('/games/$id/voice');
+    return WebSocket.connect(
+        uri.replace(scheme: uri.scheme == 'https' ? 'wss' : 'ws').toString(),
+        headers: {
+          'Authorization': 'Bearer $token'
+        }).timeout(const Duration(seconds: 15));
+  }
 
   final AppConfig config;
   final HttpClient _client = HttpClient();

@@ -34,6 +34,7 @@ import 'package:bingo/features/group_chat/data/group_gateway.dart';
 import 'package:bingo/features/group_chat/presentation/group_chat_page.dart';
 import 'package:bingo/features/group_chat/presentation/create_group_page.dart';
 import 'package:bingo/features/group_chat/presentation/create_center_page.dart';
+import 'package:bingo/features/entertainment/presentation/entertainment_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -153,6 +154,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   final _communityKey = GlobalKey<CommunityPageState>();
   final _conversationsKey = GlobalKey<MessagesPageState>();
   final _myKey = GlobalKey<ReferenceMyPageState>();
+  final _entertainmentKey = GlobalKey<EntertainmentPageState>();
   Future<void> _openLibrary({bool voices = false}) async {
     await Navigator.of(context).push<void>(MaterialPageRoute(
         builder: (_) => voices
@@ -267,7 +269,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
               final velocity = details.primaryVelocity ?? 0;
               if (_tabDrag.abs() < 60 && velocity.abs() < 250) return;
               final direction = _tabDrag.abs() >= 60 ? _tabDrag : velocity;
-              _selectTab((_tab + (direction < 0 ? 1 : -1)).clamp(0, 3));
+              _selectTab((_tab + (direction < 0 ? 1 : -1)).clamp(0, 4));
             },
             child: IndexedStack(
                 key: const ValueKey('main-pages'),
@@ -286,7 +288,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                       onOpenGroup: _openGroup,
                       onCreateGroup: _createGroup,
                       onCreateRole: _newRole,
-                      onCommunity: () => _selectTab(2),
+                      onCommunity: () => _selectTab(3),
                       onMessages: () => _onTabReady(
                           1, () => _conversationsKey.currentState?.showChats()),
                       onAllGroups: () => _onTabReady(1,
@@ -305,7 +307,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                       },
                       onCreate: () => _createGroup('快乐小窝'),
                       onCreateRole: _newRole,
-                      onCommunity: () => _selectTab(2),
+                      onCommunity: () => _selectTab(3),
                       onGroupInfo: (group) async {
                         await Navigator.of(context).push<bool>(
                             MaterialPageRoute(
@@ -318,6 +320,13 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                         if (mounted) await _refreshPartners();
                       },
                       onPartners: () => _openLibrary()),
+                  EntertainmentPage(
+                      key: _entertainmentKey,
+                      roles: gateway,
+                      groups: gateway,
+                      profile: profile,
+                      onCreate: _create,
+                      onCreateRole: _newRole),
                   CommunityPage(
                       key: _communityKey,
                       gateway: gateway,
@@ -361,7 +370,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                       onPartners: () => _selectTab(0),
                       onShares: () {
                         _onTabReady(
-                            2, () => _communityKey.currentState?.showScope(3));
+                            3, () => _communityKey.currentState?.showScope(3));
                       },
                       onFavorites: () {
                         Navigator.of(context).push<void>(MaterialPageRoute(
@@ -453,12 +462,14 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _updateCommunityChrome(tab != 0);
     if (tab == 0) unawaited(_rolesKey.currentState?.refresh());
     if (tab == 1) unawaited(_conversationsKey.currentState?.refresh());
-    if (tab == 2) unawaited(_communityKey.currentState?.refreshIfStale());
-    if (tab == 3) unawaited(_myKey.currentState?.refresh());
+    if (tab == 2) unawaited(_entertainmentKey.currentState?.refresh());
+    if (tab == 3) unawaited(_communityKey.currentState?.refreshIfStale());
+    if (tab == 4) unawaited(_myKey.currentState?.refresh());
   }
 
   Widget _navigation() => ReferenceNavigation(
       selected: _tab,
+      entertainment: true,
       homeStyle: false,
       onSelected: _selectTab,
       onCreate: _create,
@@ -472,6 +483,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   Future<void> _refreshPartners() async {
     await _rolesKey.currentState?.refresh();
     await _conversationsKey.currentState?.refresh();
+    await _entertainmentKey.currentState?.refresh();
     if (mounted) unawaited(_pollWelcomes());
   }
 
@@ -481,7 +493,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
             builder: (_) => PublishCompanionPage(
                 gateway: gateway, roleGateway: gateway, initialRole: role)));
     if (share != null && mounted) {
-      _onTabReady(2, () => _communityKey.currentState?.showScope(3));
+      _onTabReady(3, () => _communityKey.currentState?.showScope(3));
       showCenterToast(context, '搭子已分享到社区');
     }
   }
@@ -583,6 +595,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     FocusScope.of(context).unfocus();
     await Navigator.of(context).push<void>(MaterialPageRoute(
         builder: (_) => CreateCenterPage(
+              entertainmentNavigation: true,
               onCreateRole: _newRole,
               onCreateGroup: () => _createGroup(''),
               onPublish: _publish,

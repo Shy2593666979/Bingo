@@ -30,6 +30,30 @@ class DecisionModelClient:
 
         return await classify_group_user(self, state, candidates, fallback=fallback)
 
+    async def decide(self, state, candidates, instructions):
+        """Game/rule choices with explicit options; never inject group-chat finish options."""
+        if not candidates or len(candidates) > 252:
+            raise ValueError("Invalid decision candidates")
+        response = await self.http.post(
+            self.endpoint,
+            json={
+                "model": self.model,
+                "state": state,
+                "questions": {
+                    "action": {
+                        "type": "choice",
+                        "instructions": instructions,
+                        "criteria": candidates,
+                    }
+                },
+            },
+        )
+        response.raise_for_status()
+        choice = response.json()["answers"]["action"]["choice"]
+        if not isinstance(choice, str) or choice not in candidates:
+            raise ValueError("Invalid game decision")
+        return choice
+
     async def choose(self, state, candidates, *, fallback=None, observe=None):
         """One mutually exclusive choice: role ID, wait, finish, or user-requested pause."""
         if not candidates or len(candidates) > 252:

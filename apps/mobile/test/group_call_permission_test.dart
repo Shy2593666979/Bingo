@@ -40,6 +40,66 @@ class _Gateway implements GroupCallGateway {
 }
 
 void main() {
+  testWidgets('game call displays own clues and sends one sealed choice',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 700));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final gateway = _Gateway();
+    final messenger = tester.binding.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(
+        const MethodChannel('bingo/device_tools'), (call) async => null);
+    addTearDown(() => messenger.setMockMethodCallHandler(
+        const MethodChannel('bingo/device_tools'), null));
+    final group = ChatGroup.fromJson({
+      'id': 'party',
+      'name': '搭子推理局',
+      'cover': 'coffee',
+      'last_activity_at': '2026-11-22T00:00:00Z',
+      'members': [
+        {'id': 'role-0', 'name': '暖暖', 'role_name': '男朋友', 'active': true},
+        {'id': 'role-1', 'name': '甜甜', 'role_name': '女朋友', 'active': true},
+      ]
+    });
+    await tester.pumpWidget(MaterialApp(
+        home: GroupCallPage(
+            group: group,
+            members: group.activeMembers,
+            gateway: gateway,
+            gameSession: true)));
+    await tester.pumpAndSettle();
+    gateway.socket.controller.add(jsonEncode({
+      'type': 'game_state',
+      'state': {
+        'mode': 'wolf',
+        'phase': 'vote',
+        'round': 1,
+        'revision': 7,
+        'action_stage': '1:vote:false:false',
+        'options': {'role-0': '暖暖', 'skip': '弃票'},
+        'private': {
+          'identity': 'seer',
+          'clues': [
+            {'day': 1, 'target': 'role-0', 'wolf': false}
+          ]
+        },
+        'messages': [],
+      }
+    }));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ActionChip, '暖暖'));
+    await tester.pump();
+    expect(gateway.socket.commands.where((c) => c['type'] == 'game_choice'),
+        hasLength(1));
+    expect(gateway.socket.commands.last['value'], 'role-0');
+    expect(gateway.socket.commands.last['revision'], 7);
+    await tester.tap(find.text('身份与线索'));
+    await tester.pumpAndSettle();
+    expect(find.text('预言家'), findsOneWidget);
+    expect(find.text('第 1 夜：暖暖是好人'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
   for (final total in [2, 4, 6, 9]) {
     testWidgets('light call fits $total people and keeps hangup centered',
         (tester) async {

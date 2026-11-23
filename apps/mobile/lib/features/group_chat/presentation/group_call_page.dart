@@ -83,11 +83,13 @@ class GroupCallPage extends StatefulWidget {
       required this.members,
       required this.gateway,
       this.userAvatarData,
+      this.gameSession = false,
       super.key});
   final ChatGroup group;
   final List<GroupPerson> members;
   final GroupCallGateway gateway;
   final String? userAvatarData;
+  final bool gameSession;
   @override
   State<GroupCallPage> createState() => _GroupCallPageState();
 }
@@ -106,6 +108,8 @@ class _GroupCallPageState extends State<GroupCallPage>
   String discussionPhase = 'idle';
   bool muted = false, loudspeaker = true, ending = false, allowPop = false;
   bool requestingAudio = false, failed = false;
+  Map<String, dynamic>? gameState;
+  bool gameChoiceBusy = false;
 
   @override
   void initState() {
@@ -152,6 +156,13 @@ class _GroupCallPageState extends State<GroupCallPage>
     if (ending || raw is! String) return;
     final event = jsonDecode(raw) as Map<String, dynamic>;
     final type = event['type'];
+    if (type == 'game_state' && widget.gameSession) {
+      setState(() {
+        gameState = Map<String, dynamic>.from(event['state'] as Map);
+        gameChoiceBusy = false;
+      });
+      return;
+    }
     final eventGeneration = event['generation'];
     if (eventGeneration is int && eventGeneration < generation) return;
     if (type == 'discussion_state') {
@@ -168,6 +179,7 @@ class _GroupCallPageState extends State<GroupCallPage>
       return;
     }
     if (type == 'command_error') {
+      gameChoiceBusy = false;
       setState(() => status = event['message'] as String? ?? '操作未完成');
       return;
     }
@@ -247,6 +259,114 @@ class _GroupCallPageState extends State<GroupCallPage>
     }).catchError((Object _) {
       fail('通话音频异常，请重新拨打');
     });
+  }
+
+  void gameCommand(String type, {String value = '', String action = ''}) {
+    if (gameChoiceBusy ||
+        socket?.readyState != WebSocket.open ||
+        gameState == null) {
+      return;
+    }
+    setState(() => gameChoiceBusy = true);
+    socket!.add(jsonEncode({
+      'type': type,
+      'value': value,
+      'action': action,
+      'revision': gameState!['revision'],
+      'stage': gameState!['action_stage']
+    }));
+  }
+
+  Widget gameControls() {
+    final state = gameState!;
+    final options = Map<String, dynamic>.from(state['options'] as Map? ?? {});
+    final paused = state['paused'] == true;
+    String name(String id) => id == 'self'
+        ? '你'
+        : widget.members.where((p) => p.id == id).firstOrNull?.name ?? id;
+    void details() {
+      final own = Map<String, dynamic>.from(state['private'] as Map? ?? {});
+      const labels = {
+        'wolf': '狼人',
+        'seer': '预言家',
+        'witch': '女巫',
+        'villager': '村民'
+      };
+      showDialog<void>(
+          context: context,
+          builder: (context) => AlertDialog(
+                  title: Text(labels[own['identity']] ?? '本局记录'),
+                  content: SingleChildScrollView(
+                      child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                        if (own['teammates'] is List)
+                          Text(
+                              '狼队：${(own['teammates'] as List).map((p) => name(p as String)).join('、')}'),
+                        for (final clue in own['clues'] as List? ?? [])
+                          Text(
+                              '第 ${clue['day']} 夜：${name(clue['target'] as String)}是${clue['wolf'] == true ? '狼人' : '好人'}'),
+                        if (own['potions'] is Map)
+                          Text(
+                              '解药：${own['potions']['save'] == true ? '可用' : '已用'}　毒药：${own['potions']['poison'] == true ? '可用' : '已用'}'),
+                        if (own['victim'] is String)
+                          Text('今晚被袭击的是：${name(own['victim'] as String)}'),
+                        const SizedBox(height: 12),
+                        for (final item in (state['messages'] as List)
+                            .reversed
+                            .take(12)
+                            .toList()
+                            .reversed)
+                          Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Text(
+                                  '${item['speaker'] == null ? '提示' : name(item['speaker'] as String)}：${item['text']}',
+                                  style: const TextStyle(
+                                      fontSize: 13, height: 1.5))),
+                      ])),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('知道了'))
+                  ]));
+    }
+
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      if (state['action_hint'] is String)
+        Text(state['action_hint'] as String,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 12, color: _callMuted)),
+      Wrap(alignment: WrapAlignment.center, spacing: 4, children: [
+        TextButton(
+            onPressed: details,
+            child: Text(state['mode'] == 'wolf' ? '身份与线索' : '本局记录')),
+        TextButton(
+            onPressed: gameChoiceBusy
+                ? null
+                : () => gameCommand('game_action',
+                    action: paused ? 'resume' : 'pause'),
+            child: Text(paused ? '继续游戏' : '暂停')),
+        if (state['can_advance'] == true)
+          TextButton(
+              onPressed: gameChoiceBusy || paused
+                  ? null
+                  : () => gameCommand('game_action', action: 'advance'),
+              child: Text(state['mode'] == 'truth' ? '下一轮' : '进入投票')),
+      ]),
+      if (options.isNotEmpty)
+        ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 140),
+            child: SingleChildScrollView(
+                child: Wrap(spacing: 6, runSpacing: 4, children: [
+              for (final option in options.entries)
+                ActionChip(
+                    label: Text(option.value.toString()),
+                    onPressed: gameChoiceBusy || paused
+                        ? null
+                        : () => gameCommand('game_choice', value: option.key)),
+            ]))),
+    ]);
   }
 
   Future<void> startAudio() async {
@@ -338,6 +458,7 @@ class _GroupCallPageState extends State<GroupCallPage>
                         fontSize: 21,
                         fontWeight: FontWeight.w500,
                         color: Color(0xFF302B2E))),
+                if (widget.gameSession && gameState != null) gameControls(),
                 const SizedBox(height: 12),
                 Text(
                     '群聊语音 · ${widget.members.length + 1}人  ·  '
