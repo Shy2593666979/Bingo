@@ -1,7 +1,11 @@
+import json
+from contextlib import aclosing
+
 from fastapi import APIRouter, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from bingo.api.dependencies import CurrentUserDependency
+from bingo.api.dependencies import CurrentUserDependency, get_service_context
 from bingo.api.response import EnvelopeRoute
 from bingo.services.exceptions import ServiceError
 
@@ -52,6 +56,29 @@ async def action(
         "pause",
         "resume",
         "end",
+        "read_aloud",
     }:
         raise ServiceError(422, "不支持的游戏操作")
     return await request.app.state.party_games.action(identifier, user.id, payload)
+
+
+@router.post("/games/{identifier}/messages/{message_id}/speech")
+async def message_speech(
+    identifier: str, message_id: str, request: Request, user: CurrentUserDependency
+):
+    context = get_service_context(request)
+    text, voice = await request.app.state.party_games.speech_source(
+        identifier, message_id, user.id
+    )
+    voice = voice or context.settings.realtime_call.voice
+
+    async def stream():
+        async with aclosing(context.chat_speech.message_events(text, voice)) as events:
+            async for item in events:
+                yield json.dumps(item, ensure_ascii=False) + "\n"
+
+    return StreamingResponse(
+        stream(),
+        media_type="application/x-ndjson",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )

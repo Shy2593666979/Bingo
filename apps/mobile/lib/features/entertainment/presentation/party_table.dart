@@ -174,63 +174,176 @@ class PartySeatStrip extends StatelessWidget {
       this.activeId,
       this.hostId,
       this.eliminatedIds = const {},
+      this.nightMode = false,
+      this.showSeatNumbers = false,
       super.key});
   final List<GameCompanion> people;
   final String username;
   final String? userAvatarData, activeId, hostId;
   final Set<String> eliminatedIds;
+  final bool nightMode, showSeatNumbers;
   @override
-  Widget build(BuildContext context) => Container(
-      height: 110 + (MediaQuery.textScalerOf(context).scale(11) - 11),
-      decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Color(0xFFF1EDF0)))),
-      child: ListView.separated(
-          padding: const EdgeInsets.fromLTRB(10, 3, 10, 10),
-          scrollDirection: Axis.horizontal,
-          itemCount: people.length + 1,
-          separatorBuilder: (_, __) => const SizedBox(width: 10),
-          itemBuilder: (context, index) {
-            final user = index == people.length;
-            final person = user ? null : people[index];
-            final host = !user && person!.id == hostId;
-            final eliminated =
-                eliminatedIds.contains(user ? 'self' : person!.id);
-            return SizedBox(
-                width: 86,
-                child: Column(children: [
-                  SizedBox(
-                      height: 71,
-                      child: Stack(alignment: Alignment.topCenter, children: [
-                        Opacity(
-                            opacity: eliminated ? .35 : 1,
-                            child: user
-                                ? UserAvatar(
-                                    username: username,
-                                    avatarData: userAvatarData,
-                                    size: 62)
-                                : GamePortrait(person!, size: 62)),
-                        if (host)
-                          Positioned(
-                              bottom: 0,
-                              child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 9, vertical: 2),
-                                  decoration: BoxDecoration(
-                                      color: gameRose,
-                                      borderRadius: BorderRadius.circular(12)),
-                                  child: const Text('主持人',
-                                      style: TextStyle(
-                                          fontSize: 10,
-                                          height: 1.2,
-                                          color: Colors.white)))),
-                      ])),
-                  const SizedBox(height: 5),
-                  Text(
-                      '${user ? '你' : person!.name}${eliminated ? ' · 出局' : ''}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 12, height: 1.3, color: gameInk)),
-                ]));
-          }));
+  Widget build(BuildContext context) {
+    final textScale = MediaQuery.textScalerOf(context).scale(12) / 12;
+    final height = (112 + (textScale - 1) * 34).clamp(112.0, 168.0);
+    final ink = nightMode ? const Color(0xFFF1EFF9) : gameInk;
+    final muted = nightMode ? const Color(0xFF9EA5C0) : gameMuted;
+    final border = nightMode ? const Color(0xFF282E46) : const Color(0xFFF1EDF0);
+    final ringIdle =
+        nightMode ? const Color(0xFF343C5A) : const Color(0xFFF0E2E9);
+    final activeColor = nightMode ? const Color(0xFFA78BFA) : gameRose;
+    return Container(
+        height: height,
+        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: border))),
+        child: ListView.separated(
+            padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+            scrollDirection: Axis.horizontal,
+            itemCount: people.length + 1,
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemBuilder: (context, index) {
+              final user = index == people.length;
+              final person = user ? null : people[index];
+              final id = user ? 'self' : person!.id;
+              final host = !user && person!.id == hostId;
+              final eliminated = eliminatedIds.contains(id);
+              final active = !eliminated && activeId == id;
+              final seatLabel = '${index + 1}号';
+              return SizedBox(
+                  width: 82,
+                  child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                            height: 68,
+                            child: Stack(
+                                alignment: Alignment.topCenter,
+                                clipBehavior: Clip.none,
+                                children: [
+                                  AnimatedContainer(
+                                      duration:
+                                          const Duration(milliseconds: 220),
+                                      padding: const EdgeInsets.all(2.5),
+                                      decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                              color: active
+                                                  ? activeColor
+                                                  : ringIdle,
+                                              width: active ? 2.5 : 1.2),
+                                          boxShadow: active
+                                              ? [
+                                                  BoxShadow(
+                                                      color: activeColor
+                                                          .withValues(
+                                                              alpha: .32),
+                                                      blurRadius: 10,
+                                                      spreadRadius: 1)
+                                                ]
+                                              : null),
+                                      child: Opacity(
+                                          opacity: eliminated ? .35 : 1,
+                                          child: ClipOval(
+                                              child: user
+                                                  ? UserAvatar(
+                                                      username: username,
+                                                      avatarData:
+                                                          userAvatarData,
+                                                      size: 54)
+                                                  : GamePortrait(person!,
+                                                      size: 54)))),
+                                  if (showSeatNumbers)
+                                    Positioned(
+                                        top: -2,
+                                        left: 4,
+                                        child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 5, vertical: 1),
+                                            decoration: BoxDecoration(
+                                                color: eliminated
+                                                    ? (nightMode
+                                                        ? const Color(0xFF2B3046)
+                                                        : const Color(0xFFDAD5D9))
+                                                    : active
+                                                        ? activeColor
+                                                        : (nightMode
+                                                            ? const Color(
+                                                                0xFF2E3550)
+                                                            : const Color(
+                                                                0xFF3E3842)),
+                                                borderRadius:
+                                                    BorderRadius.circular(8)),
+                                            child: Text(seatLabel,
+                                                style: const TextStyle(
+                                                    fontSize: 9,
+                                                    height: 1.2,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Colors.white)))),
+                                  if (host)
+                                    Positioned(
+                                        bottom: 0,
+                                        child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 8, vertical: 2),
+                                            decoration: BoxDecoration(
+                                                color: gameRose,
+                                                borderRadius:
+                                                    BorderRadius.circular(12)),
+                                            child: const Text('主持人',
+                                                style: TextStyle(
+                                                    fontSize: 10,
+                                                    height: 1.2,
+                                                    color: Colors.white))))
+                                  else if (active)
+                                    Positioned(
+                                        bottom: 0,
+                                        child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 7, vertical: 2),
+                                            decoration: BoxDecoration(
+                                                color: activeColor,
+                                                borderRadius:
+                                                    BorderRadius.circular(12)),
+                                            child: Text(
+                                                nightMode ? '行动中' : '发言中',
+                                                style: const TextStyle(
+                                                    fontSize: 9,
+                                                    height: 1.2,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Colors.white))))
+                                  else if (eliminated)
+                                    Positioned(
+                                        bottom: 0,
+                                        child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 7, vertical: 2),
+                                            decoration: BoxDecoration(
+                                                color: nightMode
+                                                    ? const Color(0xFF31374F)
+                                                    : const Color(0xFF8E878D),
+                                                borderRadius:
+                                                    BorderRadius.circular(12)),
+                                            child: const Text('出局',
+                                                style: TextStyle(
+                                                    fontSize: 9,
+                                                    height: 1.2,
+                                                    color: Colors.white)))),
+                                ])),
+                        const SizedBox(height: 5),
+                        Text(user ? '你' : person!.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 12,
+                                height: 1.25,
+                                fontWeight: active
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                color: eliminated
+                                    ? muted
+                                    : active
+                                        ? activeColor
+                                        : ink)),
+                      ]));
+            }));
+  }
 }

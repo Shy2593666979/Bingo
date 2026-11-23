@@ -474,6 +474,7 @@ abstract interface class WelcomeRefreshGateway {
 class HttpApiGateway
     implements
         PartyGameGateway,
+        PartySpeechGateway,
         AuthGateway,
         CompanionSelectionGateway,
         UserDetailsGateway,
@@ -561,6 +562,51 @@ class HttpApiGateway
   final AppConfig config;
   final HttpClient _client = HttpClient();
   HttpClient? _groupSpeechClient;
+  final Set<HttpClient> _partySpeechClients = {};
+
+  @override
+  void stopPartySpeech() {
+    for (final client in List<HttpClient>.of(_partySpeechClients)) {
+      client.close(force: true);
+    }
+    _partySpeechClients.clear();
+  }
+
+  @override
+  Stream<Uint8List> partyMessageSpeech(
+      String gameId, String messageId) async* {
+    final client = HttpClient();
+    _partySpeechClients.add(client);
+    try {
+      final uri =
+          config.endpoint('/games/$gameId/messages/$messageId/speech');
+      final request =
+          await client.postUrl(uri).timeout(const Duration(seconds: 15));
+      _prepareRequest(request);
+      final response =
+          await request.close().timeout(const Duration(seconds: 30));
+      if (response.statusCode != 200) {
+        await response.drain<void>();
+        throw const ApiException('这条消息暂时无法播放，请稍后重试');
+      }
+      await for (final line in response
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .timeout(const Duration(seconds: 40))) {
+        if (line.trim().isEmpty) continue;
+        final item = jsonDecode(line) as Map<String, dynamic>;
+        if (item['type'] == 'audio') yield base64Decode(item['data'] as String);
+        if (item['type'] == 'audio_error') {
+          throw ApiException(item['message'] as String? ?? '语音暂时不可用');
+        }
+        if (item['type'] == 'audio_done') return;
+      }
+    } finally {
+      _partySpeechClients.remove(client);
+      client.close(force: true);
+    }
+  }
+
   @override
   void stopGroupSpeech() {
     _groupSpeechClient?.close(force: true);

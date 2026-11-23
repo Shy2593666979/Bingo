@@ -205,16 +205,20 @@ class _HomeCompanionCarouselState extends State<HomeCompanionCarousel>
         },
         child: DecoratedBox(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(23),
+            borderRadius: BorderRadius.circular(24),
             boxShadow: const [
               BoxShadow(
-                  color: Color(0x08A16B7E),
-                  blurRadius: 16,
-                  offset: Offset(0, 6)),
+                  color: Color(0x16B46A84),
+                  blurRadius: 24,
+                  offset: Offset(0, 10)),
+              BoxShadow(
+                  color: Color(0x0A000000),
+                  blurRadius: 6,
+                  offset: Offset(0, 2)),
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(23),
+            borderRadius: BorderRadius.circular(24),
             child: SizedBox(
               height: height,
               child: Stack(alignment: Alignment.center, children: [
@@ -238,7 +242,7 @@ class _HomeCompanionCarouselState extends State<HomeCompanionCarousel>
                     child: IgnorePointer(
                         child: DecoratedBox(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(23),
+                    borderRadius: BorderRadius.circular(24),
                     border: Border.all(color: HomePalette.heroBorder),
                   ),
                 ))),
@@ -250,7 +254,7 @@ class _HomeCompanionCarouselState extends State<HomeCompanionCarousel>
       if (_multiple)
         Center(
           child: Padding(
-            padding: const EdgeInsets.only(top: 10, bottom: 2),
+            padding: const EdgeInsets.only(top: 12, bottom: 2),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               for (var i = firstDot; i < firstDot + dotCount; i++)
                 Semantics(
@@ -262,15 +266,17 @@ class _HomeCompanionCarouselState extends State<HomeCompanionCarousel>
                     onTap: () => _move(_page + i - _index),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 3),
-                      child: Container(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
                         key: ValueKey('carousel-dot-${widget.roles[i].id}'),
-                        width: 7,
-                        height: 7,
+                        width: i == _index ? 18 : 6,
+                        height: 6,
                         decoration: BoxDecoration(
-                          shape: BoxShape.circle,
+                          borderRadius: BorderRadius.circular(6),
                           color: i == _index
                               ? HomePalette.accent
-                              : HomePalette.accent.withValues(alpha: .17),
+                              : HomePalette.accent.withValues(alpha: .22),
                         ),
                       ),
                     ),
@@ -279,70 +285,107 @@ class _HomeCompanionCarouselState extends State<HomeCompanionCarousel>
             ]),
           ),
         ),
-      const SizedBox(height: 9),
-      Row(children: [
-        Expanded(
-          child: Text('今天想和谁聊聊？',
-              style: BingoTypography.sectionTitle
-                  .copyWith(fontSize: 17, color: HomePalette.ink)),
+      const SizedBox(height: 14),
+      Container(
+        padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFF1EBF0)),
+          boxShadow: const [
+            BoxShadow(
+                color: Color(0x09000000),
+                blurRadius: 14,
+                offset: Offset(0, 4)),
+          ],
         ),
-        TextButton(
-            style: controlStyle,
-            onPressed: widget.onAll,
-            child: const Text('全部 ›', style: TextStyle(fontSize: 12))),
-      ]),
-      SizedBox(
-        key: const ValueKey('companion-preview'),
-        height: 55 + scale.scale(12) * 1.4,
-        child: LayoutBuilder(
-          builder: (context, constraints) => ListView.builder(
-            controller: _strip,
-            scrollDirection: Axis.horizontal,
-            itemExtent: constraints.maxWidth / 5,
-            itemCount: widget.roles.length,
-            itemBuilder: (context, index) {
-              final role = widget.roles[index];
-              final selected = index == _index;
-              final size = (constraints.maxWidth / 5 - 11).clamp(32.0, 44.0);
-              return Semantics(
-                selected: selected,
-                button: true,
-                child: InkWell(
-                  key: ValueKey('companion-card-${role.id}'),
-                  onTap: () => _move(_page + index - _index),
-                  child: Column(children: [
-                    Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Expanded(
+                child: Text('今天想和谁聊聊？',
+                    style: BingoTypography.sectionTitle.copyWith(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: HomePalette.ink)),
+              ),
+              TextButton(
+                  style: controlStyle,
+                  onPressed: widget.onAll,
+                  child: const Text('全部 ›', style: TextStyle(fontSize: 12))),
+            ]),
+            const SizedBox(height: 6),
+            SizedBox(
+              key: const ValueKey('companion-preview'),
+              height: 58 + scale.scale(12) * 1.4,
+              child: LayoutBuilder(
+                builder: (context, constraints) => ListView.builder(
+                  controller: _strip,
+                  scrollDirection: Axis.horizontal,
+                  itemExtent: constraints.maxWidth / 5,
+                  itemCount: widget.roles.length,
+                  itemBuilder: (context, index) {
+                    final role = widget.roles[index];
+                    final selected = index == _index;
+                    final size =
+                        (constraints.maxWidth / 5 - 11).clamp(32.0, 44.0);
+                    return Semantics(
+                      selected: selected,
+                      button: true,
+                      child: InkWell(
+                        key: ValueKey('companion-card-${role.id}'),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: selected
-                              ? HomePalette.accent
-                              : Colors.transparent,
-                        ),
+                        onTap: () => _move(_page + index - _index),
+                        child: Column(children: [
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.all(2.5),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(15),
+                              border: Border.all(
+                                color: selected
+                                    ? HomePalette.accent
+                                    : const Color(0xFFF0E7EC),
+                                width: selected ? 2 : 1,
+                              ),
+                              boxShadow: selected
+                                  ? [
+                                      BoxShadow(
+                                          color: HomePalette.accent
+                                              .withValues(alpha: .22),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 3))
+                                    ]
+                                  : null,
+                            ),
+                            child: AssistantAvatar(
+                                role: role.name,
+                                size: size,
+                                closePortrait: true),
+                          ),
+                          const SizedBox(height: 5),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 2),
+                            child: Text(role.displayName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: BingoTypography.caption.copyWith(
+                                    color: selected
+                                        ? HomePalette.accent
+                                        : HomePalette.ink,
+                                    fontWeight: selected
+                                        ? FontWeight.w700
+                                        : FontWeight.w500)),
+                          ),
+                        ]),
                       ),
-                      child: AssistantAvatar(
-                          role: role.name, size: size, closePortrait: true),
-                    ),
-                    const SizedBox(height: 4),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 2),
-                      child: Text(role.displayName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: BingoTypography.caption.copyWith(
-                              color: selected
-                                  ? HomePalette.accent
-                                  : HomePalette.ink,
-                              fontWeight: selected
-                                  ? FontWeight.w700
-                                  : FontWeight.w400)),
-                    ),
-                  ]),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
+              ),
+            ),
+          ],
         ),
       ),
     ]);
@@ -352,9 +395,9 @@ class _HomeCompanionCarouselState extends State<HomeCompanionCarousel>
     final name = role.displayName;
     final action = name.runes.length > 7 ? '和搭子聊聊' : '和$name聊聊';
     return LayoutBuilder(builder: (context, constraints) {
-      final avatarSize = (constraints.maxWidth * .405).clamp(80.0, 155.0);
+      final avatarSize = (constraints.maxWidth * .39).clamp(80.0, 150.0);
       return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(children: [
           Semantics(
             button: true,
@@ -365,7 +408,13 @@ class _HomeCompanionCarouselState extends State<HomeCompanionCarousel>
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white, width: 1.5),
+                  border: Border.all(color: Colors.white, width: 2.5),
+                  boxShadow: const [
+                    BoxShadow(
+                        color: Color(0x189D5871),
+                        blurRadius: 12,
+                        offset: Offset(0, 5)),
+                  ],
                 ),
                 position: DecorationPosition.foreground,
                 child: AssistantAvatar(
@@ -373,7 +422,7 @@ class _HomeCompanionCarouselState extends State<HomeCompanionCarousel>
               ),
             ),
           ),
-          const SizedBox(width: 13),
+          const SizedBox(width: 15),
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -385,39 +434,35 @@ class _HomeCompanionCarouselState extends State<HomeCompanionCarousel>
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: BingoTypography.sectionTitle.copyWith(
-                              fontSize: 21,
+                              fontSize: 22,
                               height: 1.15,
+                              fontWeight: FontWeight.w700,
                               color: HomePalette.heroInk))),
                   const SizedBox(width: 6),
                   const Icon(Icons.favorite_rounded,
-                      color: HomePalette.accent, size: 13),
+                      color: HomePalette.accent, size: 14),
                 ]),
-                const SizedBox(height: 5),
+                const SizedBox(height: 7),
                 Text('“$greeting”',
                     key: ValueKey('carousel-greeting-${role.id}'),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontSize: 13,
-                        height: 1.35,
-                        color: HomePalette.heroInk)),
-                const SizedBox(height: 5),
-                Container(
-                    width: 68,
-                    height: 2,
-                    margin: const EdgeInsets.only(left: 12),
-                    decoration: BoxDecoration(
-                        color: HomePalette.accent.withValues(alpha: .22),
-                        borderRadius: BorderRadius.circular(4))),
-                const SizedBox(height: 6),
+                        fontSize: 13.5,
+                        height: 1.4,
+                        color: Color(0xFF5D4C54))),
+                const SizedBox(height: 12),
                 FilledButton(
                   onPressed: () => _open(widget.onChat, role),
                   style: FilledButton.styleFrom(
                     backgroundColor: HomePalette.action,
                     foregroundColor: Colors.white,
+                    elevation: 2,
+                    shadowColor: HomePalette.action.withValues(alpha: .35),
+                    shape: const StadiumBorder(),
                     minimumSize: const Size(0, 38),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 8),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     textStyle: const TextStyle(
                         fontSize: 13, fontWeight: FontWeight.w700),
@@ -426,8 +471,9 @@ class _HomeCompanionCarouselState extends State<HomeCompanionCarousel>
                     Flexible(
                         child: Text(action,
                             maxLines: 1, overflow: TextOverflow.ellipsis)),
+                    const SizedBox(width: 3),
                     const HomeArtworkIcon(HomeArtwork.next,
-                        size: 14, color: Colors.white),
+                        size: 13, color: Colors.white),
                   ]),
                 ),
               ],

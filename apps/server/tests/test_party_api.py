@@ -109,6 +109,19 @@ def test_authenticated_api_roundtrip_and_duplicate_action(client):
     client.portal.call(wait_idle, service)
     after = api_payload(client.get(url))
     assert after["phase"] == "answer" and after["messages"]
+    ai_msg = next(m for m in after["messages"] if m["speaker"] not in {None, "self"})
+
+    class FakeSpeech:
+        async def message_events(self, text, voice):
+            yield {"type": "audio", "data": base64.b64encode(b"pcm-bytes").decode()}
+            yield {"type": "audio_done"}
+
+    client.app.state.services.chat_speech = FakeSpeech()
+    speech_resp = client.post(f"{url}/messages/{ai_msg['id']}/speech")
+    assert speech_resp.status_code == 200
+    assert "pcm-bytes" in base64.b64decode(
+        speech_resp.text.splitlines()[0].split('"data": "')[1].split('"')[0]
+    ).decode()
     duplicate = api_payload(client.post(url + "/actions", json=body))
     assert duplicate["revision"] == after["revision"]
     assert client.post(url + "/actions", json={**body, "type": "voice_start"}).status_code == 422

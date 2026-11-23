@@ -197,35 +197,60 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
   Widget _homeShortcut(HomeArtwork icon, String title, String subtitle,
           Color background, VoidCallback action) =>
       Expanded(
-        child: OutlinedButton(
-          onPressed: action,
-          style: OutlinedButton.styleFrom(
-            backgroundColor: background,
-            foregroundColor: HomePalette.ink,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            side: const BorderSide(color: HomePalette.entryBorder),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
-          ),
-          child: Row(children: [
-            HomeArtworkIcon(icon, size: 19, color: HomePalette.entryIcon),
-            const SizedBox(width: 7),
-            Expanded(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title,
-                        style:
-                            BingoTypography.itemTitle.copyWith(fontSize: 14)),
-                    const SizedBox(height: 2),
-                    Text(subtitle,
-                        style: BingoTypography.caption
-                            .copyWith(fontSize: 10, color: HomePalette.muted)),
-                  ]),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(18),
+          child: InkWell(
+            onTap: action,
+            borderRadius: BorderRadius.circular(18),
+            child: Ink(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xFFF1EBF0)),
+                boxShadow: const [
+                  BoxShadow(
+                      color: Color(0x09000000),
+                      blurRadius: 12,
+                      offset: Offset(0, 4)),
+                ],
+              ),
+              child: Row(children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: background,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: HomeArtworkIcon(icon,
+                        size: 18, color: HomePalette.accent),
+                  ),
+                ),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: BingoTypography.itemTitle.copyWith(
+                                fontSize: 14.5, fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 2),
+                        Text(subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: BingoTypography.caption.copyWith(
+                                fontSize: 11, color: HomePalette.muted)),
+                      ]),
+                ),
+              ]),
             ),
-            const HomeArtworkIcon(HomeArtwork.next,
-                size: 15, color: HomePalette.muted),
-          ]),
+          ),
         ),
       );
 
@@ -245,13 +270,17 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
           required DateTime? date,
           required int unread,
           required VoidCallback onTap,
-          bool group = false}) =>
+          bool group = false,
+          bool showDivider = true}) =>
       RecentChatFeedback(
           onTap: onTap,
           child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: const BoxDecoration(
-                  border: Border(bottom: BorderSide(color: BingoPalette.line))),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                  border: showDivider
+                      ? const Border(
+                          bottom: BorderSide(color: Color(0xFFF3EEF2)))
+                      : null),
               child: Row(children: [
                 avatar,
                 const SizedBox(width: 12),
@@ -266,19 +295,19 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
                                 overflow: TextOverflow.ellipsis,
                                 style: BingoTypography.itemTitle.copyWith(
                                     fontSize: 15,
-                                    fontWeight: FontWeight.w500))),
+                                    fontWeight: FontWeight.w600))),
                         if (group) ...[
                           const SizedBox(width: 6),
                           const BingoIcon(BingoSymbol.group,
-                              size: 17, color: BingoPalette.muted)
+                              size: 16, color: BingoPalette.muted)
                         ]
                       ]),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 3),
                       Text(ChatSticker.preview(preview),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                              fontSize: 14, color: CompanionLaunch.muted))
+                              fontSize: 13.5, color: CompanionLaunch.muted))
                     ])),
                 const SizedBox(width: 8),
                 Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -292,52 +321,70 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
                 ])
               ])));
   List<Widget> _recentChats() {
-    final recent = <({DateTime date, Widget child})>[];
+    final items = <({
+      DateTime date,
+      Widget avatar,
+      String name,
+      String preview,
+      int unread,
+      bool group,
+      VoidCallback onTap,
+    })>[];
     for (final g
         in _groups.where((g) => !g.archived && g.lastMessage != null)) {
-      recent.add((
+      items.add((
         date: g.lastActivity,
-        child: _recentRow(
-            avatar: GroupAvatar(members: g.activeMembers, size: 50),
-            name: g.name,
-            preview:
-                '${g.senderNameFor(g.lastMessage!)}：${g.lastMessage!.content}',
-            date: g.lastActivity,
-            unread: g.unread,
-            group: true,
-            onTap: () => widget.onOpenGroup(g))
+        avatar: GroupAvatar(members: g.activeMembers, size: 48),
+        name: g.name,
+        preview:
+            '${g.senderNameFor(g.lastMessage!)}：${g.lastMessage!.content}',
+        unread: g.unread,
+        group: true,
+        onTap: () => widget.onOpenGroup(g),
       ));
     }
     for (final r in (_roles ?? <RoleOption>[])
         .where((r) => r.messageCount > 0 && !r.archived)) {
-      recent.add((
+      items.add((
         date: r.lastMessageAt ?? DateTime(2000),
-        child: _recentRow(
-            avatar: AssistantAvatar(role: r.name, size: 52),
-            name: r.displayName,
-            preview: r.lastMessage ?? '和搭子聊聊吧',
-            date: r.lastMessageAt,
-            unread: r.unreadCount,
-            onTap: () => widget.onChat(r))
+        avatar: AssistantAvatar(role: r.name, size: 48),
+        name: r.displayName,
+        preview: r.lastMessage ?? '和搭子聊聊吧',
+        unread: r.unreadCount,
+        group: false,
+        onTap: () => widget.onChat(r),
       ));
     }
-    recent.sort((a, b) => b.date.compareTo(a.date));
-    return recent.take(2).map((e) => e.child).toList();
+    items.sort((a, b) => b.date.compareTo(a.date));
+    final top = items.take(2).toList();
+    return [
+      for (var i = 0; i < top.length; i++)
+        _recentRow(
+          avatar: top[i].avatar,
+          name: top[i].name,
+          preview: top[i].preview,
+          date: top[i].date,
+          unread: top[i].unread,
+          group: top[i].group,
+          showDivider: i < top.length - 1,
+          onTap: top[i].onTap,
+        ),
+    ];
   }
 
   @override
   Widget build(BuildContext context) {
     final roles = _roles;
     final recent = _recentChats();
-    return DecoratedBox(
-      decoration: CompanionLaunch.background,
+    return ColoredBox(
+      color: const Color(0xFFFAF7F9),
       child: SafeArea(
         bottom: false,
         child: RefreshIndicator(
           onRefresh: refresh,
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(14, 0, 14, 24),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
             children: [
               if (widget.showHeader) HomeGreeting(nickname: widget.nickname),
               if (roles == null && !_failed)
@@ -361,31 +408,50 @@ class CompanionSpacePageState extends State<CompanionSpacePage> {
                   onDetail: widget.onDetail,
                   onAll: _allPartners,
                 ),
-              const SizedBox(height: 10),
-              const Divider(height: 1, color: HomePalette.divider),
-              _heading('每个人，都可以成为你的搭子', null, top: 14, bottom: 10),
+              _heading('每个人，都可以成为你的搭子', null, top: 18, bottom: 10),
               IntrinsicHeight(
                 child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _homeShortcut(HomeArtwork.plus, '创建搭子', '创建专属的 AI 搭子',
-                          HomePalette.createSurface, widget.onCreateRole),
-                      const SizedBox(width: 9),
-                      _homeShortcut(HomeArtwork.compass, '社区推荐', '发现更多有趣的搭子',
-                          HomePalette.communitySurface, widget.onCommunity),
+                      _homeShortcut(HomeArtwork.plus, '创建搭子', '定制专属 AI 搭子',
+                          const Color(0xFFFDECF2), widget.onCreateRole),
+                      const SizedBox(width: 10),
+                      _homeShortcut(HomeArtwork.compass, '社区推荐', '发现更多有趣搭子',
+                          const Color(0xFFF3EEFD), widget.onCommunity),
                     ]),
               ),
-              const SizedBox(height: 17),
-              const Divider(height: 1, color: HomePalette.divider),
               InkWell(
+                  borderRadius: BorderRadius.circular(10),
                   onTap: widget.onMessages,
                   child: _heading('最近聊天', widget.onMessages,
-                      top: 12, bottom: 2, label: '全部聊天 ›')),
-              ...recent,
+                      top: 18, bottom: 10, label: '全部聊天 ›')),
+              if (recent.isNotEmpty)
+                Container(
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFF1EBF0)),
+                    boxShadow: const [
+                      BoxShadow(
+                          color: Color(0x09000000),
+                          blurRadius: 14,
+                          offset: Offset(0, 4)),
+                    ],
+                  ),
+                  child: Column(children: recent),
+                ),
               if (recent.isEmpty && roles != null)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Text('最近的对话会显示在这里', style: BingoTypography.caption),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0xFFF1EBF0)),
+                  ),
+                  child: const Text('最近的对话会显示在这里',
+                      style: BingoTypography.caption),
                 ),
             ],
           ),

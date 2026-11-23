@@ -81,33 +81,45 @@ class _GameSetupPageState extends State<GameSetupPage> {
         if (!didPop) _back();
       },
       child: Scaffold(
-          backgroundColor: Colors.white,
+          backgroundColor: const Color(0xFFFAF7F9),
           appBar: AppBar(
-              backgroundColor: Colors.white,
+              backgroundColor: const Color(0xFFFAF7F9),
+              elevation: 0,
+              scrolledUnderElevation: 0,
               centerTitle: true,
               actions: [
                 if (_step == 0)
-                  IconButton(
-                      tooltip: '玩法配置',
-                      onPressed: () => setState(() => _step = 1),
-                      icon: const Icon(Icons.tune_rounded,
-                          size: 21, color: gameRose))
+                  Padding(
+                      padding: const EdgeInsets.only(right: 10),
+                      child: TextButton.icon(
+                          style: TextButton.styleFrom(
+                              foregroundColor: gameRose,
+                              backgroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 6),
+                              minimumSize: const Size(0, 32),
+                              side: const BorderSide(color: Color(0xFFF1E6EC)),
+                              shape: const StadiumBorder()),
+                          onPressed: () => setState(() => _step = 1),
+                          icon: const Icon(Icons.tune_rounded, size: 16),
+                          label: const Text('设置',
+                              style: TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.w600))))
               ],
               leading: IconButton(
                   onPressed: _back,
-                  icon: const Icon(Icons.chevron_left, color: gameInk)),
-              title: _step == 0
-                  ? null
-                  : Text(widget.game.title,
-                      style: const TextStyle(
-                          fontSize: 17,
-                          color: gameInk,
-                          fontWeight: FontWeight.w600))),
+                  icon: const Icon(Icons.chevron_left_rounded,
+                      size: 28, color: gameInk)),
+              title: Text(widget.game.title,
+                  style: const TextStyle(
+                      fontSize: 17,
+                      color: gameInk,
+                      fontWeight: FontWeight.w700))),
           body: Column(children: [
             if (_step > 0)
               Padding(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 35, vertical: 17),
+                      const EdgeInsets.symmetric(horizontal: 35, vertical: 14),
                   child: Row(children: [
                     for (var i = 0; i < 3; i++) ...[
                       if (i > 0)
@@ -131,7 +143,7 @@ class _GameSetupPageState extends State<GameSetupPage> {
                                     color: i <= _step
                                         ? Colors.white
                                         : gameMuted))),
-                        const SizedBox(height: 7),
+                        const SizedBox(height: 6),
                         Text(['邀请谁', '选玩法', '准备开场'][i],
                             style: TextStyle(
                                 fontSize: 11,
@@ -141,103 +153,120 @@ class _GameSetupPageState extends State<GameSetupPage> {
                   ])),
             Expanded(
                 child: ListView(
-                    padding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 18),
                     children: _step == 0
                         ? _pick()
                         : _step == 1
                             ? _configure()
                             : _confirm())),
-            SafeArea(
-                top: false,
-                child: Container(
-                    padding: const EdgeInsets.fromLTRB(18, 12, 18, 26),
-                    decoration: const BoxDecoration(
-                        color: Colors.white,
-                        border: Border(top: BorderSide(color: gameLine))),
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      if (_step == 0) _selectionSummary(),
-                      if (_draft.validationError != null)
-                        Padding(
-                            padding: const EdgeInsets.only(bottom: 9),
-                            child: Text(_draft.validationError!,
-                                style: const TextStyle(
-                                    color: gameMuted, fontSize: 12))),
-                      GameButton(
-                          _step == 0
-                              ? '开始小聚 ›'
-                              : _step == 2
-                                  ? '开始体验小聚'
-                                  : '下一步',
-                          onPressed: _draft.validationError != null
-                              ? null
-                              : () {
-                                  if (_step == 1) {
-                                    setState(() => _step++);
-                                  } else {
-                                    Navigator.pop(context, _draft);
-                                  }
-                                }),
-                    ]))),
+            Container(
+                decoration: const BoxDecoration(
+                    color: Colors.white,
+                    border: Border(top: BorderSide(color: Color(0xFFF1EBF0))),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Color(0x0A000000),
+                          blurRadius: 14,
+                          offset: Offset(0, -4))
+                    ]),
+                child: SafeArea(
+                    top: false,
+                    child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+                        child:
+                            Column(mainAxisSize: MainAxisSize.min, children: [
+                          if (_step == 0) _selectionSummary(),
+                          if (_draft.validationError != null)
+                            Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: Text(_draft.validationError!,
+                                    style: const TextStyle(
+                                        color: gameMuted, fontSize: 12))),
+                          GameButton(
+                              _step == 0
+                                  ? '开始小聚 ›'
+                                  : _step == 2
+                                      ? '开始体验小聚'
+                                      : '下一步',
+                              onPressed: _draft.validationError != null
+                                  ? null
+                                  : () {
+                                      if (_step == 1) {
+                                        setState(() => _step++);
+                                      } else {
+                                        Navigator.pop(context, _draft);
+                                      }
+                                    }),
+                        ])))),
           ])));
 
   List<Widget> _pick() => [
-        const Stack(alignment: Alignment.center, children: [
-          Text('邀请谁一起玩',
-              style: TextStyle(
-                  fontSize: 23,
-                  height: 1.4,
-                  fontWeight: FontWeight.w700,
-                  color: gameInk)),
-          Positioned(right: 48, top: 0, child: GameAccent()),
-        ]),
-        const SizedBox(height: 7),
-        const Center(
-            child: Text('选几位搭子，来一场轻松的小聚吧',
-                style: TextStyle(
-                    fontSize: 15, height: 1.5, color: Color(0xFF6D666C)))),
-        const SizedBox(height: 26),
+        const Text('邀请谁一起玩',
+            style: TextStyle(
+                fontSize: 22,
+                height: 1.3,
+                fontWeight: FontWeight.w700,
+                color: gameInk)),
+        const SizedBox(height: 4),
+        Text(
+            widget.game == CompanionGame.truth
+                ? '选 2～5 位搭子，开启轻松有趣的真心话小聚'
+                : '选好人数板子和搭子，马上开启一局推理',
+            style: const TextStyle(
+                fontSize: 13, height: 1.45, color: gameMuted)),
+        const SizedBox(height: 16),
         Container(
-            padding: const EdgeInsets.all(3),
+            padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-                color: const Color(0xFFF8F5F7),
-                border: Border.all(color: const Color(0xFFE9E0E5)),
-                borderRadius: BorderRadius.circular(16)),
+                color: const Color(0xFFF1ECF0),
+                borderRadius: BorderRadius.circular(14)),
             child: Row(children: [
               for (final from in [true, false])
                 Expanded(
-                    child: InkWell(
+                    child: GestureDetector(
                         onTap: () => _selectSource(from),
-                        borderRadius: BorderRadius.circular(13),
-                        child: Container(
+                        child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
                             alignment: Alignment.center,
-                            padding: const EdgeInsets.symmetric(vertical: 9),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
                             decoration: BoxDecoration(
                                 color: _fromGroup == from
-                                    ? gameRose
+                                    ? Colors.white
                                     : Colors.transparent,
-                                borderRadius: BorderRadius.circular(13)),
+                                borderRadius: BorderRadius.circular(11),
+                                boxShadow: _fromGroup == from
+                                    ? const [
+                                        BoxShadow(
+                                            color: Color(0x12000000),
+                                            blurRadius: 6,
+                                            offset: Offset(0, 2))
+                                      ]
+                                    : null),
                             child: Text(from ? '已有群聊' : '我的搭子',
                                 style: TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 13.5,
+                                    fontWeight: _fromGroup == from
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
                                     color: _fromGroup == from
-                                        ? Colors.white
-                                        : gameInk)))))
+                                        ? gameInk
+                                        : gameMuted)))))
             ])),
-        const SizedBox(height: 19),
+        const SizedBox(height: 14),
         if (widget.game == CompanionGame.wolf) ...[
           _seatChoices(),
-          const SizedBox(height: 16)
+          const SizedBox(height: 14)
         ],
         if (_fromGroup) ...[
           if (widget.groupsFailed)
             const Text('群聊暂时没读到，可返回娱乐页下拉重试，或从我的搭子组局。',
                 style: TextStyle(color: gameMuted, height: 1.8)),
           if (widget.groups.isEmpty && !widget.groupsFailed)
-            const Text('还没有群聊，可以切到「选搭子组新群」。',
+            const Text('还没有群聊，可以切到「我的搭子」组局。',
                 style: TextStyle(color: gameMuted, height: 1.8)),
           for (final g in widget.groups)
             Padding(
-                padding: const EdgeInsets.only(bottom: 11),
+                padding: const EdgeInsets.only(bottom: 10),
                 child: Material(
                     color: Colors.transparent,
                     child: InkWell(
@@ -247,19 +276,19 @@ class _GameSetupPageState extends State<GameSetupPage> {
                               _selected.clear();
                             }),
                         child: Container(
-                            padding: const EdgeInsets.all(14),
+                            padding: const EdgeInsets.all(13),
                             decoration: BoxDecoration(
                                 color: _group?.id == g.id
-                                    ? const Color(0xFFFFEFF7)
+                                    ? const Color(0xFFFFF2F7)
                                     : Colors.white,
                                 borderRadius: BorderRadius.circular(18),
                                 border: Border.all(
                                     color: _group?.id == g.id
                                         ? gameRose
-                                        : gameLine)),
+                                        : const Color(0xFFF0E9EE))),
                             child: Row(children: [
                               SizedBox(
-                                  width: 55,
+                                  width: 54,
                                   child: Wrap(
                                       spacing: 3,
                                       runSpacing: 3,
@@ -282,163 +311,257 @@ class _GameSetupPageState extends State<GameSetupPage> {
                                             fontSize: 15,
                                             fontWeight: FontWeight.w600,
                                             color: gameInk)),
-                                    const SizedBox(height: 5),
+                                    const SizedBox(height: 4),
                                     Text('${g.activeMembers.length} 位搭子',
                                         style: const TextStyle(
                                             fontSize: 12, color: gameMuted))
                                   ])),
                               Icon(
                                   _group?.id == g.id
-                                      ? Icons.radio_button_checked
-                                      : Icons.radio_button_off,
-                                  size: 20,
+                                      ? Icons.check_circle_rounded
+                                      : Icons.radio_button_unchecked_rounded,
+                                  size: 21,
                                   color:
                                       _group?.id == g.id ? gameRose : gameMuted)
                             ]))))),
-          const SizedBox(height: 11),
+          const SizedBox(height: 8),
         ],
-        const SizedBox(height: 12),
         if (_available.isEmpty && !_fromGroup)
           TextButton.icon(
               onPressed: widget.onCreateRole,
               icon: const Icon(Icons.add),
               label: const Text('先创建我的搭子')),
-        LayoutBuilder(
-            builder: (context, constraints) => Wrap(
-                spacing: 14,
-                runSpacing: 14,
-                children: _available.map((p) {
-                  final selected = _selected.contains(p.id);
-                  final disabled = !selected && _selected.length >= _max;
-                  const columns = 2;
-                  return SizedBox(
-                      width:
-                          (constraints.maxWidth - 14 * (columns - 1)) / columns,
-                      child: Semantics(
-                          button: true,
-                          selected: selected,
-                          label: p.name,
-                          child: InkWell(
-                              onTap: disabled ? null : () => _toggle(p),
-                              borderRadius: BorderRadius.circular(15),
-                              child: Opacity(
-                                  opacity: disabled ? .5 : 1,
-                                  child: Container(
-                                      padding:
-                                          const EdgeInsets.fromLTRB(6, 8, 6, 8),
-                                      decoration: BoxDecoration(
-                                          color: selected
-                                              ? const Color(0xFFFFF5F9)
-                                              : const Color(0xFFFBF8FA),
-                                          borderRadius:
-                                              BorderRadius.circular(15),
-                                          border: Border.all(
-                                              color: selected
-                                                  ? gameRose
-                                                  : gameLine)),
-                                      child: Column(children: [
-                                        Stack(
-                                            clipBehavior: Clip.none,
-                                            children: [
-                                              GamePortrait(p,
-                                                  size: (constraints.maxWidth -
-                                                              14) /
-                                                          2 -
-                                                      61),
-                                              Positioned(
-                                                  top: -1,
-                                                  right: -18,
-                                                  child: Container(
-                                                      width: 24,
-                                                      height: 24,
-                                                      decoration: BoxDecoration(
-                                                          color: selected
-                                                              ? gameRose
-                                                              : Colors.white,
-                                                          shape:
-                                                              BoxShape.circle,
-                                                          border: Border.all(
-                                                              color: selected
-                                                                  ? Colors.white
-                                                                  : const Color(
-                                                                      0xFFAAA4AA),
-                                                              width: 1.5)),
-                                                      child: selected
-                                                          ? const Icon(
-                                                              Icons.check,
-                                                              size: 17,
-                                                              color:
-                                                                  Colors.white)
-                                                          : null))
+        LayoutBuilder(builder: (context, constraints) {
+          final largeText = MediaQuery.textScalerOf(context).scale(14) > 19;
+          final columns =
+              (constraints.maxWidth < 300 || largeText) ? 2 : 3;
+          const gap = 10.0;
+          final itemWidth =
+              (constraints.maxWidth - gap * (columns - 1)) / columns;
+          final avatarSize = (itemWidth - 28).clamp(52.0, 76.0);
+          return Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: _available.map((p) {
+                final selected = _selected.contains(p.id);
+                final disabled = !selected && _selected.length >= _max;
+                return SizedBox(
+                    width: itemWidth,
+                    child: Semantics(
+                        button: true,
+                        selected: selected,
+                        label: p.name,
+                        child: Material(
+                            color: Colors.transparent,
+                            borderRadius: BorderRadius.circular(18),
+                            child: InkWell(
+                                onTap: disabled ? null : () => _toggle(p),
+                                borderRadius: BorderRadius.circular(18),
+                                child: Opacity(
+                                    opacity: disabled ? .48 : 1,
+                                    child: AnimatedContainer(
+                                        duration:
+                                            const Duration(milliseconds: 180),
+                                        padding: const EdgeInsets.fromLTRB(
+                                            8, 12, 8, 10),
+                                        decoration: BoxDecoration(
+                                            color: selected
+                                                ? const Color(0xFFFFF3F8)
+                                                : Colors.white,
+                                            borderRadius:
+                                                BorderRadius.circular(18),
+                                            border: Border.all(
+                                                color: selected
+                                                    ? gameRose
+                                                    : const Color(0xFFF0E9EE),
+                                                width: selected ? 1.5 : 1),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                  color: selected
+                                                      ? gameRose.withValues(
+                                                          alpha: .12)
+                                                      : const Color(0x07000000),
+                                                  blurRadius:
+                                                      selected ? 10 : 8,
+                                                  offset: const Offset(0, 3))
                                             ]),
-                                        const SizedBox(height: 7),
-                                        Text(p.name,
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                            textAlign: TextAlign.center,
-                                            style: const TextStyle(
-                                                fontSize: 14,
-                                                height: 1.4,
-                                                color: gameInk))
-                                      ]))))));
-                }).toList())),
+                                        child: Column(children: [
+                                          Stack(
+                                              clipBehavior: Clip.none,
+                                              children: [
+                                                GamePortrait(p,
+                                                    size: avatarSize),
+                                                Positioned(
+                                                    top: -4,
+                                                    right: -4,
+                                                    child: Container(
+                                                        width: 21,
+                                                        height: 21,
+                                                        decoration: BoxDecoration(
+                                                            color: selected
+                                                                ? gameRose
+                                                                : Colors.white,
+                                                            shape:
+                                                                BoxShape.circle,
+                                                            border: Border.all(
+                                                                color: selected
+                                                                    ? Colors
+                                                                        .white
+                                                                    : const Color(
+                                                                        0xFFD0C9CF),
+                                                                width: 1.5)),
+                                                        child: selected
+                                                            ? const Icon(
+                                                                Icons
+                                                                    .check_rounded,
+                                                                size: 14,
+                                                                color: Colors
+                                                                    .white)
+                                                            : null))
+                                              ]),
+                                          const SizedBox(height: 8),
+                                          Text(p.name,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                  fontSize: 13,
+                                                  height: 1.3,
+                                                  fontWeight: selected
+                                                      ? FontWeight.w700
+                                                      : FontWeight.w500,
+                                                  color: selected
+                                                      ? gameRose
+                                                      : gameInk))
+                                        ])))))));
+              }).toList());
+        }),
       ];
 
   Widget _selectionSummary() => Padding(
-      padding: const EdgeInsets.only(bottom: 38),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Text('已选择 ${_chosen.length} 人',
-              style: const TextStyle(fontSize: 15, color: gameInk)),
+          Text('已选择 ${_chosen.length}/$_max 人',
+              style: const TextStyle(
+                  fontSize: 13.5, fontWeight: FontWeight.w600, color: gameInk)),
           const Spacer(),
-          TextButton(
-              onPressed: () => setState(_selected.clear),
-              child: const Text('清空',
-                  style: TextStyle(color: gameRose, fontSize: 13)))
+          if (_chosen.isNotEmpty)
+            TextButton(
+                style: TextButton.styleFrom(
+                    minimumSize: const Size(0, 28),
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                onPressed: () => setState(_selected.clear),
+                child: const Text('清空',
+                    style: TextStyle(color: gameRose, fontSize: 12.5)))
         ]),
-        const SizedBox(height: 4),
-        Wrap(
-            spacing: 10,
-            runSpacing: 8,
-            children: _chosen
-                .map((p) => Container(
-                    padding: const EdgeInsets.fromLTRB(3, 3, 8, 3),
-                    decoration: BoxDecoration(
-                        color: const Color(0xFFFBF1F6),
-                        borderRadius: BorderRadius.circular(22)),
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      GamePortrait(p, size: 30),
-                      const SizedBox(width: 6),
-                      ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 95),
-                          child: Text(p.name,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontSize: 12, color: gameInk))),
-                      const SizedBox(width: 4),
-                      InkWell(
-                          onTap: () => _toggle(p),
-                          child: const Icon(Icons.close,
-                              size: 16, color: gameMuted)),
-                    ])))
-                .toList()),
+        if (_chosen.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          SizedBox(
+              height: 36,
+              child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _chosen.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (_, i) {
+                    final p = _chosen[i];
+                    return Container(
+                        padding: const EdgeInsets.fromLTRB(4, 3, 8, 3),
+                        decoration: BoxDecoration(
+                            color: const Color(0xFFFFF1F6),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                                color: gameRose.withValues(alpha: .22))),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          GamePortrait(p, size: 26),
+                          const SizedBox(width: 6),
+                          ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 84),
+                              child: Text(p.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: gameInk))),
+                          const SizedBox(width: 4),
+                          GestureDetector(
+                              onTap: () => _toggle(p),
+                              child: const Icon(Icons.close_rounded,
+                                  size: 15, color: gameMuted)),
+                        ]));
+                  })),
+        ],
       ]));
 
-  Widget _seatChoices() => SegmentedButton<int>(
-          segments: const [
-            ButtonSegment(value: 5, label: Text('5 人小局')),
-            ButtonSegment(value: 7, label: Text('7 人标准局'))
-          ],
-          selected: {
-            _seats
-          },
-          onSelectionChanged: (value) => setState(() {
-                _seats = value.first;
-                if (_seats == 5 && _identity == 'witch') _identity = null;
-                while (_selected.length > _max) {
-                  _selected.remove(_selected.last);
-                }
-              }));
+  Widget _seatChoices() => Row(children: [
+        for (final (seats, title, desc) in [
+          (5, '5 人小局', '1狼 · 1预 · 3民'),
+          (7, '7 人标准局', '2狼 · 1预 · 1巫 · 3民'),
+        ]) ...[
+          if (seats == 7) const SizedBox(width: 10),
+          Expanded(
+              child: Material(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(16),
+                  child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () => setState(() {
+                            _seats = seats;
+                            if (_seats == 5 && _identity == 'witch') {
+                              _identity = null;
+                            }
+                            while (_selected.length > _max) {
+                              _selected.remove(_selected.last);
+                            }
+                          }),
+                      child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 11),
+                          decoration: BoxDecoration(
+                              color: _seats == seats
+                                  ? const Color(0xFFFFF2F7)
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                  color: _seats == seats
+                                      ? gameRose
+                                      : const Color(0xFFF0E9EE),
+                                  width: _seats == seats ? 1.5 : 1)),
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(children: [
+                                  Expanded(
+                                      child: Text(title,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w700,
+                                              color: _seats == seats
+                                                  ? gameRose
+                                                  : gameInk))),
+                                  Icon(
+                                      _seats == seats
+                                          ? Icons.check_circle_rounded
+                                          : Icons.circle_outlined,
+                                      size: 17,
+                                      color: _seats == seats
+                                          ? gameRose
+                                          : const Color(0xFFD0C9CF)),
+                                ]),
+                                const SizedBox(height: 3),
+                                Text(desc,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        fontSize: 11, color: gameMuted)),
+                              ]))))),
+        ],
+      ]);
 
   List<Widget> _configure() => [
         GameSectionTitle(

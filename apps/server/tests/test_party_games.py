@@ -438,3 +438,50 @@ async def test_full_wolf_game_reaches_actual_winner_without_scripted_outcome(sea
         assert state["winner"] in {"good", "wolf"}
         wolves = sum(state["roles"][p] == "wolf" for p in state["alive"])
         assert (wolves == 0) if state["winner"] == "good" else (wolves * 2 >= len(state["alive"]))
+
+
+@pytest.mark.asyncio
+async def test_party_speech_source_and_read_aloud_setting(tmp_path):
+    from bingo.db.models import PartyGame
+
+    db, user, roles, service = await fixture(tmp_path)
+    try:
+        state = r.new_game("truth", [{"id": p.id, "name": p.nickname} for p in roles], "玩家")
+        assert state["read_aloud"] is True
+        ai_msg = r.message(state, "我来出一道题吧", roles[0].id)
+        secret_msg = r.message(state, "秘密", roles[0].id, recipients=[roles[0].id])
+        row = PartyGame(user_id=user.id, active_user_id=user.id, state_json=json.dumps(state))
+        async with db.session_factory() as session:
+            session.add(row)
+            await session.commit()
+        text, _voice = await service.speech_source(row.id, ai_msg["id"], user.id)
+        assert text == "我来出一道题吧"
+        with pytest.raises(ServiceError):
+            await service.speech_source(row.id, secret_msg["id"], user.id)
+        toggled = await service.action(
+            row.id,
+            user.id,
+            GameAction(type="read_aloud", value="false", command_id="mute-1", revision=0),
+        )
+        assert toggled["read_aloud"] is False
+    finally:
+        await service.close()
+        await db.dispose()
+
+
+def test_ai_long_speech_splits_into_natural_bubbles_in_text_room():
+    text = (
+        "好，我是女巫，昨夜没有人被刀，我很确信——因为解药还在我手上，我没救人。"
+        "换句话讲，狼人昨晚空刀了，这在首夜不太常见。\n\n"
+        "我倾向于狼队可能在藏，或者在布局。\n\n"
+        "今天不建议硬票人，信息太少容易误伤好人。咱们多观察一轮，相信美好即将发生。"
+    )
+    bubbles = r.split_party_bubbles(text)
+    assert len(bubbles) >= 3
+    assert "我倾向于狼队可能在藏，或者在布局。" in bubbles
+    state = game(n=4, identity="villager")
+    state.update(phase="speech", actor="0", queue=["1"])
+    r.spoken(state, "0", text)
+    ai_msgs = [m for m in state["messages"] if m["speaker"] == "0"]
+    assert len(ai_msgs) == len(bubbles)
+    assert state["actor"] == "1"

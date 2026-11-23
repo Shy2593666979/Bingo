@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:bingo/features/entertainment/domain/game_setup.dart';
 
 abstract interface class PartyGameGateway {
@@ -9,4 +10,9 @@ abstract interface class PartyGameGateway {
       String id, String type, String value, int revision, String commandId,
       {String stage = ''});
   Future<WebSocket> connectPartyVoice(String id);
+}
+
+abstract interface class PartySpeechGateway {
+  Stream<Uint8List> partyMessageSpeech(String gameId, String messageId);
+  void stopPartySpeech();
 }

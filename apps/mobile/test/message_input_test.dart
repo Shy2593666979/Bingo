@@ -111,7 +111,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(plus, findsNothing);
     expect(
-        tester.getSize(find.byKey(const ValueKey('send'))), const Size(32, 32));
+        tester.getSize(find.byKey(const ValueKey('send'))), const Size(34, 34));
     expect(tester.getSize(send), const Size(43, 43));
     expect(tester.getCenter(send), actionPosition);
     await tester.tap(send);

@@ -35,6 +35,8 @@ class MessageInput extends StatefulWidget {
     this.referenceStyle = false,
     this.initialVoiceMode = true,
     this.reserveKeyboardSpace = false,
+    this.partyMode = false,
+    this.darkSurface = false,
     super.key,
   });
 
@@ -50,7 +52,11 @@ class MessageInput extends StatefulWidget {
   final TextEditingController? textController;
   final bool groupMenu;
   final String hintText;
-  final bool referenceStyle, initialVoiceMode, reserveKeyboardSpace;
+  final bool referenceStyle,
+      initialVoiceMode,
+      reserveKeyboardSpace,
+      partyMode,
+      darkSurface;
 
   @override
   State<MessageInput> createState() => MessageInputState();
@@ -592,318 +598,344 @@ class MessageInputState extends State<MessageInput> {
                   widget.onCall();
                 })
             : const SizedBox.shrink();
+    final dark = widget.darkSurface;
+    final refInk = dark ? const Color(0xFFF2F0F7) : BingoPalette.ink;
+    final refMuted = dark ? const Color(0xFF9EA5C0) : ChatScene.muted;
+    final refFieldBg =
+        dark ? const Color(0xFF232940) : const Color(0xFFF2F6FA);
+    final refAccent =
+        dark ? const Color(0xFFA78BFA) : BingoPalette.primary;
+    final barContent = SafeArea(
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(widget.referenceStyle ? 8 : 12, 5,
+            widget.referenceStyle ? 8 : 12, 7),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: EdgeInsets.all(widget.referenceStyle ? 0 : 7),
+              decoration: BoxDecoration(
+                color: widget.referenceStyle
+                    ? Colors.transparent
+                    : Colors.white.withValues(alpha: 0.97),
+                borderRadius:
+                    BorderRadius.circular(widget.referenceStyle ? 30 : 24),
+                border: widget.referenceStyle
+                    ? null
+                    : Border.all(color: Colors.white),
+                boxShadow: widget.referenceStyle
+                    ? []
+                    : const [
+                        BoxShadow(
+                          color: Color(0x14205F4F),
+                          blurRadius: 20,
+                          offset: Offset(0, 6),
+                        ),
+                      ],
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  TapRegion(
+                      groupId: _composerTapRegionGroup,
+                      child: Container(
+                        width: 43,
+                        height: 43,
+                        decoration: BoxDecoration(
+                          color: widget.referenceStyle
+                              ? Colors.transparent
+                              : skin.id == 'mint'
+                                  ? BingoPalette.softSurface
+                                  : skin.other,
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          onPressed: widget.enabled ? _toggleVoiceMode : null,
+                          tooltip: _voiceMode ? '键盘输入' : '语音输入',
+                          color: widget.referenceStyle ? refMuted : skin.accent,
+                          icon: ChatComposerIcon(
+                              _voiceMode
+                                  ? ChatComposerSymbol.keyboard
+                                  : ChatComposerSymbol.voice,
+                              color: widget.referenceStyle
+                                  ? refMuted
+                                  : skin.accent),
+                        ),
+                      )),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: _voiceMode
+                        ? Listener(
+                            behavior: HitTestBehavior.opaque,
+                            onPointerDown: _handlePointerDown,
+                            onPointerMove: _handlePointerMove,
+                            onPointerUp: _handlePointerUp,
+                            onPointerCancel: _handlePointerCancel,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 120),
+                              height: 46,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: _recording
+                                    ? switch (_releaseAction) {
+                                        _VoiceReleaseAction.cancel =>
+                                          colors.errorContainer,
+                                        _VoiceReleaseAction.transcribe =>
+                                          BingoPalette.softSurface,
+                                        _VoiceReleaseAction.send =>
+                                          dark
+                                              ? const Color(0xFF3A2D5E)
+                                              : BingoPalette.blush,
+                                      }
+                                    : dark
+                                        ? const Color(0xFF232940)
+                                        : skin.id == 'mint'
+                                            ? BingoPalette.blush
+                                            : skin.user,
+                                border: Border.all(
+                                    color: dark
+                                        ? refAccent.withValues(alpha: .35)
+                                        : skin.id == 'mint'
+                                            ? BingoPalette.blush
+                                            : skin.accent
+                                                .withValues(alpha: .25)),
+                                borderRadius: BorderRadius.circular(23),
+                              ),
+                              child: _transcribing
+                                  ? Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        SizedBox.square(
+                                          dimension: 16,
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: refAccent),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(voiceLabel,
+                                            style: TextStyle(color: refInk)),
+                                      ],
+                                    )
+                                  : Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.mic_rounded,
+                                          color: dark ? refAccent : skin.accent,
+                                          size: 22,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          voiceLabel,
+                                          style: TextStyle(
+                                            color: refInk,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          )
+                        : Container(
+                            decoration: BoxDecoration(
+                                color: widget.referenceStyle
+                                    ? refFieldBg
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(25)),
+                            child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Expanded(
+                                      child: TextField(
+                                    onTap: () {
+                                      if (_showStickers || _showMore) {
+                                        setState(() {
+                                          _showStickers = false;
+                                          _showMore = false;
+                                        });
+                                      }
+                                    },
+                                    controller: _controller,
+                                    focusNode: _focusNode,
+                                    enabled: widget.enabled,
+                                    minLines: 1,
+                                    maxLines: 5,
+                                    textInputAction: widget.partyMode
+                                        ? TextInputAction.send
+                                        : TextInputAction.newline,
+                                    onSubmitted: widget.partyMode
+                                        ? (_) => _submit()
+                                        : null,
+                                    style: widget.referenceStyle
+                                        ? TextStyle(
+                                            fontSize: 14.5,
+                                            height: 1.45,
+                                            color: refInk)
+                                        : null,
+                                    decoration: InputDecoration(
+                                      hintText: widget.hintText,
+                                      hintStyle: widget.referenceStyle
+                                          ? TextStyle(
+                                              fontSize: 14, color: refMuted)
+                                          : null,
+                                      filled: true,
+                                      fillColor: Colors.transparent,
+                                      border: InputBorder.none,
+                                      enabledBorder: InputBorder.none,
+                                      focusedBorder: InputBorder.none,
+                                      disabledBorder: InputBorder.none,
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 11,
+                                      ),
+                                    ),
+                                  )),
+                                  if (widget.referenceStyle &&
+                                      !widget.partyMode)
+                                    TapRegion(
+                                        groupId: _composerTapRegionGroup,
+                                        child: IconButton(
+                                            tooltip: '表情',
+                                            onPressed: _emoji,
+                                            icon: const BingoIcon(
+                                                BingoSymbol.smile,
+                                                size: 25,
+                                                color: BingoPalette.muted))),
+                                ])),
+                  ),
+                  const SizedBox(width: 7),
+                  TapRegion(
+                    groupId: _composerTapRegionGroup,
+                    child: Container(
+                      width: 43,
+                      height: 43,
+                      decoration: BoxDecoration(
+                        color: widget.referenceStyle
+                            ? Colors.transparent
+                            : widget.enabled
+                                ? BingoPalette.softSurface
+                                : colors.surfaceContainer,
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        padding: widget.referenceStyle
+                            ? EdgeInsets.zero
+                            : const EdgeInsets.all(8),
+                        onPressed: widget.partyMode
+                            ? (widget.enabled && showSend ? _submit : null)
+                            : (showSend
+                                ? (widget.enabled ? _submit : null)
+                                : (widget.enabled ? _openMore : null)),
+                        tooltip: widget.partyMode
+                            ? '发送'
+                            : (showSend ? '发送消息' : '更多功能'),
+                        disabledColor:
+                            widget.referenceStyle ? Colors.white70 : null,
+                        color: widget.referenceStyle
+                            ? showSend
+                                ? Colors.white
+                                : refMuted
+                            : skin.accent,
+                        icon: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 160),
+                          transitionBuilder: (child, animation) =>
+                              ScaleTransition(scale: animation, child: child),
+                          child: widget.partyMode
+                              ? Container(
+                                  key: ValueKey('party-send-$showSend'),
+                                  width: 34,
+                                  height: 34,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                      color: widget.enabled && showSend
+                                          ? refAccent
+                                          : refFieldBg,
+                                      shape: BoxShape.circle),
+                                  child: ChatComposerIcon(
+                                      ChatComposerSymbol.send,
+                                      size: 20,
+                                      color: widget.enabled && showSend
+                                          ? Colors.white
+                                          : refMuted))
+                              : showSend
+                                  ? widget.referenceStyle
+                                      ? Container(
+                                          key: const ValueKey('send'),
+                                          width: 34,
+                                          height: 34,
+                                          alignment: Alignment.center,
+                                          decoration: BoxDecoration(
+                                              color: refAccent.withValues(
+                                                  alpha:
+                                                      widget.enabled ? 1 : .4),
+                                              shape: BoxShape.circle),
+                                          child: const ChatComposerIcon(
+                                              ChatComposerSymbol.send,
+                                              size: 20,
+                                              color: Colors.white))
+                                      : const Icon(
+                                          Icons.arrow_upward_rounded,
+                                          key: ValueKey('send'),
+                                        )
+                                  : AnimatedRotation(
+                                      key: const ValueKey('more'),
+                                      turns: _showMore ? 0.125 : 0,
+                                      duration:
+                                          const Duration(milliseconds: 180),
+                                      child: ChatComposerIcon(
+                                          widget.referenceStyle
+                                              ? ChatComposerSymbol.addOutlined
+                                              : ChatComposerSymbol.add,
+                                          size: widget.referenceStyle ? 27 : 26,
+                                          color: widget.referenceStyle
+                                              ? refMuted.withValues(
+                                                  alpha:
+                                                      widget.enabled ? 1 : .4)
+                                              : skin.accent),
+                                    ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (keyboardInset > 0 || MediaQuery.disableAnimationsOf(context))
+              ComposerPanelSpace(
+                  key: const ValueKey('composer-panel-space'),
+                  keyboardInset: keyboardInset,
+                  child: panel)
+            else
+              AnimatedSize(
+                duration: const Duration(milliseconds: 180),
+                alignment: Alignment.topCenter,
+                curve: Curves.easeOutCubic,
+                child: ComposerPanelSpace(
+                    key: const ValueKey('composer-panel-space'),
+                    keyboardInset: keyboardInset,
+                    child: panel),
+              ),
+          ],
+        ),
+      ),
+    );
     return TapRegion(
         groupId: _composerTapRegionGroup,
         onTapOutside: (_) {
           dismissPanels();
           _focusNode.unfocus();
         },
-        child: ChatGlass(
-            bottom: true,
-            child: SafeArea(
-              top: false,
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(widget.referenceStyle ? 8 : 12, 5,
-                    widget.referenceStyle ? 8 : 12, 7),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(widget.referenceStyle ? 0 : 7),
-                      decoration: BoxDecoration(
-                        color: widget.referenceStyle
-                            ? Colors.transparent
-                            : Colors.white.withValues(alpha: 0.97),
-                        borderRadius: BorderRadius.circular(
-                            widget.referenceStyle ? 30 : 24),
-                        border: widget.referenceStyle
-                            ? null
-                            : Border.all(color: Colors.white),
-                        boxShadow: widget.referenceStyle
-                            ? []
-                            : const [
-                                BoxShadow(
-                                  color: Color(0x14205F4F),
-                                  blurRadius: 20,
-                                  offset: Offset(0, 6),
-                                ),
-                              ],
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          TapRegion(
-                              groupId: _composerTapRegionGroup,
-                              child: Container(
-                                width: 43,
-                                height: 43,
-                                decoration: BoxDecoration(
-                                  color: widget.referenceStyle
-                                      ? Colors.transparent
-                                      : skin.id == 'mint'
-                                          ? BingoPalette.softSurface
-                                          : skin.other,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: IconButton(
-                                  onPressed:
-                                      widget.enabled ? _toggleVoiceMode : null,
-                                  tooltip: _voiceMode ? '键盘输入' : '语音输入',
-                                  color: widget.referenceStyle
-                                      ? ChatScene.muted
-                                      : skin.accent,
-                                  icon: ChatComposerIcon(
-                                      _voiceMode
-                                          ? ChatComposerSymbol.keyboard
-                                          : ChatComposerSymbol.voice,
-                                      color: widget.referenceStyle
-                                          ? ChatScene.muted
-                                          : skin.accent),
-                                ),
-                              )),
-                          const SizedBox(width: 7),
-                          Expanded(
-                            child: _voiceMode
-                                ? Listener(
-                                    behavior: HitTestBehavior.opaque,
-                                    onPointerDown: _handlePointerDown,
-                                    onPointerMove: _handlePointerMove,
-                                    onPointerUp: _handlePointerUp,
-                                    onPointerCancel: _handlePointerCancel,
-                                    child: AnimatedContainer(
-                                      duration:
-                                          const Duration(milliseconds: 120),
-                                      height: 46,
-                                      alignment: Alignment.center,
-                                      decoration: BoxDecoration(
-                                        color: _recording
-                                            ? switch (_releaseAction) {
-                                                _VoiceReleaseAction.cancel =>
-                                                  colors.errorContainer,
-                                                _VoiceReleaseAction
-                                                      .transcribe =>
-                                                  BingoPalette.softSurface,
-                                                _VoiceReleaseAction.send =>
-                                                  BingoPalette.blush,
-                                              }
-                                            : skin.id == 'mint'
-                                                ? BingoPalette.blush
-                                                : skin.user,
-                                        border: Border.all(
-                                            color: skin.id == 'mint'
-                                                ? BingoPalette.blush
-                                                : skin.accent
-                                                    .withValues(alpha: .25)),
-                                        borderRadius: BorderRadius.circular(23),
-                                      ),
-                                      child: _transcribing
-                                          ? Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                const SizedBox.square(
-                                                  dimension: 16,
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                          strokeWidth: 2),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Text(voiceLabel),
-                                              ],
-                                            )
-                                          : Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Icon(
-                                                  Icons.mic_rounded,
-                                                  color: skin.accent,
-                                                  size: 22,
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Text(
-                                                  voiceLabel,
-                                                  style: const TextStyle(
-                                                    color: BingoPalette.ink,
-                                                    fontWeight: FontWeight.w700,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                    ),
-                                  )
-                                : Container(
-                                    decoration: BoxDecoration(
-                                        color: widget.referenceStyle
-                                            ? const Color(0xFFF2F6FA)
-                                            : Colors.transparent,
-                                        borderRadius:
-                                            BorderRadius.circular(25)),
-                                    child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.end,
-                                        children: [
-                                          Expanded(
-                                              child: TextField(
-                                            onTap: () {
-                                              if (_showStickers || _showMore) {
-                                                setState(() {
-                                                  _showStickers = false;
-                                                  _showMore = false;
-                                                });
-                                              }
-                                            },
-                                            controller: _controller,
-                                            focusNode: _focusNode,
-                                            enabled: widget.enabled,
-                                            minLines: 1,
-                                            maxLines: 5,
-                                            textInputAction:
-                                                TextInputAction.newline,
-                                            style: widget.referenceStyle
-                                                ? const TextStyle(
-                                                    fontSize: 14.5,
-                                                    height: 1.45,
-                                                    color: BingoPalette.ink)
-                                                : null,
-                                            decoration: InputDecoration(
-                                              hintText: widget.hintText,
-                                              hintStyle: widget.referenceStyle
-                                                  ? const TextStyle(
-                                                      fontSize: 14,
-                                                      color: BingoPalette.muted)
-                                                  : null,
-                                              filled: true,
-                                              fillColor: Colors.transparent,
-                                              border: InputBorder.none,
-                                              enabledBorder: InputBorder.none,
-                                              focusedBorder: InputBorder.none,
-                                              contentPadding:
-                                                  const EdgeInsets.symmetric(
-                                                horizontal: 10,
-                                                vertical: 11,
-                                              ),
-                                            ),
-                                          )),
-                                          if (widget.referenceStyle)
-                                            TapRegion(
-                                                groupId:
-                                                    _composerTapRegionGroup,
-                                                child: IconButton(
-                                                    tooltip: '表情',
-                                                    onPressed: _emoji,
-                                                    icon: const BingoIcon(
-                                                        BingoSymbol.smile,
-                                                        size: 25,
-                                                        color: BingoPalette
-                                                            .muted))),
-                                        ])),
-                          ),
-                          const SizedBox(width: 7),
-                          TapRegion(
-                            groupId: _composerTapRegionGroup,
-                            child: Container(
-                              width: 43,
-                              height: 43,
-                              decoration: BoxDecoration(
-                                color: widget.referenceStyle
-                                    ? Colors.transparent
-                                    : widget.enabled
-                                        ? BingoPalette.softSurface
-                                        : colors.surfaceContainer,
-                                shape: BoxShape.circle,
-                              ),
-                              child: IconButton(
-                                padding: widget.referenceStyle
-                                    ? EdgeInsets.zero
-                                    : const EdgeInsets.all(8),
-                                onPressed: !widget.enabled
-                                    ? null
-                                    : showSend
-                                        ? _submit
-                                        : _openMore,
-                                tooltip: showSend ? '发送消息' : '更多功能',
-                                disabledColor: widget.referenceStyle
-                                    ? Colors.white70
-                                    : null,
-                                color: widget.referenceStyle
-                                    ? showSend
-                                        ? Colors.white
-                                        : ChatScene.muted
-                                    : skin.accent,
-                                icon: AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 160),
-                                  transitionBuilder: (child, animation) =>
-                                      ScaleTransition(
-                                          scale: animation, child: child),
-                                  child: showSend
-                                      ? widget.referenceStyle
-                                          ? Container(
-                                              key: const ValueKey('send'),
-                                              width: 32,
-                                              height: 32,
-                                              alignment: Alignment.center,
-                                              decoration: BoxDecoration(
-                                                  color: BingoPalette.primary
-                                                      .withValues(
-                                                          alpha: widget.enabled
-                                                              ? 1
-                                                              : .4),
-                                                  shape: BoxShape.circle),
-                                              child: const ChatComposerIcon(
-                                                  ChatComposerSymbol.send,
-                                                  size: 20,
-                                                  color: Colors.white))
-                                          : const Icon(
-                                              Icons.arrow_upward_rounded,
-                                              key: ValueKey('send'),
-                                            )
-                                      : AnimatedRotation(
-                                          key: const ValueKey('more'),
-                                          turns: _showMore ? 0.125 : 0,
-                                          duration:
-                                              const Duration(milliseconds: 180),
-                                          child: ChatComposerIcon(
-                                              widget.referenceStyle
-                                                  ? ChatComposerSymbol
-                                                      .addOutlined
-                                                  : ChatComposerSymbol.add,
-                                              size: widget.referenceStyle
-                                                  ? 27
-                                                  : 26,
-                                              color: widget.referenceStyle
-                                                  ? ChatScene.muted.withValues(
-                                                      alpha: widget.enabled
-                                                          ? 1
-                                                          : .4)
-                                                  : skin.accent),
-                                        ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (keyboardInset > 0 ||
-                        MediaQuery.disableAnimationsOf(context))
-                      ComposerPanelSpace(
-                          key: const ValueKey('composer-panel-space'),
-                          keyboardInset: keyboardInset,
-                          child: panel)
-                    else
-                      AnimatedSize(
-                        duration: const Duration(milliseconds: 180),
-                        alignment: Alignment.topCenter,
-                        curve: Curves.easeOutCubic,
-                        child: ComposerPanelSpace(
-                            key: const ValueKey('composer-panel-space'),
-                            keyboardInset: keyboardInset,
-                            child: panel),
-                      ),
-                  ],
-                ),
-              ),
-            )));
+        child: dark
+            ? Container(
+                decoration: const BoxDecoration(
+                    color: Color(0xFF1A1F31),
+                    border:
+                        Border(top: BorderSide(color: Color(0xFF282E46)))),
+                child: barContent)
+            : ChatGlass(bottom: true, child: barContent));
   }
 }
 

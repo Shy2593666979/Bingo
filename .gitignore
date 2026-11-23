@@ -57,3 +57,4 @@ Thumbs.db
 /apps/mobile/assets/stickers/*.png
 /design/
 /artifacts/
+.zed/

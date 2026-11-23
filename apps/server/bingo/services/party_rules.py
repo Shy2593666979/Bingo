@@ -5,14 +5,45 @@ import secrets
 from collections import Counter
 from uuid import uuid4
 
+from bingo.utils.segments import split_complete_segments
+
 SELF = "self"
 ROLES = {"wolf": "狼人", "seer": "预言家", "witch": "女巫", "villager": "村民"}
 
 
-def message(state, text, speaker=None, *, recipients=None):
+def split_party_bubbles(text: str) -> list[str]:
+    paragraphs = [p.strip() for p in text.splitlines() if p.strip()]
+    if not paragraphs:
+        return [text.strip()] if text.strip() else []
+    bubbles: list[str] = []
+    for para in paragraphs:
+        if len(para) <= 55:
+            bubbles.append(para)
+            continue
+        segments, _ = split_complete_segments(para, final=True)
+        if not segments:
+            bubbles.append(para)
+            continue
+        current = ""
+        for seg in segments:
+            if not current:
+                current = seg
+            elif len(current) + len(seg) <= 55 or len(current) < 18:
+                current += seg
+            else:
+                bubbles.append(current)
+                current = seg
+        if current:
+            bubbles.append(current)
+    return bubbles or [text.strip()]
+
+
+def message(state, text, speaker=None, *, recipients=None, client_message_id=None):
     item = {"id": str(uuid4()), "text": text, "speaker": speaker, "round": state["round"]}
     if recipients is not None:
         item["recipients"] = list(recipients)
+    if client_message_id is not None:
+        item["client_message_id"] = client_message_id
     state["messages"].append(item)
     return item
 
@@ -57,6 +88,7 @@ def new_game(mode, people, username, rounds=5, identity=None):
         "potion": {"save": True, "poison": True},
         "night": {},
         "voice": False,
+        "read_aloud": True,
         "waiting_user": False,
         "user_pending": False,
         "voice_epoch": 0,
@@ -87,7 +119,10 @@ def new_game(mode, people, username, rounds=5, identity=None):
 
 def visible_messages(state, player):
     return [
-        {k: v for k, v in item.items() if k != "recipients"}
+        {
+            **{k: v for k, v in item.items() if k != "recipients"},
+            **({"private": True} if "recipients" in item else {}),
+        }
         for item in state["messages"]
         if "recipients" not in item or player in item["recipients"]
     ]
@@ -167,6 +202,7 @@ def public_view(state, revision=0):
         "host_id": state["host_id"],
         "phase": state["phase"],
         "round": state["round"],
+        "rounds": state["rounds"],
         "revision": revision,
         "action_stage": action_stage(state),
         "action_hint": action_hint(state),
@@ -185,6 +221,7 @@ def public_view(state, revision=0):
         "kind": state.get("kind"),
         "question": state.get("question"),
         "voice": state["voice"],
+        "read_aloud": state.get("read_aloud", True),
         "waiting_user": state["waiting_user"],
         "voice_epoch": state["voice_epoch"],
         "playback": state["playback"],
@@ -356,7 +393,7 @@ def check_winner(state):
     return False
 
 
-def spoken(state, player, text):
+def spoken(state, player, text, *, client_message_id=None):
     if not can_speak(state, player):
         raise ValueError("当前阶段不能发言")
     private = (
@@ -364,7 +401,13 @@ def spoken(state, player, text):
         if (state["phase"] == "night")
         else None
     )
-    message(state, text, player, recipients=private)
+    chunks = (
+        split_party_bubbles(text)
+        if player != SELF and not state.get("voice")
+        else [text]
+    )
+    for chunk in chunks:
+        message(state, chunk, player, recipients=private, client_message_id=client_message_id)
     state["recent_speakers"] = [*state["recent_speakers"][-9:], player]
     state["waiting_user"] = False
     state["user_pending"] = player == SELF

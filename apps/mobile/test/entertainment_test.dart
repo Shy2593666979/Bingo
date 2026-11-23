@@ -212,6 +212,7 @@ void main() {
     await tester.tap(find.text('真心话'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), '我的体验发言');
+    await tester.pump();
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('游戏操作'));
@@ -277,17 +278,100 @@ void main() {
   testWidgets('live game controls fit narrow screens and large text',
       (tester) async {
     for (final scale in [1.0, 1.4, 2.0]) {
-      for (final phase in ['vote', 'discuss']) {
+      for (final phase in ['choose', 'answer', 'finished']) {
+        final api = Gateways();
+        final snapshot = await api.createPartyGame(GameSetup(
+            game: CompanionGame.truth, companions: companions.take(3).toList()));
+        snapshot.addAll({
+          'mode': 'truth',
+          'phase': phase,
+          'round': 2,
+          'rounds': 5,
+          'actor': 'self',
+          'kind': 'truth',
+          'question': phase == 'choose' ? null : '最近让你偷偷开心的一件小事是什么？',
+          'can_advance': phase != 'finished',
+          'options': phase == 'choose'
+              ? {'truth': '真心话', 'dare': '大冒险'}
+              : <String, String>{},
+          'messages': [
+            {'id': 't1', 'speaker': null, 'text': '第 2 轮 · 轮到我'},
+            {'id': 't2', 'speaker': 'p0', 'text': '最近让你偷偷开心的一件小事是什么？'},
+          ],
+        });
+        await surface(
+            tester,
+            PartyGameRoomPage(
+                key: ValueKey('truth-$phase-$scale'),
+                gateway: api,
+                initial: snapshot,
+                profile: profile),
+            width: 320,
+            scale: scale);
+        expect(tester.takeException(), isNull);
+      }
+      for (final phase in ['vote', 'discuss', 'night', 'finished']) {
         final api = Gateways();
         final snapshot = await api.createPartyGame(GameSetup(
             game: CompanionGame.wolf, companions: companions.take(6).toList()));
         snapshot.addAll({
           'mode': 'wolf',
           'phase': phase,
-          'actor': null,
+          'actor': phase == 'night' ? 'self' : 'p1',
           'can_advance': phase == 'discuss',
-          'private': {'identity': 'villager', 'clues': []},
+          'winner': phase == 'finished' ? 'good' : null,
+          'identities': phase == 'finished'
+              ? {
+                  'self': 'seer',
+                  'p0': 'wolf',
+                  'p1': 'wolf',
+                  'p2': 'witch',
+                  'p3': 'villager',
+                  'p4': 'villager',
+                  'p5': 'villager',
+                }
+              : null,
+          'private': phase == 'night'
+              ? {
+                  'identity': 'witch',
+                  'potions': {'save': true, 'poison': true},
+                  'victim': 'p0',
+                  'clues': []
+                }
+              : {
+                  'identity': 'seer',
+                  'clues': [
+                    {'day': 1, 'target': 'p0', 'wolf': true}
+                  ]
+                },
+          'messages': [
+            {'id': 'm1', 'speaker': null, 'text': '第 1 夜，请按自己的身份行动。'},
+            {
+              'id': 'm2',
+              'speaker': 'p0',
+              'text': '今晚刀谁？',
+              'private': true,
+            },
+            {
+              'id': 'm3',
+              'speaker': null,
+              'text': '查验结果：搭子1是狼人。',
+              'private': true,
+            },
+            {'id': 'm4', 'speaker': null, 'text': '天亮了。搭子2出局。'},
+            {'id': 'm5', 'speaker': 'p1', 'text': '我先说说我的判断。'},
+            {
+              'id': 'm6',
+              'speaker': null,
+              'text': '投票结果：我→搭子1；搭子1→搭子2；搭子3→搭子1；搭子4→弃票',
+            },
+          ],
           'options': {
+            if (phase == 'night') ...{
+              'skip': '不用药',
+              'save': '使用解药',
+              for (final p in companions.take(6)) 'poison:${p.id}': '毒杀${p.name}',
+            },
             if (phase == 'vote') ...{
               for (final p in companions.take(6)) p.id: p.name,
               'skip': '弃票'

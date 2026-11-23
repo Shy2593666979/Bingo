@@ -17,32 +17,47 @@ class HomeGreeting extends StatelessWidget {
     return Semantics(
       header: true,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(6, 25, 6, 25),
-        child: Wrap(
-          spacing: 7,
-          runSpacing: 4,
-          crossAxisAlignment: WrapCrossAlignment.center,
+        padding: const EdgeInsets.fromLTRB(4, 16, 4, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('$greeting，',
-                style: BingoTypography.sectionTitle.copyWith(fontSize: 24)),
-            Row(mainAxisSize: MainAxisSize.min, children: [
-              Flexible(
-                child: CustomPaint(
-                  painter: const _GreetingStroke(),
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 5),
-                    child: Text(name,
-                        style: BingoTypography.sectionTitle.copyWith(
-                            fontSize: 33,
-                            height: 1.14,
-                            fontWeight: FontWeight.w800)),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text('$greeting，',
+                    style: BingoTypography.sectionTitle.copyWith(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF4A4248))),
+                Row(mainAxisSize: MainAxisSize.min, children: [
+                  Flexible(
+                    child: CustomPaint(
+                      painter: const _GreetingStroke(),
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text(name,
+                            style: BingoTypography.sectionTitle.copyWith(
+                                fontSize: 26,
+                                height: 1.18,
+                                fontWeight: FontWeight.w700,
+                                color: HomePalette.ink)),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 5),
-              const HomeArtworkIcon(HomeArtwork.wave,
-                  size: 27, color: HomePalette.accent),
-            ]),
+                  const SizedBox(width: 6),
+                  const HomeArtworkIcon(HomeArtwork.wave,
+                      size: 22, color: HomePalette.accent),
+                ]),
+              ],
+            ),
+            const SizedBox(height: 4),
+            const Text('在这里慢慢聊，搭子一直都在',
+                style: TextStyle(
+                    fontSize: 12.5,
+                    height: 1.4,
+                    color: HomePalette.muted)),
           ],
         ),
       ),
@@ -56,19 +71,21 @@ class _GreetingStroke extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
-    final y = size.height;
-    final stroke = Path()
-      ..moveTo(0, y)
-      ..cubicTo(w * .21, y - 3.4, w * .5, y - 6, w * .78, y - 5.1)
-      ..quadraticBezierTo(w * .91, y - 4.9, w, y - 3.9)
-      ..cubicTo(w * .65, y - 4.1, w * .31, y - 1.5, 0, y + .7)
-      ..close();
-    canvas.drawPath(
-        stroke,
+    final y = size.height - 1;
+    final rect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, y - 3.5, w, 3.5),
+      const Radius.circular(3),
+    );
+    canvas.drawRRect(
+        rect,
         Paint()
           ..shader = const LinearGradient(
-            colors: [Color(0xFFE89DB4), HomePalette.accent, Color(0xFFEAB3C5)],
-          ).createShader(Rect.fromLTWH(0, y - 6, w, 7)));
+            colors: [
+              Color(0x66ED82A4),
+              Color(0xB3DC5E84),
+              Color(0x44F3B0C5),
+            ],
+          ).createShader(Rect.fromLTWH(0, y - 3.5, w, 3.5)));
   }
 
   @override

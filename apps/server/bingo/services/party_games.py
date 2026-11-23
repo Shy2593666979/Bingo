@@ -176,6 +176,7 @@ class PartyGameService:
                     "interrupt",
                     "recover",
                     "advance",
+                    "read_aloud",
                 }:
                     if not (
                         command.type in {"choice", "change_question"}
@@ -189,13 +190,13 @@ class PartyGameService:
                 if command.type == "played":
                     if command.epoch != state["voice_epoch"]:
                         raise ValueError("旧音频回执已失效")
-                self.apply(state, command.type, command.value)
+                self.apply(state, command.type, command.value, command_id=command.command_id)
                 if command.type in {"choice", "advance", "change_question", "resume"}:
                     state["voice_suspended"] = False
             except ValueError as error:
                 raise ServiceError(422, str(error)) from error
             state["commands"] = [*state["commands"][-99:], command.command_id]
-            if command.type not in {"played", "recover"}:
+            if command.type not in {"played", "recover", "read_aloud"}:
                 state["voice_epoch"] += 1
                 state["playback"] = None
             if not await self.save(identifier, revision, state):
@@ -209,7 +210,10 @@ class PartyGameService:
         return await self.get(identifier, user_id)
 
     @staticmethod
-    def apply(state, action, value):
+    def apply(state, action, value, *, command_id=None):
+        if action == "read_aloud":
+            state["read_aloud"] = value.strip().lower() != "false"
+            return
         if action in {"interrupt", "say", "pause", "voice_stop", "end"} and state["playback"]:
             for item in state["messages"]:
                 if item["id"] == state["playback"]:
@@ -261,11 +265,11 @@ class PartyGameService:
             if not value.strip():
                 raise ValueError("请先说点什么")
             if rules.can_speak(state, rules.SELF):
-                rules.spoken(state, rules.SELF, value.strip())
+                rules.spoken(state, rules.SELF, value.strip(), client_message_id=command_id)
             elif state["mode"] == "truth" or (
                 state["phase"] == "speech" and rules.SELF in state["alive"]
             ):
-                rules.message(state, value.strip(), rules.SELF)
+                rules.message(state, value.strip(), rules.SELF, client_message_id=command_id)
             else:
                 raise ValueError("当前阶段不能向场上发言")
         elif action == "change_question" and state["mode"] == "truth":
@@ -346,6 +350,15 @@ class PartyGameService:
             state.update(paused=True, error="AI 暂时无法完成本次操作，请点击继续重试")
             await self.save(identifier, revision, state)
 
+    async def speech_source(self, identifier, message_id, user_id):
+        state, _ = await self.load(identifier, user_id)
+        visible = rules.visible_messages(state, rules.SELF)
+        item = next((m for m in visible if m["id"] == message_id), None)
+        if item is None or item.get("speaker") in {None, rules.SELF}:
+            raise ServiceError(404, "消息不存在或不可朗读")
+        role = await self.role(user_id, item["speaker"])
+        return item["text"], role.voice
+
     async def role(self, user_id, identifier):
         async with self.database.session_factory() as session:
             role = await session.get(Role, identifier)
@@ -406,7 +419,11 @@ class PartyGameService:
                 {
                     "answer": "认真回答当前问题或完成挑战，保持个性。",
                     "speech": "完成自己的本轮发言，给出具体判断与理由。",
-                    "last_words": "你已出局，留下简短遗言，不再参与行动。",
+                    "last_words": (
+                        "你已出局，留下简短遗言，不再参与行动。"
+                        "如果你是预言家或女巫等好人关键身份，可以坦诚交代已知线索帮助好人；"
+                        "如果你是狼人，保持伪装。"
+                    ),
                 }[phase],
             )
             rules.spoken(state, actor, text)
@@ -419,12 +436,33 @@ class PartyGameService:
                 )
                 rules.spoken(state, actor, text)
             else:
-                choice = await self.ai.choose(
-                    state,
-                    actor,
-                    rules.options(state, actor),
-                    "根据自己身份、私有线索和公开历史执行本次夜间行动。",
-                )
+                night_options = rules.options(state, actor)
+                night_action = state["night_action"]
+                if night_action == "potion":
+                    if state["round"] == 1:
+                        # Night 1 has zero daytime discussion; never let AI witch blind-poison.
+                        safe_options = {
+                            k: v for k, v in night_options.items() if not k.startswith("poison:")
+                        }
+                        if safe_options:
+                            night_options = safe_options
+                        victim = state["night"].get("kill")
+                        instruction = (
+                            "这是第1夜，你被狼人袭击且首夜可以自救，强烈建议选择save使用解药自救。"
+                            if victim == actor and "save" in night_options
+                            else "这是第1夜，还没有白天发言信息，"
+                            "只在使用解药救人或不用药之间选择。"
+                        )
+                    else:
+                        instruction = (
+                            "仅当公开发言或票型里已有明确高度怀疑的狼人目标时才使用毒药，"
+                            "没有确凿怀疑不要随意毒人；结合局势决定是否使用解药或不用药。"
+                        )
+                elif night_action == "kill":
+                    instruction = "结合刚才狼队私聊商议的策略，选择今晚最优先袭击的目标。"
+                else:
+                    instruction = "根据公开发言和局势，选择一位最值得查验的存活玩家。"
+                choice = await self.ai.choose(state, actor, night_options, instruction)
                 rules.night_choice(state, actor, choice)
         elif phase == "vote":
             actor = next((p for p in state["queue"] if p != rules.SELF), None)
